@@ -13,6 +13,8 @@ export default function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
+  const [role, setRole] = useState('player'); // New state for role
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -27,8 +29,7 @@ export default function Login() {
     try {
       let result;
       if (isRegistering) {
-        // Here we could check for an invitation code to become admin, but for now we default to 'player'
-        result = await register(name, surname, password);
+        result = await register(name, surname, password, role);
       } else {
         result = await login(name, surname, password);
       }
@@ -97,6 +98,21 @@ export default function Login() {
               />
             </div>
           </div>
+
+          {isRegistering && (
+            <div style={{ marginBottom: 20 }}>
+              <label className="label">Tipo de Usuario</label>
+              <select 
+                className="input-field" 
+                value={role} 
+                onChange={e => setRole(e.target.value)}
+                style={{ cursor: 'pointer' }}
+              >
+                <option value="player">⚽ Jugador</option>
+                <option value="admin">🔑 Entrenador</option>
+              </select>
+            </div>
+          )}
 
           {error && <div style={{ fontSize: 11, color: '#e74c3c', marginBottom: 12, textAlign: 'center' }}>⚠ {error}</div>}
 
