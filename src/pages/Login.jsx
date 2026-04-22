@@ -85,11 +85,12 @@ export default function Login() {
         boxShadow: '0 12px 48px rgba(0,0,0,.35)'
       }}>
         {/* Logo */}
-        <div style={{ fontSize: 44, marginBottom: 6 }}>⚽</div>
+        <img src={import.meta.env.BASE_URL + 'escudo.png'} alt="Escudo" style={{ width: 64, height: 64, objectFit: 'contain', marginBottom: 8 }} />
         <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 2, color: '#111' }}>Cabrerizos F.C.</div>
-        <div style={{ color: '#96a0b5', fontSize: 11, marginBottom: 24, letterSpacing: 0.3 }}>
+        <div style={{ color: '#96a0b5', fontSize: 11, marginBottom: 4, letterSpacing: 0.3 }}>
           {isRegistering ? 'Crear nueva cuenta' : 'Acceso a la plataforma'}
         </div>
+        <div style={{ color: '#b0b8c9', fontSize: 9, marginBottom: 20, fontWeight: 600 }}>Juvenil B · 2ª Juvenil Grupo 1 · Salamanca</div>
 
         {/* Role selection (register only) */}
         {isRegistering && (

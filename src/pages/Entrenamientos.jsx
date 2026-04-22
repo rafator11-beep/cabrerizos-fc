@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Calendar, Clock, Flame, ChevronRight, Star, MessageSquare, Trash2, Edit3, Save, X } from 'lucide-react';
+import { Plus, Calendar, Clock, Flame, ChevronRight, Star, MessageSquare, Trash2, Edit3, Save, X, Image as ImageIcon } from 'lucide-react';
+import EXERCISE_IMAGES from '../exercises.json';
 
 const INTENSITIES = [
   { id: 'baja', label: 'Baja', color: '#10b981', icon: '🟢' },
@@ -24,7 +25,8 @@ export default function Entrenamientos() {
     title: '', date: new Date().toISOString().split('T')[0],
     duration: 90, intensity: 'media', objective: '', exercises: [], notes: ''
   });
-  const [exerciseInput, setExerciseInput] = useState({ name: '', description: '', duration: 15 });
+  const [exerciseInput, setExerciseInput] = useState({ name: '', description: '', duration: 15, image: '' });
+  const [showGallery, setShowGallery] = useState(false);
 
   useEffect(() => { fetchTrainings(); fetchPlayers(); }, []);
 
@@ -64,7 +66,7 @@ export default function Entrenamientos() {
   const addExercise = () => {
     if (!exerciseInput.name) return;
     setForm(f => ({ ...f, exercises: [...f.exercises, { ...exerciseInput, id: Date.now() }] }));
-    setExerciseInput({ name: '', description: '', duration: 15 });
+    setExerciseInput({ name: '', description: '', duration: 15, image: '' });
   };
 
   const removeExercise = (id) => {
@@ -152,16 +154,32 @@ export default function Entrenamientos() {
             {/* Exercises */}
             <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#4a5568' }}>Ejercicios:</div>
             {form.exercises.map(ex => (
-              <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, marginBottom: 3, fontSize: 11 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, marginBottom: 3, fontSize: 11 }}>
+                {ex.image && <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 4 }} />}
                 <span style={{ flex: 1 }}>{ex.name} ({ex.duration}min)</span>
                 <button onClick={() => removeExercise(ex.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><X size={12} /></button>
               </div>
             ))}
             <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+              {exerciseInput.image && (
+                <img src={import.meta.env.BASE_URL + 'exercises/' + exerciseInput.image} alt="selected" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 6 }} />
+              )}
+              <button className="btn btn-outline btn-sm" onClick={() => setShowGallery(!showGallery)} style={{ padding: '0 8px' }} title="Añadir imagen">
+                <ImageIcon size={14} />
+              </button>
               <input className="input-field" placeholder="Nombre ejercicio" value={exerciseInput.name} onChange={e => setExerciseInput(ei => ({ ...ei, name: e.target.value }))} style={{ flex: 1 }} />
               <input type="number" className="input-field" value={exerciseInput.duration} onChange={e => setExerciseInput(ei => ({ ...ei, duration: parseInt(e.target.value) || 15 }))} style={{ width: 50 }} />
               <button className="btn btn-outline btn-sm" onClick={addExercise}>+</button>
             </div>
+            {showGallery && (
+              <div style={{ background: '#f8f9fb', padding: 8, borderRadius: 8, marginBottom: 6, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, maxHeight: 150, overflowY: 'auto' }}>
+                {EXERCISE_IMAGES.map(img => (
+                  <img key={img} src={import.meta.env.BASE_URL + 'exercises/' + img} alt="ejercicio" 
+                    onClick={() => { setExerciseInput(ei => ({ ...ei, image: img })); setShowGallery(false); }}
+                    style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 4, cursor: 'pointer', border: exerciseInput.image === img ? '2px solid #0057ff' : 'none' }} />
+                ))}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 6 }}>
               <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={createTraining}><Save size={12} /> Crear</button>
@@ -240,6 +258,9 @@ export default function Entrenamientos() {
                       <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: '#0057ff' }}>
                         {i + 1}
                       </div>
+                      {ex.image && (
+                        <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e6ed' }} />
+                      )}
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{ex.name}</div>
                         {ex.description && <div style={{ fontSize: 11, color: '#96a0b5', marginTop: 2 }}>{ex.description}</div>}

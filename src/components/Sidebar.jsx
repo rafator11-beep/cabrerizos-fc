@@ -19,12 +19,10 @@ export default function Sidebar() {
     <aside style={{ width: 210, flexShrink: 0, background: '#111827', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
       <div style={{ padding: '14px 13px 10px', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 32, height: 32, background: '#0057ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: 13 }}>
-            CFC
-          </div>
+          <img src={import.meta.env.BASE_URL + 'escudo.png'} alt="Escudo" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain' }} />
           <div>
             <div style={{ color: 'white', fontWeight: 800, fontSize: 14 }}>Cabrerizos F.C.</div>
-            <div style={{ color: 'rgba(255,255,255,.28)', fontSize: 9, textTransform: 'uppercase', letterSpacing: .6 }}>Juveniles · 24/25</div>
+            <div style={{ color: 'rgba(255,255,255,.35)', fontSize: 8, textTransform: 'uppercase', letterSpacing: .5, lineHeight: 1.3 }}>Juvenil B · 2ª Juvenil G1<br/>Salamanca 24/25</div>
           </div>
         </div>
       </div>
