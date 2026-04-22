@@ -233,3 +233,85 @@ BEGIN
     ALTER TABLE plays ADD COLUMN category TEXT NOT NULL DEFAULT 'general';
   END IF;
 END $$;
+
+-- ==========================================
+-- 9. ROSTER TABLE (Plantilla independiente de auth)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS roster (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  surname TEXT NOT NULL,
+  number INTEGER,
+  position TEXT DEFAULT '',
+  photo_url TEXT DEFAULT '',
+  stats JSONB NOT NULL DEFAULT '{}'::jsonb,
+  is_starter BOOLEAN DEFAULT true,
+  auth_profile_id UUID, -- se vincula cuando el jugador se registra
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE roster ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Roster viewable by everyone" ON roster;
+DROP POLICY IF EXISTS "Admins can insert roster" ON roster;
+DROP POLICY IF EXISTS "Admins can update roster" ON roster;
+DROP POLICY IF EXISTS "Admins can delete roster" ON roster;
+DROP POLICY IF EXISTS "Anyone can update roster" ON roster;
+DROP POLICY IF EXISTS "Anyone can insert roster" ON roster;
+
+CREATE POLICY "Roster viewable by everyone" ON roster
+  FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can insert roster" ON roster
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Anyone can update roster" ON roster
+  FOR UPDATE USING (true);
+
+CREATE POLICY "Admins can delete roster" ON roster
+  FOR DELETE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- ==========================================
+-- 10. SEED: Pre-cargar plantilla Cabrerizos FC
+-- ==========================================
+-- Solo ejecutar una vez. Si ya existe algún jugador, no duplicar.
+INSERT INTO roster (name, surname, number, is_starter, position) VALUES
+  ('Haritz', 'González Delgado', 1, true, 'Portero'),
+  ('Álvaro', 'Delgado González', 2, true, ''),
+  ('Asier', 'Marcos Riesco', 4, true, ''),
+  ('Hugo', 'López García', 5, true, ''),
+  ('Iván', 'Martín Cañizal', 9, true, ''),
+  ('Aarón', 'Gabriel García', 10, true, ''),
+  ('Unai', 'Rodríguez Ríos', 15, true, ''),
+  ('Daniel', 'Alonso Gago', 16, true, ''),
+  ('Iván', 'Matías González', 18, true, ''),
+  ('Raúl', 'Rodríguez Morán', 19, true, ''),
+  ('Juan', 'Vicente Hernández', 20, true, ''),
+  ('Gabriel', 'Fraile Alguacil', 8, false, ''),
+  ('Ricardo André', 'Romero Chiuz', 11, false, ''),
+  ('David Mario', 'Hidalgo Vizcaíno', 12, false, ''),
+  ('Daniel', 'Fuentes Santana', 21, false, '')
+ON CONFLICT DO NOTHING;
+
+-- ==========================================
+-- 11. STORAGE: Bucket para fotos de jugadores
+-- ==========================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('player-photos', 'player-photos', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Anyone can view player photos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'player-photos');
+
+CREATE POLICY "Authenticated users can upload photos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'player-photos');
+
+CREATE POLICY "Authenticated users can update photos"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'player-photos');
+
+CREATE POLICY "Authenticated users can delete photos"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'player-photos');

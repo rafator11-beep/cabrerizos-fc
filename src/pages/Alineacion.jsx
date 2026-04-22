@@ -55,7 +55,7 @@ export default function Alineacion() {
     try {
       const [{ data: l }, { data: p }] = await Promise.all([
         supabase.from('lineups').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*').eq('role', 'player').order('number'),
+        supabase.from('roster').select('*').order('number'),
       ]);
       setLineups(l || []);
       setPlayers(p || []);

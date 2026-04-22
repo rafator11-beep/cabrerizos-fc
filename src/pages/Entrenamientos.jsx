@@ -43,7 +43,7 @@ export default function Entrenamientos() {
 
   const fetchPlayers = async () => {
     try {
-      const { data } = await supabase.from('profiles').select('*').eq('role', 'player').order('name');
+      const { data } = await supabase.from('roster').select('*').order('number');
       setPlayers(data || []);
     } catch { }
   };
