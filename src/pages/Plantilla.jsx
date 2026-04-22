@@ -2,6 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Edit3, Save, X, User, Camera, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import FieldCanvas from '../components/FieldCanvas';
+
+const PIZARRA_ARROW_TYPES = [
+  { id: "pass", label: "Pase", color: "#ffe066" },
+  { id: "run", label: "Carrera", color: "#4de8a0" },
+  { id: "shoot", label: "Disparo", color: "#ff6b6b" },
+];
 
 const POSITIONS = ['Portero', 'Central', 'Lateral Derecho', 'Lateral Izquierdo', 'Mediocentro', 'Mediapunta', 'Medio Defensivo', 'Interior', 'Extremo Derecho', 'Extremo Izquierdo', 'Delantero Centro', 'Carrilero'];
 
@@ -38,6 +45,48 @@ export default function Plantilla() {
   const [expandedId, setExpandedId] = useState(null);
   const fileInputRef = useRef(null);
   const [uploadingId, setUploadingId] = useState(null);
+
+  // Pizarra de análisis
+  const [showPizarra, setShowPizarra] = useState(false);
+  const [pizarraTokens, setPizarraTokens] = useState([]);
+  const [pizarraArrows, setPizarraArrows] = useState([]);
+  const [pizarraTool, setPizarraTool] = useState('move');
+  const [pizarraArrowType, setPizarraArrowType] = useState('pass');
+  const [pizarraDrawPt, setPizarraDrawPt] = useState(null);
+
+  const pizarraTogglePlayer = (p, isRival) => {
+    const label = String(p.number || '?');
+    const has = pizarraTokens.find(t => t.kind === 'player' && t.label === label && !!t.isRival === isRival);
+    if (has) {
+      setPizarraTokens(ts => ts.filter(t => t.id !== has.id));
+    } else {
+      setPizarraTokens(ts => [...ts, {
+        id: `piz_${label}${isRival ? 'R' : ''}t${Date.now()}`,
+        kind: 'player',
+        x: 100 + Math.random() * 350,
+        y: 50 + Math.random() * 260,
+        color: isRival ? '#ef4444' : '#0057ff',
+        label,
+        name: isRival ? null : p.name,
+        isRival,
+      }]);
+    }
+  };
+
+  const pizarraAddToken = (kind) => {
+    setPizarraTokens(ts => [...ts, {
+      id: kind + Date.now(),
+      kind,
+      x: 200 + Math.random() * 150,
+      y: 100 + Math.random() * 150,
+    }]);
+  };
+
+  const pizarraClear = () => {
+    setPizarraTokens([]);
+    setPizarraArrows([]);
+    setPizarraDrawPt(null);
+  };
 
   useEffect(() => { fetchPlayers(); }, []);
 
@@ -121,12 +170,110 @@ export default function Plantilla() {
           <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>👥 Plantilla Cabrerizos F.C.</h2>
           <div style={{ fontSize: 11, color: '#96a0b5', marginTop: 2 }}>Juvenil B · {players.length} jugadores</div>
         </div>
-        {isAdmin && (
-          <button className="btn btn-primary btn-sm" onClick={() => setShowAddForm(!showAddForm)}>
-            <Plus size={14} /> Añadir
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className={`btn btn-sm ${showPizarra ? 'btn-primary' : 'btn-outline'}`} onClick={() => setShowPizarra(v => !v)}>
+            ⚽ Pizarra de análisis
           </button>
-        )}
+          {isAdmin && (
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAddForm(!showAddForm)}>
+              <Plus size={14} /> Añadir
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Pizarra de análisis */}
+      {showPizarra && (
+        <div style={{ marginBottom: 20, border: '1.5px solid #e0e4ed', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,.07)' }}>
+          <div style={{ display: 'flex', height: 440 }}>
+            {/* Toolbar */}
+            <div style={{ width: 170, background: '#f8f9fb', borderRight: '1px solid #e0e4ed', padding: 10, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#0057ff', textTransform: 'uppercase', marginBottom: 2 }}>Cabrerizos FC</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {players.map(p => {
+                  const label = String(p.number || '?');
+                  const on = pizarraTokens.some(t => t.kind === 'player' && t.label === label && !t.isRival);
+                  return (
+                    <div key={p.id} onClick={() => pizarraTogglePlayer(p, false)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px', borderRadius: 7, cursor: 'pointer', background: on ? '#eef3ff' : 'white', border: `1px solid ${on ? '#0057ff' : '#e0e4ed'}`, transition: 'all .1s' }}>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#0057ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 800, color: 'white', flexShrink: 0 }}>{p.number || '?'}</div>
+                      <span style={{ fontSize: 9, fontWeight: on ? 700 : 500, flex: 1 }}>{p.name}</span>
+                      {on && <span style={{ fontSize: 8, color: '#0057ff' }}>✓</span>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', marginTop: 8 }}>Rival</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {Array.from({ length: 11 }).map((_, i) => {
+                  const num = String(i + 1);
+                  const on = pizarraTokens.some(t => t.kind === 'player' && t.label === num && t.isRival);
+                  return (
+                    <div key={i} onClick={() => pizarraTogglePlayer({ number: i + 1 }, true)}
+                      style={{ width: 26, height: 26, borderRadius: '50%', background: on ? '#ef4444' : '#fee2e2', border: `2px solid ${on ? '#ef4444' : '#fca5a5'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 800, cursor: 'pointer', color: on ? 'white' : '#ef4444' }}>
+                      {num}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ borderTop: '1px solid #e0e4ed', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 2 }}>Elementos</div>
+                <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start', gap: 6, fontSize: 10 }} onClick={() => pizarraAddToken('ball')}>⚽ Balón</button>
+                <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start', gap: 6, fontSize: 10 }} onClick={() => pizarraAddToken('cone')}>🔺 Cono</button>
+                <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start', gap: 6, fontSize: 10 }} onClick={() => pizarraAddToken('goal')}>🥅 Portería</button>
+              </div>
+
+              <div style={{ borderTop: '1px solid #e0e4ed', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 2 }}>Herramienta</div>
+                {[
+                  { id: 'move', label: '↕ Mover' },
+                  { id: 'arrow', label: '→ Flecha' },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setPizarraTool(t.id)}
+                    className={`btn btn-sm ${pizarraTool === t.id ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ justifyContent: 'flex-start', fontSize: 10 }}>
+                    {t.label}
+                  </button>
+                ))}
+                {pizarraTool === 'arrow' && (
+                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    {PIZARRA_ARROW_TYPES.map(a => (
+                      <button key={a.id} onClick={() => setPizarraArrowType(a.id)}
+                        style={{ flex: 1, padding: '3px 4px', borderRadius: 6, border: `2px solid ${pizarraArrowType === a.id ? a.color : '#e0e4ed'}`, background: pizarraArrowType === a.id ? `${a.color}22` : 'white', cursor: 'pointer', fontSize: 8, fontWeight: 700 }}>
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button className="btn btn-outline btn-sm" style={{ fontSize: 10 }} onClick={() => setPizarraArrows([])}>🗑 Borrar flechas</button>
+                <button className="btn btn-outline btn-sm" style={{ fontSize: 10, color: '#ef4444' }} onClick={pizarraClear}>✕ Limpiar todo</button>
+              </div>
+
+              <div style={{ fontSize: 8, color: '#96a0b5', textAlign: 'center', marginTop: 4, lineHeight: 1.4 }}>
+                Clic derecho o doble clic para eliminar elemento
+              </div>
+            </div>
+
+            {/* Canvas */}
+            <div style={{ flex: 1, background: '#2a6118' }}>
+              <FieldCanvas
+                tokens={pizarraTokens}
+                arrows={pizarraArrows}
+                onMove={(id, x, y) => setPizarraTokens(ts => ts.map(t => t.id === id ? { ...t, x, y } : t))}
+                tool={pizarraTool}
+                arrowType={pizarraArrowType}
+                onArrow={a => setPizarraArrows(as => [...as, a])}
+                drawPt={pizarraDrawPt}
+                setDrawPt={setPizarraDrawPt}
+                onPlace={(kind, x, y) => setPizarraTokens(ts => [...ts, { id: kind + Date.now(), kind, x, y }])}
+                onDelete={id => setPizarraTokens(ts => ts.filter(t => t.id !== id))}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Team summary bar */}
       <TeamSummary players={players} />

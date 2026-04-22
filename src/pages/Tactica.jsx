@@ -44,22 +44,22 @@ export default function Tactica() {
   const [arrowType, setArrowType] = useState("pass");
   const [drawPt, setDrawPt] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const players = [
-    { num: 1, color: '#e74c3c' }, { num: 2, color: '#2980b9' }, { num: 3, color: '#27ae60' },
-    { num: 4, color: '#2980b9' }, { num: 5, color: '#2980b9' }, { num: 6, color: '#8e44ad' },
-    { num: 7, color: '#e67e22' }, { num: 8, color: '#8e44ad' }, { num: 9, color: '#e74c3c' },
-    { num: 10, color: '#e67e22' }, { num: 11, color: '#27ae60' }
-  ];
+  const [players, setPlayers] = useState([]);
 
   useEffect(() => {
     fetchPlays();
+    fetchPlayers();
   }, [activeCategory]);
+
+  const fetchPlayers = async () => {
+    const { data } = await supabase.from('roster').select('*').order('number');
+    if (data) setPlayers(data);
+  };
 
   const fetchPlays = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('plays')
         .select('*')
         .eq('category', activeCategory)
@@ -113,15 +113,30 @@ export default function Tactica() {
     sync({ ...activePlay, tokens: [...(activePlay.tokens || []), t] });
   };
 
-  const togglePlayer = (p) => {
+  const onDeleteToken = (id) => {
     if (!activePlay) return;
-    const has = (activePlay.tokens || []).find(t => t.kind === "player" && t.label === String(p.num));
+    sync({ ...activePlay, tokens: (activePlay.tokens || []).filter(t => t.id !== id) });
+  };
+
+  const togglePlayer = (p, isRival = false) => {
+    if (!activePlay) return;
+    const label = String(p.number || '?');
+    const has = (activePlay.tokens || []).find(t => t.kind === "player" && t.label === label && !!t.isRival === isRival);
     if (has) {
       sync({ ...activePlay, tokens: (activePlay.tokens || []).filter(t => t.id !== has.id) });
     } else {
       sync({
-        ...activePlay, 
-        tokens: [...(activePlay.tokens || []), { id: `pl${p.num}t${Date.now()}`, kind: "player", x: 80 + Math.random() * 390, y: 40 + Math.random() * 280, color: p.color, label: String(p.num) }]
+        ...activePlay,
+        tokens: [...(activePlay.tokens || []), {
+          id: `pl${label}${isRival ? 'R' : ''}t${Date.now()}`,
+          kind: "player",
+          x: 80 + Math.random() * 390,
+          y: 40 + Math.random() * 280,
+          color: isRival ? '#ef4444' : '#0057ff',
+          label,
+          name: isRival ? null : p.name,
+          isRival
+        }]
       });
     }
   };
@@ -132,7 +147,7 @@ export default function Tactica() {
     const np = { name, category: activeCategory, type: "Táctica", tokens: [], arrows: [] };
     
     try {
-      const { data, error } = await supabase.from('plays').insert([
+      const { data } = await supabase.from('plays').insert([
         { ...np, created_by: profile?.id }
       ]).select().single();
 
@@ -238,18 +253,38 @@ export default function Tactica() {
         {isAdmin && activePlay && (
           <>
             <div className="card" style={{ padding: 10 }}>
-              <div className="label">Jugadores</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              <div className="label">Cabrerizos FC</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 {players.map(p => {
-                  const on = (activePlay.tokens || []).some(t => t.kind === "player" && t.label === String(p.num));
+                  const label = String(p.number || '?');
+                  const on = (activePlay.tokens || []).some(t => t.kind === "player" && t.label === label && !t.isRival);
                   return (
-                    <div key={p.num} onClick={() => togglePlayer(p)}
-                      style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 6px", borderRadius: 20, border: `1.5px solid ${on ? "#0057ff" : "#e0e4ed"}`, background: on ? "#eef3ff" : "white", cursor: "pointer" }}>
-                      <div style={{ width: 14, height: 14, borderRadius: "50%", background: p.color }} />
-                      <span style={{ fontSize: 10, fontWeight: 700 }}>{p.num}</span>
+                    <div key={p.id} onClick={() => togglePlayer(p, false)}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 8, border: `1.5px solid ${on ? "#0057ff" : "#e0e4ed"}`, background: on ? "#eef3ff" : "white", cursor: "pointer", transition: 'all .1s' }}>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: '#0057ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+                        {p.number || '?'}
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: on ? 700 : 500, flex: 1 }}>{p.name || 'Jugador'}</span>
+                      {on && <span style={{ fontSize: 9, color: '#0057ff', fontWeight: 700 }}>✓</span>}
                     </div>
                   );
                 })}
+              </div>
+              <div className="label" style={{ marginTop: 10 }}>Equipo Rival</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {Array.from({ length: 11 }).map((_, i) => {
+                  const num = String(i + 1);
+                  const on = (activePlay.tokens || []).some(t => t.kind === "player" && t.label === num && t.isRival);
+                  return (
+                    <div key={`rival-${i}`} onClick={() => togglePlayer({ number: i + 1 }, true)}
+                      style={{ width: 30, height: 30, borderRadius: "50%", border: `2px solid ${on ? "#ef4444" : "#fca5a5"}`, background: on ? "#ef4444" : "#fee2e2", display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, cursor: "pointer", color: on ? 'white' : '#ef4444' }}>
+                      {num}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 9, color: '#96a0b5', marginTop: 6, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6 }}>
+                💡 Doble clic o clic derecho sobre una ficha para eliminarla
               </div>
             </div>
 
@@ -320,6 +355,7 @@ export default function Tactica() {
               drawPt={drawPt}
               setDrawPt={setDrawPt}
               onPlace={isAdmin ? onPlace : undefined}
+              onDelete={isAdmin ? onDeleteToken : undefined}
             />
           ) : (
             <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)' }}>

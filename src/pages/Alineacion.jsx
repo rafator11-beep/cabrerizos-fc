@@ -272,7 +272,9 @@ export default function Alineacion() {
                 <select className="input-field" style={{ flex: 1, padding: '2px 4px', fontSize: 10 }}
                   value={s.player_id || ''} onChange={e => assignPlayer(i, e.target.value || null)}>
                   <option value="">-- Vacío --</option>
-                  {players.map(pl => <option key={pl.id} value={pl.id}>{pl.number ? `#${pl.number} ` : ''}{pl.name} {pl.surname?.[0]}.</option>)}
+                  {players
+                    .filter(pl => !assignedIds.has(pl.id) || s.player_id === pl.id)
+                    .map(pl => <option key={pl.id} value={pl.id}>{pl.number ? `#${pl.number} ` : ''}{pl.name} {pl.surname?.[0]}.</option>)}
                 </select>
                 {s.player_id && <button onClick={() => clearSlot(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 10 }}>✕</button>}
               </div>
