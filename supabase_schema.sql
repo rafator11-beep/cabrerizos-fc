@@ -290,7 +290,14 @@ INSERT INTO roster (name, surname, number, is_starter, position) VALUES
   ('Gabriel', 'Fraile Alguacil', 8, false, ''),
   ('Ricardo André', 'Romero Chiuz', 11, false, ''),
   ('David Mario', 'Hidalgo Vizcaíno', 12, false, ''),
-  ('Daniel', 'Fuentes Santana', 21, false, '')
+  ('Daniel', 'Fuentes Santana', 21, false, ''),
+  ('Jorge', 'Alonso Cordovilla', NULL, false, ''),
+  ('Héctor', 'Cáceres Marcos', NULL, false, ''),
+  ('Alejandro', 'Cuevas Gonzalo', NULL, false, ''),
+  ('Guillermo', 'Domínguez García', NULL, false, ''),
+  ('Álex', 'Hernández Nicolás', NULL, false, ''),
+  ('Carlos', 'Martín Silva', NULL, false, ''),
+  ('Hugo', 'Torres Salvado', NULL, false, '')
 ON CONFLICT DO NOTHING;
 
 -- ==========================================
