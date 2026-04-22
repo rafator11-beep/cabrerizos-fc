@@ -8,15 +8,26 @@ import Feedback from './pages/Feedback';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#111827', color: 'white' }}>
-        Cargando Cabrerizos FC...
+      <div style={{
+        display: 'flex',
+        height: '100vh',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#111827',
+        color: 'white',
+        flexDirection: 'column',
+        gap: 12
+      }}>
+        <div style={{ fontSize: 40 }}>⚽</div>
+        <div style={{ fontWeight: 700, fontSize: 16 }}>Cargando Cabrerizos F.C...</div>
+        <div style={{ color: 'rgba(255,255,255,.3)', fontSize: 11 }}>Conectando con el servidor</div>
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -28,8 +39,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <ProtectedRoute>
             <DashboardLayout />
@@ -39,8 +50,9 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="pizarra" element={<Pizarra />} />
         <Route path="feedback" element={<Feedback />} />
-        {/* Placeholder for other routes like sessions, physical, players */}
       </Route>
+      {/* Catch-all: redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
