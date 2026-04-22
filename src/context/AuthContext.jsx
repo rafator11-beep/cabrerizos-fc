@@ -77,8 +77,11 @@ export const AuthProvider = ({ children }) => {
       }
     });
     
-    // We will handle the profile creation in a trigger or manual insert if needed.
-    // Assuming the user needs to be inserted into 'profiles' after sign up:
+    // Friendly error for "user already registered"
+    if (error && error.message.includes('User already registered')) {
+      return { error: { message: 'Ese nombre ya está registrado. Por favor, inicia sesión.' } };
+    }
+    
     if (data?.user && !error) {
       const { error: profileError } = await supabase.from('profiles').insert([
         {
