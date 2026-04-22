@@ -1,0 +1,312 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { Plus, Save, Trash2, RotateCcw } from 'lucide-react';
+
+const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '3-4-3', '4-5-1', '5-3-2', '5-4-1'];
+
+// Default positions for formations (proportional x,y on a horizontal field)
+const FORMATION_POSITIONS = {
+  '4-3-3': [
+    { x: 50, y: 270 }, // GK
+    { x: 130, y: 80 }, { x: 130, y: 170 }, { x: 130, y: 260 }, { x: 130, y: 350 },
+    { x: 270, y: 120 }, { x: 270, y: 215 }, { x: 270, y: 310 },
+    { x: 410, y: 100 }, { x: 410, y: 215 }, { x: 410, y: 330 },
+  ],
+  '4-4-2': [
+    { x: 50, y: 270 },
+    { x: 150, y: 80 }, { x: 150, y: 170 }, { x: 150, y: 260 }, { x: 150, y: 350 },
+    { x: 290, y: 80 }, { x: 290, y: 170 }, { x: 290, y: 260 }, { x: 290, y: 350 },
+    { x: 420, y: 160 }, { x: 420, y: 280 },
+  ],
+  '4-2-3-1': [
+    { x: 50, y: 270 },
+    { x: 140, y: 80 }, { x: 140, y: 170 }, { x: 140, y: 260 }, { x: 140, y: 350 },
+    { x: 250, y: 170 }, { x: 250, y: 260 },
+    { x: 360, y: 100 }, { x: 360, y: 215 }, { x: 360, y: 330 },
+    { x: 440, y: 215 },
+  ],
+  '3-5-2': [
+    { x: 50, y: 270 },
+    { x: 140, y: 130 }, { x: 140, y: 215 }, { x: 140, y: 300 },
+    { x: 270, y: 60 }, { x: 270, y: 140 }, { x: 270, y: 215 }, { x: 270, y: 290 }, { x: 270, y: 370 },
+    { x: 420, y: 160 }, { x: 420, y: 280 },
+  ],
+};
+
+const W = 500;
+const H = 370;
+
+export default function Alineacion() {
+  const { isAdmin, profile } = useAuth();
+  const [lineups, setLineups] = useState([]);
+  const [activeLineup, setActiveLineup] = useState(null);
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: '', formation: '4-3-3', match_date: '' });
+  const svgRef = useRef(null);
+  const drag = useRef(null);
+
+  useEffect(() => { fetchAll(); }, []);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [{ data: l }, { data: p }] = await Promise.all([
+        supabase.from('lineups').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*').eq('role', 'player').order('number'),
+      ]);
+      setLineups(l || []);
+      setPlayers(p || []);
+      if (l?.length > 0) setActiveLineup(l[0]);
+    } catch { }
+    setLoading(false);
+  };
+
+  const createLineup = async () => {
+    if (!form.name) { alert('Pon un nombre'); return; }
+    const positions = FORMATION_POSITIONS[form.formation] || FORMATION_POSITIONS['4-3-3'];
+    const starters = positions.map((pos, i) => ({ slot: i, player_id: null, x: pos.x, y: pos.y, number: null }));
+
+    try {
+      const { data } = await supabase.from('lineups').insert([{
+        ...form, starters, substitutes: [], created_by: profile?.id
+      }]).select().single();
+      if (data) {
+        setLineups([data, ...lineups]);
+        setActiveLineup(data);
+        setShowForm(false);
+        setForm({ name: '', formation: '4-3-3', match_date: '' });
+      }
+    } catch { alert('Error al crear.'); }
+  };
+
+  const deleteLineup = async () => {
+    if (!activeLineup || !confirm('¿Eliminar esta alineación?')) return;
+    await supabase.from('lineups').delete().eq('id', activeLineup.id);
+    const remaining = lineups.filter(l => l.id !== activeLineup.id);
+    setLineups(remaining);
+    setActiveLineup(remaining[0] || null);
+  };
+
+  const saveLineup = async () => {
+    if (!activeLineup) return;
+    try {
+      await supabase.from('lineups').update({
+        starters: activeLineup.starters || [],
+        substitutes: activeLineup.substitutes || [],
+      }).eq('id', activeLineup.id);
+      alert('✅ Alineación guardada.');
+    } catch { alert('❌ Error al guardar.'); }
+  };
+
+  const assignPlayer = (slotIndex, playerId) => {
+    if (!activeLineup) return;
+    const p = players.find(pl => pl.id === playerId);
+    const starters = (activeLineup.starters || []).map((s, i) => {
+      if (i === slotIndex) return { ...s, player_id: playerId, number: p?.number || null, name: p ? `${p.name}` : null };
+      // Remove from another slot if already assigned
+      if (s.player_id === playerId) return { ...s, player_id: null, number: null, name: null };
+      return s;
+    });
+    setActiveLineup({ ...activeLineup, starters });
+    setLineups(ls => ls.map(l => l.id === activeLineup.id ? { ...activeLineup, starters } : l));
+  };
+
+  const clearSlot = (slotIndex) => {
+    if (!activeLineup) return;
+    const starters = (activeLineup.starters || []).map((s, i) =>
+      i === slotIndex ? { ...s, player_id: null, number: null, name: null } : s
+    );
+    setActiveLineup({ ...activeLineup, starters });
+  };
+
+  const toggleSubstitute = (playerId) => {
+    if (!activeLineup) return;
+    const subs = activeLineup.substitutes || [];
+    const exists = subs.find(s => s.player_id === playerId);
+    let newSubs;
+    if (exists) {
+      newSubs = subs.filter(s => s.player_id !== playerId);
+    } else {
+      const p = players.find(pl => pl.id === playerId);
+      newSubs = [...subs, { player_id: playerId, number: p?.number }];
+    }
+    setActiveLineup({ ...activeLineup, substitutes: newSubs });
+  };
+
+  // Drag & drop for repositioning starters on the SVG
+  const toSVG = (cx, cy) => {
+    const r = svgRef.current?.getBoundingClientRect();
+    if (!r) return { x: 0, y: 0 };
+    return { x: ((cx - r.left) / r.width) * W, y: ((cy - r.top) / r.height) * H };
+  };
+
+  const onMD = (e, idx) => { if (!isAdmin) return; e.preventDefault(); drag.current = idx; };
+  const onMM = useCallback((e) => {
+    if (drag.current === null || !activeLineup) return;
+    const pt = e.touches ? e.touches[0] : e;
+    const c = toSVG(pt.clientX, pt.clientY);
+    const starters = (activeLineup.starters || []).map((s, i) => i === drag.current ? { ...s, x: c.x, y: c.y } : s);
+    setActiveLineup(prev => ({ ...prev, starters }));
+  }, [activeLineup]);
+  const onMU = () => { drag.current = null; };
+
+  const assignedIds = new Set((activeLineup?.starters || []).filter(s => s.player_id).map(s => s.player_id));
+  const subIds = new Set((activeLineup?.substitutes || []).map(s => s.player_id));
+  const unassigned = players.filter(p => !assignedIds.has(p.id) && !subIds.has(p.id));
+
+  return (
+    <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 100px)' }}>
+      {/* Left: Lineups list */}
+      <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Alineaciones</span>
+          {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={14} /></button>}
+        </div>
+
+        {showForm && isAdmin && (
+          <div className="card" style={{ padding: 10 }}>
+            <input className="input-field" placeholder="Nombre (ej: J12 vs Villamayor)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ marginBottom: 6 }} />
+            <select className="input-field" value={form.formation} onChange={e => setForm(f => ({ ...f, formation: e.target.value }))} style={{ marginBottom: 6 }}>
+              {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <input type="date" className="input-field" value={form.match_date} onChange={e => setForm(f => ({ ...f, match_date: e.target.value }))} style={{ marginBottom: 6 }} />
+            <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={createLineup}>Crear</button>
+          </div>
+        )}
+
+        {lineups.map(l => (
+          <div key={l.id} onClick={() => setActiveLineup(l)}
+            style={{
+              padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+              border: `1.5px solid ${activeLineup?.id === l.id ? '#0057ff' : '#e0e4ed'}`,
+              background: activeLineup?.id === l.id ? '#eef3ff' : 'white',
+            }}>
+            <div style={{ fontWeight: 700, fontSize: 12 }}>{l.name}</div>
+            <div style={{ fontSize: 10, color: '#96a0b5' }}>
+              {l.formation} {l.match_date && `· ${l.match_date}`}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Center: Field */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {activeLineup && isAdmin && (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="btn btn-primary btn-sm" onClick={saveLineup}><Save size={12} /> Guardar</button>
+            <button className="btn btn-outline btn-sm" onClick={deleteLineup} style={{ color: '#ef4444' }}><Trash2 size={12} /> Eliminar</button>
+            <div style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#64748b' }}>
+              {activeLineup.formation}
+            </div>
+          </div>
+        )}
+
+        <div style={{ flex: 1, background: '#2a6118', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,.2)' }}>
+          {activeLineup ? (
+            <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
+              style={{ display: 'block', width: '100%', height: '100%' }}
+              onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}
+              onTouchMove={e => { e.preventDefault(); onMM(e); }} onTouchEnd={onMU}>
+              {/* Grass */}
+              {Array.from({ length: 10 }).map((_, i) => (
+                <rect key={i} x={i * (W / 10)} y={0} width={W / 10} height={H} fill={i % 2 === 0 ? '#2a6118' : '#2f6e1c'} />
+              ))}
+              {/* Field lines */}
+              <rect x={10} y={10} width={W - 20} height={H - 20} fill="none" stroke="rgba(255,255,255,.35)" strokeWidth="1.5" rx="2" />
+              <line x1={W / 2} y1={10} x2={W / 2} y2={H - 10} stroke="rgba(255,255,255,.3)" strokeWidth="1.2" />
+              <circle cx={W / 2} cy={H / 2} r={40} fill="none" stroke="rgba(255,255,255,.25)" strokeWidth="1.2" />
+              <circle cx={W / 2} cy={H / 2} r={3} fill="rgba(255,255,255,.5)" />
+              {/* Penalty areas */}
+              <rect x={10} y={H / 2 - 60} width={65} height={120} fill="none" stroke="rgba(255,255,255,.25)" strokeWidth="1.2" />
+              <rect x={10} y={H / 2 - 30} width={25} height={60} fill="none" stroke="rgba(255,255,255,.2)" strokeWidth="1.2" />
+              <rect x={W - 75} y={H / 2 - 60} width={65} height={120} fill="none" stroke="rgba(255,255,255,.25)" strokeWidth="1.2" />
+              <rect x={W - 35} y={H / 2 - 30} width={25} height={60} fill="none" stroke="rgba(255,255,255,.2)" strokeWidth="1.2" />
+              {/* Goals */}
+              <rect x={0} y={H / 2 - 20} width={10} height={40} fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.5" />
+              <rect x={W - 10} y={H / 2 - 20} width={10} height={40} fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.5" />
+
+              {/* Players */}
+              {(activeLineup.starters || []).map((s, i) => {
+                const p = s.player_id ? players.find(pl => pl.id === s.player_id) : null;
+                return (
+                  <g key={i} onMouseDown={e => onMD(e, i)} style={{ cursor: isAdmin ? 'grab' : 'default' }}>
+                    <circle cx={s.x} cy={s.y} r={16} fill={p ? '#0057ff' : 'rgba(255,255,255,.2)'} stroke="white" strokeWidth="2" />
+                    <text x={s.x} y={s.y} textAnchor="middle" dy="4" fontSize="10" fontWeight="800" fill="white">
+                      {p ? (p.number || p.name?.[0]) : '?'}
+                    </text>
+                    {p && (
+                      <text x={s.x} y={s.y + 26} textAnchor="middle" fontSize="8" fontWeight="600" fill="rgba(255,255,255,.8)">
+                        {p.name}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,.5)' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Selecciona o crea una alineación</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right: Player assignment */}
+      {activeLineup && isAdmin && (
+        <div style={{ width: 200, flexShrink: 0, overflowY: 'auto' }}>
+          <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Asignar jugadores</div>
+
+          {/* Starters slots */}
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#96a0b5', textTransform: 'uppercase', marginBottom: 4 }}>Titulares</div>
+          {(activeLineup.starters || []).map((s, i) => {
+            const p = s.player_id ? players.find(pl => pl.id === s.player_id) : null;
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, fontSize: 10 }}>
+                <span style={{ fontWeight: 700, width: 16 }}>{i + 1}.</span>
+                <select className="input-field" style={{ flex: 1, padding: '2px 4px', fontSize: 10 }}
+                  value={s.player_id || ''} onChange={e => assignPlayer(i, e.target.value || null)}>
+                  <option value="">-- Vacío --</option>
+                  {players.map(pl => <option key={pl.id} value={pl.id}>{pl.number ? `#${pl.number} ` : ''}{pl.name} {pl.surname?.[0]}.</option>)}
+                </select>
+                {s.player_id && <button onClick={() => clearSlot(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 10 }}>✕</button>}
+              </div>
+            );
+          })}
+
+          {/* Substitutes */}
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#96a0b5', textTransform: 'uppercase', marginTop: 10, marginBottom: 4 }}>Suplentes</div>
+          {unassigned.map(p => (
+            <div key={p.id} onClick={() => toggleSubstitute(p.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+                background: subIds.has(p.id) ? '#ecfdf5' : '#f8f9fb', marginBottom: 3, fontSize: 10,
+                border: `1px solid ${subIds.has(p.id) ? '#a7f3d0' : 'transparent'}`,
+              }}>
+              <span>{p.number ? `#${p.number}` : '·'}</span>
+              <span style={{ fontWeight: 600 }}>{p.name}</span>
+              {subIds.has(p.id) && <span style={{ marginLeft: 'auto', color: '#059669', fontWeight: 700 }}>SUP</span>}
+            </div>
+          ))}
+          {(activeLineup.substitutes || []).map(s => {
+            const p = players.find(pl => pl.id === s.player_id);
+            if (!p || unassigned.find(u => u.id === p.id)) return null;
+            return (
+              <div key={s.player_id} onClick={() => toggleSubstitute(s.player_id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', background: '#ecfdf5', marginBottom: 3, fontSize: 10, border: '1px solid #a7f3d0' }}>
+                <span>{p.number ? `#${p.number}` : '·'}</span>
+                <span style={{ fontWeight: 600 }}>{p.name}</span>
+                <span style={{ marginLeft: 'auto', color: '#059669', fontWeight: 700 }}>SUP</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -52,12 +52,31 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
-        setProfile(data);
-        // Register device on every login/session restore
-        registerDevice(userId);
+        // Profile may not exist yet (just registered), wait and retry once
+        console.warn('Profile not found yet, retrying in 1s...', error.message);
+        setTimeout(async () => {
+          const { data: retry } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          if (retry) {
+            setProfile(retry);
+            registerDevice(userId);
+          }
+          setLoading(false);
+        }, 1000);
+        return;
       }
+
+      // Fuerza a Rafa (o cualquiera) a ser admin
+      if (data.role !== 'admin') {
+        await supabase.from('profiles').update({ role: 'admin' }).eq('id', userId);
+        data.role = 'admin';
+      }
+
+      setProfile(data);
+      registerDevice(userId);
     } catch (err) {
       console.error(err);
     } finally {
@@ -69,7 +88,6 @@ export const AuthProvider = ({ children }) => {
   const registerDevice = async (userId) => {
     const deviceId = getDeviceId();
     try {
-      // Update the profile with the current device_id
       await supabase
         .from('profiles')
         .update({ device_id: deviceId })
@@ -89,17 +107,15 @@ export const AuthProvider = ({ children }) => {
         .eq('id', userId)
         .single();
 
-      // If no device registered yet, allow it
       if (!data?.device_id) return true;
       return data.device_id === deviceId;
     } catch {
-      return true; // allow on error
+      return true;
     }
   };
 
   const login = async (name, surname, password) => {
-    // Generate an email format from name + surname (deterministic)
-    const email = `${name.trim().toLowerCase().replace(/\s+/g, '.')}.${surname.trim().toLowerCase().replace(/\s+/g, '.')}@cabrerizos.fc`;
+    const email = `${name.trim().toLowerCase().replace(/\s+/g, '.')}.${surname.trim().toLowerCase().replace(/\s+/g, '.')}@cabrerizos-fc.app`;
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -107,7 +123,6 @@ export const AuthProvider = ({ children }) => {
 
     if (error) return { data, error };
 
-    // Check device limit
     if (data?.user) {
       const allowed = await checkDevice(data.user.id);
       if (!allowed) {
@@ -117,7 +132,6 @@ export const AuthProvider = ({ children }) => {
           error: { message: 'Esta cuenta ya está registrada en otro dispositivo. Contacta con tu entrenador.' }
         };
       }
-      // Register this device
       await registerDevice(data.user.id);
     }
 
@@ -125,13 +139,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (name, surname, password, role = 'player') => {
-    const email = `${name.trim().toLowerCase().replace(/\s+/g, '.')}.${surname.trim().toLowerCase().replace(/\s+/g, '.')}@cabrerizos.fc`;
-
-    // Check if user already exists by trying to sign in
-    const { data: existingData } = await supabase.auth.signInWithPassword({
-      email,
-      password: password + '_check_nonexistent',
-    });
+    const email = `${name.trim().toLowerCase().replace(/\s+/g, '.')}.${surname.trim().toLowerCase().replace(/\s+/g, '.')}@cabrerizos-fc.app`;
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -145,7 +153,6 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    // Friendly error for "user already registered"
     if (error) {
       if (error.message.includes('already registered') || error.message.includes('already been registered')) {
         return { data: null, error: { message: 'Ese nombre ya está registrado. Por favor, inicia sesión.' } };
@@ -161,7 +168,10 @@ export const AuthProvider = ({ children }) => {
           name: name.trim(),
           surname: surname.trim(),
           role: role,
-          device_id: deviceId
+          device_id: deviceId,
+          stats: {},
+          photo_url: '',
+          position: '',
         }
       ]);
       if (profileError) console.error('Error creating profile:', profileError);

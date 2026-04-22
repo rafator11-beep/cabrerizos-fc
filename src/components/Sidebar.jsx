@@ -1,11 +1,18 @@
 import { NavLink } from 'react-router-dom';
-import { Home, ClipboardList, PenTool, Dumbbell, Users, MessageSquare } from 'lucide-react';
+import { Home, PenTool, Dumbbell, Target, Users, LayoutGrid, MessageSquare } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
+  const { isAdmin } = useAuth();
+
   const NAV = [
-    { id: '', icon: <Home size={16} />, label: 'Inicio' },
-    { id: 'pizarra', icon: <PenTool size={16} />, label: 'Pizarra Táctica' },
-    { id: 'feedback', icon: <MessageSquare size={16} />, label: 'Feedback' },
+    { id: '', icon: <Home size={16} />, label: 'Inicio', show: true },
+    { id: 'entrenamientos', icon: <Dumbbell size={16} />, label: 'Entrenamientos', show: true },
+    { id: 'tactica', icon: <PenTool size={16} />, label: 'Táctica', show: true },
+    { id: 'tecnica', icon: <Target size={16} />, label: 'Técnica', show: true },
+    { id: 'plantilla', icon: <Users size={16} />, label: 'Plantilla', show: true },
+    { id: 'alineacion', icon: <LayoutGrid size={16} />, label: 'Alineación', show: true },
+    { id: 'feedback', icon: <MessageSquare size={16} />, label: 'Feedback', show: true },
   ];
 
   return (
@@ -27,7 +34,7 @@ export default function Sidebar() {
       </div>
       
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {NAV.map(item => (
+        {NAV.filter(item => item.show).map(item => (
           <NavLink 
             key={item.id} 
             to={`/${item.id}`}
@@ -44,6 +51,26 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Role indicator at the bottom */}
+      <div style={{ marginTop: 'auto', padding: '12px 13px', borderTop: '1px solid rgba(255,255,255,.08)' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 8px', borderRadius: 8,
+          background: isAdmin ? 'rgba(0,87,255,.15)' : 'rgba(5,150,105,.15)',
+        }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: isAdmin ? '#0057ff' : '#059669',
+          }} />
+          <span style={{
+            fontSize: 10, fontWeight: 700,
+            color: isAdmin ? '#60a5fa' : '#6ee7b7',
+          }}>
+            {isAdmin ? '🔑 Entrenador' : '⚽ Jugador'}
+          </span>
+        </div>
+      </div>
     </aside>
   );
 }

@@ -3,7 +3,11 @@ import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import DashboardLayout from './pages/DashboardLayout';
 import Home from './pages/Home';
-import Pizarra from './pages/Pizarra';
+import Tactica from './pages/Tactica';
+import Entrenamientos from './pages/Entrenamientos';
+import Tecnica from './pages/Tecnica';
+import Plantilla from './pages/Plantilla';
+import Alineacion from './pages/Alineacion';
 import Feedback from './pages/Feedback';
 
 function ProtectedRoute({ children }) {
@@ -48,8 +52,14 @@ export default function App() {
         }
       >
         <Route index element={<Home />} />
-        <Route path="pizarra" element={<Pizarra />} />
+        <Route path="entrenamientos" element={<Entrenamientos />} />
+        <Route path="tactica" element={<Tactica />} />
+        <Route path="tecnica" element={<Tecnica />} />
+        <Route path="plantilla" element={<Plantilla />} />
+        <Route path="alineacion" element={<Alineacion />} />
         <Route path="feedback" element={<Feedback />} />
+        {/* Legacy route redirect */}
+        <Route path="pizarra" element={<Navigate to="/tactica" replace />} />
       </Route>
       {/* Catch-all: redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
