@@ -114,8 +114,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (name, surname, password) => {
-    const email = `${name.trim().toLowerCase().replace(/\s+/g, '.')}.${surname.trim().toLowerCase().replace(/\s+/g, '.')}@cabrerizos-fc.app`;
+  const buildEmail = (name, surname, surname2 = '') => {
+    const n = name.trim().toLowerCase().replace(/\s+/g, '.');
+    const s = surname.trim().toLowerCase().replace(/\s+/g, '.');
+    const s2 = surname2 ? surname2.trim().toLowerCase().replace(/\s+/g, '.') : '';
+    return s2 ? `${n}.${s}.${s2}@cabrerizos-fc.app` : `${n}.${s}@cabrerizos-fc.app`;
+  };
+
+  const login = async (name, surname, password, surname2 = '') => {
+    const email = buildEmail(name, surname, surname2);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -138,8 +145,8 @@ export const AuthProvider = ({ children }) => {
     return { data, error };
   };
 
-  const register = async (name, surname, password, role = 'player') => {
-    const email = `${name.trim().toLowerCase().replace(/\s+/g, '.')}.${surname.trim().toLowerCase().replace(/\s+/g, '.')}@cabrerizos-fc.app`;
+  const register = async (name, surname, password, role = 'player', surname2 = '') => {
+    const email = buildEmail(name, surname, surname2);
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -162,11 +169,15 @@ export const AuthProvider = ({ children }) => {
 
     if (data?.user) {
       const deviceId = getDeviceId();
+      const fullSurname = surname2.trim()
+        ? `${surname.trim()} ${surname2.trim()}`
+        : surname.trim();
+
       const { error: profileError } = await supabase.from('profiles').insert([
         {
           id: data.user.id,
           name: name.trim(),
-          surname: surname.trim(),
+          surname: fullSurname,
           role: role,
           device_id: deviceId,
           stats: {},

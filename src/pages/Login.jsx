@@ -7,6 +7,7 @@ export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
+  const [surname2, setSurname2] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('player');
   const [error, setError] = useState('');
@@ -21,7 +22,8 @@ export default function Login() {
     setSuccess('');
     setLoading(true);
 
-    if (!name || !surname || !password) {
+    const needSurname2 = isRegistering;
+    if (!name || !surname || (needSurname2 && !surname2) || !password) {
       setError('Por favor, rellena todos los campos.');
       setLoading(false);
       return;
@@ -36,15 +38,16 @@ export default function Login() {
     try {
       let result;
       if (isRegistering) {
-        result = await register(name, surname, password, role);
+        result = await register(name, surname, password, role, surname2);
         if (!result.error) {
           setSuccess('¡Registrado correctamente! Ya puedes acceder.');
           setIsRegistering(false);
+          setSurname2('');
           setLoading(false);
           return;
         }
       } else {
-        result = await login(name, surname, password);
+        result = await login(name, surname, password, surname2);
       }
 
       if (result.error) {
@@ -155,16 +158,34 @@ export default function Login() {
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <label className="label">Apellidos</label>
+            <label className="label">Primer apellido</label>
             <div style={{ position: 'relative' }}>
               <User size={16} style={{ position: 'absolute', left: 10, top: 9, color: '#96a0b5' }} />
               <input
                 className="input-field"
                 style={{ paddingLeft: 34 }}
-                placeholder="Ej: Torres"
+                placeholder="Ej: García"
                 value={surname}
                 onChange={e => setSurname(e.target.value)}
                 autoComplete="family-name"
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label className="label">
+              Segundo apellido
+              {!isRegistering && <span style={{ color: '#96a0b5', fontWeight: 400, fontSize: 10 }}> (si tienes cuenta con él)</span>}
+            </label>
+            <div style={{ position: 'relative' }}>
+              <User size={16} style={{ position: 'absolute', left: 10, top: 9, color: '#96a0b5' }} />
+              <input
+                className="input-field"
+                style={{ paddingLeft: 34 }}
+                placeholder="Ej: López"
+                value={surname2}
+                onChange={e => setSurname2(e.target.value)}
+                autoComplete="additional-name"
               />
             </div>
           </div>
