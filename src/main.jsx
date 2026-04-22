@@ -8,7 +8,7 @@ import './index.css'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/cabrerizos-fc/">
         <App />
       </BrowserRouter>
     </AuthProvider>
