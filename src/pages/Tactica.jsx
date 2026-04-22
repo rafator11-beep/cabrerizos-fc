@@ -45,6 +45,17 @@ export default function Tactica() {
   const [drawPt, setDrawPt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState([]);
+  const [fieldView, setFieldView] = useState('full');
+
+  const VIEWS = [
+    { id: 'full',  label: '⬛ Campo completo' },
+    { id: 'left',  label: '◧ Mitad izquierda' },
+    { id: 'right', label: '◨ Mitad derecha' },
+  ];
+  const cycleView = () => {
+    const idx = VIEWS.findIndex(v => v.id === fieldView);
+    setFieldView(VIEWS[(idx + 1) % VIEWS.length].id);
+  };
 
   useEffect(() => {
     fetchPlays();
@@ -336,7 +347,13 @@ export default function Tactica() {
             <button onClick={undoArrow} className="btn btn-outline btn-sm"><Undo2 size={12}/> Deshacer</button>
             <button onClick={clearArrows} className="btn btn-outline btn-sm"><Trash2 size={12}/> Borrar flechas</button>
             <button onClick={deletePlay} className="btn btn-outline btn-sm" style={{ color: '#ef4444' }}><Trash2 size={12}/> Eliminar</button>
-            
+
+            <div style={{ width: 1, height: 20, background: "#e0e4ed", margin: "0 4px" }} />
+            <button onClick={cycleView} title="Cambiar vista del campo"
+              style={{ padding: '0 10px', height: 32, borderRadius: 6, border: '1.5px solid #e0e4ed', background: fieldView !== 'full' ? '#eef3ff' : '#f5f6f9', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: fieldView !== 'full' ? '#0057ff' : '#4a5568', whiteSpace: 'nowrap' }}>
+              {VIEWS.find(v => v.id === fieldView)?.label}
+            </button>
+
             <div style={{ marginLeft: 'auto' }}>
               <button onClick={savePlay} className="btn btn-primary btn-sm"><Save size={12}/> Guardar</button>
             </div>
@@ -345,8 +362,8 @@ export default function Tactica() {
         
         <div style={{ flex: 1, background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {activePlay ? (
-            <FieldCanvas 
-              tokens={activePlay.tokens || []} 
+            <FieldCanvas
+              tokens={activePlay.tokens || []}
               arrows={activePlay.arrows || []}
               onMove={isAdmin ? onMove : undefined}
               tool={isAdmin ? tool : 'move'}
@@ -356,6 +373,7 @@ export default function Tactica() {
               setDrawPt={setDrawPt}
               onPlace={isAdmin ? onPlace : undefined}
               onDelete={isAdmin ? onDeleteToken : undefined}
+              viewMode={fieldView}
             />
           ) : (
             <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)' }}>

@@ -257,8 +257,7 @@ export default function Login() {
         </div>
 
         <div style={{ marginTop: 14, fontSize: 9, color: '#c0c8d8', lineHeight: 1.4 }}>
-          ⚠ Una cuenta = un dispositivo.<br/>
-          Si cambias de móvil, avisa a tu entrenador.
+          Puedes acceder desde cualquier dispositivo con tu usuario y contraseña.
         </div>
       </div>
     </div>

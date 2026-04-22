@@ -11,7 +11,13 @@ const ARROW_TYPES = [
   { id: "free", label: "Libre", color: "#c084fc", dash: "8,4", w: 2 },
 ];
 
-export default function FieldCanvas({ tokens, arrows, onMove, tool, arrowType, onArrow, drawPt, setDrawPt, onPlace, onDelete }) {
+const VIEW_BOXES = {
+  full:  `0 0 ${W} ${H}`,
+  left:  `0 0 ${Math.round(W * 0.56)} ${H}`,
+  right: `${Math.round(W * 0.44)} 0 ${Math.round(W * 0.56)} ${H}`,
+};
+
+export default function FieldCanvas({ tokens, arrows, onMove, tool, arrowType, onArrow, drawPt, setDrawPt, onPlace, onDelete, viewMode = 'full' }) {
   const ref = useRef(null);
   const drag = useRef(null);
 
@@ -187,7 +193,7 @@ export default function FieldCanvas({ tokens, arrows, onMove, tool, arrowType, o
   };
 
   return (
-    <svg ref={ref} viewBox={`0 0 ${W} ${H}`}
+    <svg ref={ref} viewBox={VIEW_BOXES[viewMode] ?? VIEW_BOXES.full}
       style={{ display: "block", width: "100%", height: "100%", cursor: tool === "move" ? "default" : "crosshair" }}
       onMouseMove={onSvgMM} onMouseUp={onSvgMU} onMouseLeave={onSvgMU}
       onTouchMove={e => { e.preventDefault(); onSvgMM(e); }} onTouchEnd={onSvgMU}

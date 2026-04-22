@@ -69,10 +69,15 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Fuerza a Rafa (o cualquiera) a ser admin
-      if (data.role !== 'admin') {
+      // Solo Rafa e Ibon son entrenadores — cualquier otro queda como jugador
+      const ADMIN_NAMES = ['rafa', 'ibon'];
+      const isAuthorizedAdmin = ADMIN_NAMES.includes(data.name?.trim().toLowerCase());
+      if (isAuthorizedAdmin && data.role !== 'admin') {
         await supabase.from('profiles').update({ role: 'admin' }).eq('id', userId);
         data.role = 'admin';
+      } else if (!isAuthorizedAdmin && data.role === 'admin') {
+        await supabase.from('profiles').update({ role: 'player' }).eq('id', userId);
+        data.role = 'player';
       }
 
       setProfile(data);
@@ -97,23 +102,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Check if this device is the registered one
-  const checkDevice = async (userId) => {
-    const deviceId = getDeviceId();
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('device_id')
-        .eq('id', userId)
-        .single();
-
-      if (!data?.device_id) return true;
-      return data.device_id === deviceId;
-    } catch {
-      return true;
-    }
-  };
-
   const buildEmail = (name, surname, surname2 = '') => {
     const n = name.trim().toLowerCase().replace(/\s+/g, '.');
     const s = surname.trim().toLowerCase().replace(/\s+/g, '.');
@@ -123,29 +111,17 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (name, surname, password, surname2 = '') => {
     const email = buildEmail(name, surname, surname2);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) return { data, error };
-
-    if (data?.user) {
-      const allowed = await checkDevice(data.user.id);
-      if (!allowed) {
-        await supabase.auth.signOut();
-        return {
-          data: null,
-          error: { message: 'Esta cuenta ya está registrada en otro dispositivo. Contacta con tu entrenador.' }
-        };
-      }
-      await registerDevice(data.user.id);
-    }
-
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     return { data, error };
   };
 
+  const ADMIN_NAMES = ['rafa', 'ibon'];
+
   const register = async (name, surname, password, role = 'player', surname2 = '') => {
+    if (role === 'admin' && !ADMIN_NAMES.includes(name.trim().toLowerCase())) {
+      return { data: null, error: { message: 'Solo los entrenadores autorizados pueden registrarse como Entrenador. Contacta con Rafa.' } };
+    }
+
     const email = buildEmail(name, surname, surname2);
 
     const { data, error } = await supabase.auth.signUp({
