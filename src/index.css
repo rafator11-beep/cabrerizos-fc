@@ -1,0 +1,111 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  background: #f0f2f5;
+  color: #111;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15); 
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.3); 
+}
+
+/* Base utility classes from previous prototype */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all .12s;
+}
+
+.btn-sm {
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
+.btn-primary {
+  background: #0057ff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #0045cc;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #ccd0db;
+  color: #4a5568;
+}
+
+.btn-outline:hover {
+  background: #f5f6f9;
+}
+
+.card {
+  background: white;
+  border: 1px solid #e2e6ed;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.input-field {
+  background: #f5f6f9;
+  border: 1.5px solid #e0e4ed;
+  border-radius: 7px;
+  padding: 7px 10px;
+  color: #111;
+  outline: none;
+  width: 100%;
+  font-size: 12px;
+  transition: border-color .15s;
+}
+
+.input-field:focus {
+  border-color: #0057ff;
+}
+
+.label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: #4a5568;
+  display: block;
+  margin-bottom: 3px;
+}
