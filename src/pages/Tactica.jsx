@@ -810,7 +810,7 @@ const lastAutosavedRef = useRef('');
   }
 
   // ── Mobile layout (player-first) ──────────────────────────────────────
-  if (isMobile && !isAdmin) {
+ if (isMobile && isPlayerMode) {
     const activeLabel = (CATEGORIES.find(c => c.id === activeCategory)?.label) || 'Categoría';
 
     return (
