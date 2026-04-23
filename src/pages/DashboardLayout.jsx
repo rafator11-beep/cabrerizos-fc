@@ -4,12 +4,19 @@ import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Menu, Eye } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import MobilePlayerShell from '../components/MobilePlayerShell';
 
 export default function DashboardLayout() {
   const { profile, isRealAdmin, viewAsPlayer, setViewAsPlayer, logout } = useAuth();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isPlayerMode = !isRealAdmin || viewAsPlayer;
+
+  // Mobile-first shell for players: bottom nav + sheet menu, no sidebar compression.
+  if (isMobile && isPlayerMode) {
+    return <MobilePlayerShell />;
+  }
 
   const switchToPlayer = () => {
     setViewAsPlayer(true);

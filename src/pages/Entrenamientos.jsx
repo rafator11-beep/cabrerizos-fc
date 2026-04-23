@@ -184,7 +184,7 @@ export default function Entrenamientos() {
       return (
         <div>
           {/* Back button */}
-          <button onClick={() => setMobileView('list')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#0057ff', fontWeight: 700, fontSize: 13, marginBottom: 12, padding: 0 }}>
+          <button onClick={() => setMobileView('list')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#0b63ff', fontWeight: 950, fontSize: 14, marginBottom: 12, padding: 0 }}>
             <ChevronLeft size={18} /> Entrenamientos
           </button>
           {showDistributor ? (
@@ -221,11 +221,11 @@ export default function Entrenamientos() {
 
     // Mobile list view
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Entrenamientos</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontWeight: 950, fontSize: 18, color: '#0f172a' }}>Entrenamientos</span>
           <button className={isAdmin ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm"} onClick={() => setShowForm(!showForm)}>
-            <Plus size={14} /> {isAdmin ? 'Nuevo' : 'Sugerir Sesión'}
+            <Plus size={14} /> {isAdmin ? 'Nuevo' : 'Sugerir'}
           </button>
         </div>
 
@@ -244,7 +244,7 @@ export default function Entrenamientos() {
         )}
 
         {trainings.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 30, color: '#96a0b5', fontSize: 12 }}>
+          <div className="card" style={{ textAlign: 'center', padding: 22, color: '#64748b', fontSize: 13 }}>
             No hay entrenamientos aún.
             {isAdmin && <div style={{ marginTop: 6 }}>Pulsa <strong>Nuevo</strong> para crear uno.</div>}
           </div>
@@ -253,18 +253,18 @@ export default function Entrenamientos() {
           return (
             <div key={t.id} onClick={() => selectTraining(t)}
               style={{
-                padding: "12px 14px", borderRadius: 10,
-                border: `1.5px solid ${activeTraining?.id === t.id ? "#0057ff" : "#e0e4ed"}`,
-                background: activeTraining?.id === t.id ? "#eef3ff" : "white",
+                padding: "14px 16px", borderRadius: 16,
+                border: `2px solid ${activeTraining?.id === t.id ? "#0b63ff" : "#e2e8f0"}`,
+                background: activeTraining?.id === t.id ? "rgba(11,99,255,.08)" : "white",
                 cursor: "pointer", transition: 'all .12s'
               }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{t.title}</div>
-                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 10, background: `${int.color}15`, color: int.color, fontWeight: 700 }}>{int.icon} {int.label}</span>
+                <div style={{ fontWeight: 950, fontSize: 15, color: '#0f172a' }}>{t.title}</div>
+                <span style={{ fontSize: 11, padding: '4px 10px', borderRadius: 999, background: `${int.color}18`, color: int.color, fontWeight: 900 }}>{int.icon} {int.label}</span>
               </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 10, color: '#96a0b5' }}>
-                <span><Calendar size={10} style={{ verticalAlign: 'middle' }} /> {t.date}</span>
-                <span><Clock size={10} style={{ verticalAlign: 'middle' }} /> {t.duration}min</span>
+              <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 12, color: '#475569', flexWrap: 'wrap', fontWeight: 700 }}>
+                <span><Calendar size={12} style={{ verticalAlign: 'middle' }} /> {t.date}</span>
+                <span><Clock size={12} style={{ verticalAlign: 'middle' }} /> {t.duration} min</span>
                 <span>📝 {(t.exercises || []).length} ejercicios</span>
               </div>
             </div>

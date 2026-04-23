@@ -49,6 +49,25 @@ body {
   -webkit-font-smoothing: antialiased; 
 }
 
+/* Mobile readability baseline */
+@media (max-width: 640px) {
+  body {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+  .btn {
+    min-height: 42px;
+    border-radius: 12px;
+  }
+  .btn-sm {
+    min-height: 36px;
+    font-size: 13px;
+  }
+  .card {
+    border-radius: 16px;
+  }
+}
+
 ::-webkit-scrollbar { 
   display: none; 
 }

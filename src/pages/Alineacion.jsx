@@ -278,7 +278,12 @@ const toggleSubstitute = (playerId) => {
             {(activeLineup.starters || []).map((s, i) => {
               const p = s.player_id ? players.find(pl => pl.id === s.player_id) : null;
               if (!p?.photo_url) return null;
-              return <clipPath key={`clip-${i}`} id={`clip-alin-${i}`}><circle cx={s.x} cy={s.y} r={15} /></clipPath>;
+              // "Cromito" clip: rounded-rect portrait (not circular)
+              return (
+                <clipPath key={`clip-${i}`} id={`clip-alin-${i}`}>
+                  <rect x={s.x - 14} y={s.y - 18} width={28} height={36} rx={8} ry={8} />
+                </clipPath>
+              );
             })}
           </defs>
           {(activeLineup.starters || []).map((s, i) => {
@@ -286,28 +291,38 @@ const toggleSubstitute = (playerId) => {
             const hasPhoto = !!p?.photo_url;
             return (
               <g key={i} onMouseDown={e => onMD(e, i)} onTouchStart={e => onMD(e, i)} style={{ cursor: isAdmin ? 'grab' : 'default' }}>
-                <circle cx={s.x} cy={s.y} r={17}
-                  fill={hasPhoto ? '#1a1a2e' : (p ? '#0057ff' : 'rgba(255,255,255,.2)')}
-                  stroke="white" strokeWidth="2.5" />
                 {hasPhoto ? (
-                  <image href={p.photo_url} x={s.x - 15} y={s.y - 15} width={30} height={30} clipPath={`url(#clip-alin-${i})`} preserveAspectRatio="xMidYMid slice" />
+                  <g>
+                    <rect x={s.x - 15} y={s.y - 19} width={30} height={38} rx={9} ry={9} fill="#0b1220" stroke="white" strokeWidth="2.5" opacity={0.95} />
+                    <image href={p.photo_url} x={s.x - 14} y={s.y - 18} width={28} height={36} clipPath={`url(#clip-alin-${i})`} preserveAspectRatio="xMidYMid slice" />
+                    <rect x={s.x - 15} y={s.y + 6} width={30} height={13} rx={0} ry={0} fill="rgba(0,0,0,.45)" />
+                    <text x={s.x} y={s.y + 16} textAnchor="middle" fontSize="7.5" fontWeight="900" fill="white">
+                      {p.number ? `#${p.number}` : (p.name || '').slice(0, 1)}
+                    </text>
+                  </g>
+                ) : (
+                  <circle cx={s.x} cy={s.y} r={17}
+                    fill={p ? '#0057ff' : 'rgba(255,255,255,.2)'}
+                    stroke="white" strokeWidth="2.5" />
+                )}
+                {hasPhoto ? (
+                  null
                 ) : (
                   <text x={s.x} y={s.y} textAnchor="middle" dy="4" fontSize="11" fontWeight="800" fill="white">
                     {p ? (p.number || p.name?.[0]) : '?'}
                   </text>
                 )}
-                {hasPhoto && <circle cx={s.x} cy={s.y} r={17} fill="none" stroke="white" strokeWidth="2.5" />}
                 {hasPhoto && p?.number && (
                   <g>
                     <circle cx={s.x + 11} cy={s.y - 11} r={7} fill="#0057ff" stroke="white" strokeWidth="1.5" />
                     <text x={s.x + 11} y={s.y - 11} textAnchor="middle" dy="3.5" fontSize="7" fontWeight="800" fill="white">{p.number}</text>
                   </g>
                 )}
-                {p && (
-                  <text x={s.x} y={s.y + 27} textAnchor="middle" fontSize="8" fontWeight="700" fill="rgba(255,255,255,.9)">
-                    {p.name}
-                  </text>
-                )}
+                 {p && !hasPhoto && (
+                   <text x={s.x} y={s.y + 27} textAnchor="middle" fontSize="8" fontWeight="700" fill="rgba(255,255,255,.9)">
+                     {p.name}
+                   </text>
+                 )}
               </g>
             );
           })}

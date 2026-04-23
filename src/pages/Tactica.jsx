@@ -86,6 +86,8 @@ export default function Tactica() {
   const [players, setPlayers] = useState([]);
   const [fieldView, setFieldView] = useState('full');
  const [mobileTab, setMobileTab] = useState('jugadas');// 'jugadas' | 'campo'
+  const [playerSheetOpen, setPlayerSheetOpen] = useState(true);
+  const [playerCatOpen, setPlayerCatOpen] = useState(false);
 
   // Pilar 1 — Live indicator for realtime updates
   const [liveFlash, setLiveFlash] = useState(false);
@@ -807,7 +809,125 @@ const lastAutosavedRef = useRef('');
     );
   }
 
-  // ── Mobile layout ─────────────────────────────────────────────────────
+  // ── Mobile layout (player-first) ──────────────────────────────────────
+  if (isMobile && !isAdmin) {
+    const activeLabel = (CATEGORIES.find(c => c.id === activeCategory)?.label) || 'Categoría';
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* Selector bar */}
+        <div className="card" style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => setPlayerSheetOpen(true)}
+            style={{ flex: 1, justifyContent: 'space-between' }}
+          >
+            <span style={{ fontWeight: 950 }}>
+              {activePlay ? activePlay.name : 'Elige jugada'}
+            </span>
+            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 900 }}>{activeLabel}</span>
+          </button>
+          <button className="btn btn-outline btn-sm" onClick={() => setShowHeatmap(h => !h)} title="Mapa de calor">
+            <Thermometer size={14} />
+          </button>
+        </div>
+
+        {/* Field first */}
+        <div style={{ aspectRatio: fieldRatio, width: '100%', background: "#2a6118", borderRadius: 16, overflow: "hidden", boxShadow: "0 6px 26px rgba(0,0,0,.25)", position: 'relative' }}>
+          {showHeatmap ? (
+            <Heatmap plays={allPlays} includeArrows />
+          ) : activePlay ? (
+            <FieldCanvas
+              ref={fieldSvgRef}
+              tokens={currentStep.tokens || []}
+              arrows={currentStep.arrows || []}
+              zones={currentStep.zones || []}
+              tool="move"
+              arrowType={effectiveArrowType}
+              drawPt={drawPt}
+              setDrawPt={setDrawPt}
+              viewMode={fieldView}
+              animating={animating}
+              selectedTokenId={selectedTokenId} onSelectToken={setSelectedTokenId}
+              myRosterId={myRosterId}
+              presentationMode={true}
+            />
+          ) : (
+            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.78)', padding: '48px 20px' }}>
+              <div style={{ fontSize: 42, marginBottom: 10 }}>📋</div>
+              <div style={{ fontSize: 15, fontWeight: 950, marginBottom: 6 }}>Elige una jugada</div>
+              <div style={{ fontSize: 12, opacity: 0.95 }}>Pulsa “Elige jugada” para ver categorías y jugadas.</div>
+            </div>
+          )}
+        </div>
+
+        <Timeline />
+
+        {/* Bottom sheet selector */}
+        {playerSheetOpen && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+            <div onClick={() => setPlayerSheetOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.55)' }} />
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, background: 'white', borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden', maxHeight: '78vh', boxShadow: '0 -24px 70px rgba(0,0,0,.35)' }}>
+              <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid #e2e8f0' }}>
+                <div style={{ width: 36, height: 4, borderRadius: 999, background: '#e2e8f0', margin: '0 auto 8px' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 950, color: '#0f172a', flex: 1 }}>Jugadas</div>
+                  <button className="btn btn-outline btn-sm" onClick={() => setPlayerSheetOpen(false)}>Listo</button>
+                </div>
+              </div>
+              <div style={{ padding: 14, overflowY: 'auto' }}>
+                <button className="btn btn-outline btn-sm" onClick={() => setPlayerCatOpen(o => !o)} style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontWeight: 950 }}>{activeLabel}</span>
+                  <span style={{ fontSize: 12, opacity: 0.7 }}>Cambiar</span>
+                </button>
+
+                {playerCatOpen && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                    {CATEGORIES.map(c => (
+                      <button
+                        key={c.id}
+                        className="btn btn-outline"
+                        onClick={() => { setActiveCategory(c.id); setActivePlay(null); setActiveStepIndex(0); setPlayerCatOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span style={{ fontWeight: 950 }}>{c.label}</span>
+                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 900 }}>
+                          {allPlays.filter(p => p.category === c.id).length}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {loading ? (
+                    <div className="card" style={{ padding: 16, textAlign: 'center', color: '#64748b' }}>Cargando...</div>
+                  ) : plays.length === 0 ? (
+                    <div className="card" style={{ padding: 16, textAlign: 'center', color: '#64748b' }}>No hay jugadas en esta categoría.</div>
+                  ) : (
+                    plays.map(p => (
+                      <button
+                        key={p.id}
+                        className="btn btn-outline"
+                        onClick={() => { setActivePlay(p); setActiveStepIndex(0); setPlayerSheetOpen(false); }}
+                        style={{ justifyContent: 'space-between', padding: '12px 14px', borderColor: activePlay?.id === p.id ? catInfo.color : '#dbe1ea' }}
+                      >
+                        <span style={{ fontWeight: 950, color: '#0f172a' }}>{p.name}</span>
+                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 900 }}>{(p.steps || []).length} pasos</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div style={{ paddingBottom: `calc(12px + env(safe-area-inset-bottom))` }} />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Mobile layout (admin) ─────────────────────────────────────────────
   if (isMobile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
