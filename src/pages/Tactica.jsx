@@ -36,7 +36,17 @@ const VECTOR_COLORS = [
   { id: '#ef4444', label: 'Defensa', hex: '#ef4444' },
   { id: '#fbbf24', label: 'Pase Clave', hex: '#fbbf24' },
 ];
-
+const QUICK_TOOL_BTNS = [
+  { id: 'player', label: 'X', title: 'Jugador' },
+  { id: 'ball', label: '⚽', title: 'Balón' },
+  { id: 'cone', label: '🟧', title: 'Cono' },
+  { id: 'cone_blue', label: '🔷', title: 'Cono azul' },
+  { id: 'goal', label: '🥅', title: 'Portería' },
+  { id: 'mannequin', label: '🧍', title: 'Maniquí' },
+  { id: 'pole', label: '🚩', title: 'Poste' },
+  { id: 'ladder', label: '🪜', title: 'Escalera' },
+  { id: 'hurdle', label: '▭', title: 'Valla' },
+];
 const VECTOR_STYLES = [
   { id: 'solid',   label: 'Pase corto',    icon: <Minus size={14} /> },
   { id: 'curved',  label: 'Centro/Largo',  icon: <Spline size={14} /> },
