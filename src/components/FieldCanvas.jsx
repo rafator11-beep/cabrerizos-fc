@@ -111,11 +111,25 @@ const FieldCanvas = forwardRef(({
       onDoubleClick: (e) => { e.stopPropagation(); onDelete?.(t.id); }
     };
 
+    const posX = t.x || 0;
+    const posY = t.y || 0;
+
     switch(t.kind) {
       case 'ball': return (
-        <g key={t.id} transform={`translate(${t.x || 0}, ${t.y || 0})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
           <circle r={8} fill="white" stroke="#333" strokeWidth="1" />
           <path d="M -4 -4 L 4 4 M -4 4 L 4 -4" stroke="#333" strokeWidth="0.5" />
+        </g>
+      );
+      case 'cone': return (
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+          <path d="M -8 8 L 0 -8 L 8 8 Z" fill="#f59e0b" stroke="white" strokeWidth="1" />
+        </g>
+      );
+      case 'mannequin': return (
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+          <rect x={-6} y={-10} width={12} height={20} rx={4} fill="#8b5cf6" stroke="white" strokeWidth="1" />
+          <circle cy={-14} r={4} fill="#8b5cf6" stroke="white" strokeWidth="1" />
         </g>
       );
       case 'player': {
@@ -124,7 +138,7 @@ const FieldCanvas = forwardRef(({
         const tokenColor = isRival ? '#ef4444' : (t.color || '#0057ff');
         
         return (
-          <g key={t.id} transform={`translate(${t.x || 0}, ${t.y || 0})`} {...ev} className="cursor-grab active:cursor-grabbing">
+          <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
             <defs>
               <filter id={`f-shadow-${t.id}`}><feDropShadow dx="0" dy="1.5" stdDeviation="2.5" floodOpacity="0.3"/></filter>
               <clipPath id={`f-clip-${t.id}`}><circle r={17}/></clipPath>
