@@ -41,7 +41,8 @@ const QUICK_EXERCISES = [
 const EXERCISES_CATALOG = (Array.isArray(EXERCISES_DATA) ? EXERCISES_DATA : []).map(decorateExercise);
 
 export default function Entrenamientos() {
-  const { isAdmin, profile, user } = useAuth();
+ const { isAdmin, isRealAdmin, viewAsPlayer, profile, user } = useAuth();
+const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
   const [trainings, setTrainings] = useState([]);
   const [activeTraining, setActiveTraining] = useState(null);
