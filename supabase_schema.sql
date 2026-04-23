@@ -316,11 +316,11 @@ INSERT INTO roster (name, surname, number, is_starter, position, stats) VALUES
   -- SUPLENTES / CADETE (sin ficha federativa completa)
   ('Héctor', 'Cáceres Marcos', 7, false, '',
     '{"goals":0,"assists":0,"yellow_cards":1,"red_cards":0,"matches_played":11,"starts":8,"sub_appearances":3,"minutes":816,"rating":4.73,"birth_date":"2008-11-29","age":17,"laterality":"","club_origin":""}'::jsonb),
-  ('Alejandro', 'Cuevas Gonzalo', NULL, false, '',
+  ('Alejandro', 'Cuevas Gonzalo', 8, false, '',
     '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
-  ('Daniel', 'Fuentes Santana', NULL, false, '',
+  ('Daniel', 'Fuentes Santana', 68, false, '',
     '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
-  ('Hugo', 'Torres Salvado', NULL, false, '',
+  ('Hugo', 'Torres Salvado', 33, false, '',
     '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb)
 ON CONFLICT DO NOTHING;
 

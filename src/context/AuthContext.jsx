@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [viewAsPlayer, setViewAsPlayer] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -191,7 +192,10 @@ export const AuthProvider = ({ children }) => {
       register,
       logout,
       resetPlayerDevice,
-      isAdmin: profile?.role === 'admin'
+      isAdmin: profile?.role === 'admin' && !viewAsPlayer,
+      isRealAdmin: profile?.role === 'admin',
+      viewAsPlayer,
+      setViewAsPlayer
     }}>
       {children}
     </AuthContext.Provider>

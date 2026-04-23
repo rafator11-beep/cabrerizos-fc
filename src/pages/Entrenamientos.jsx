@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Calendar, Clock, Star, Trash2, Save, X, Image as ImageIcon } from 'lucide-react';
-import EXERCISE_IMAGES from '../exercises.json';
+import { Plus, Calendar, Clock, Star, Trash2, Save, X, Image as ImageIcon, ChevronLeft, Users } from 'lucide-react';
+import EXERCISES_DATA from '../exercises_data.json';
+import { useIsMobile } from '../hooks/useIsMobile';
+import SessionDistributor from '../components/SessionDistributor';
 
 const INTENSITIES = [
   { id: 'baja', label: 'Baja', color: '#10b981', icon: '🟢' },
@@ -27,6 +29,7 @@ const QUICK_EXERCISES = [
 
 export default function Entrenamientos() {
   const { isAdmin, profile, user } = useAuth();
+  const isMobile = useIsMobile();
   const [trainings, setTrainings] = useState([]);
   const [activeTraining, setActiveTraining] = useState(null);
   const [players, setPlayers] = useState([]);
@@ -34,8 +37,9 @@ export default function Entrenamientos() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showScoring, setShowScoring] = useState(false);
+  const [showDistributor, setShowDistributor] = useState(false);
+  const [mobileView, setMobileView] = useState('list'); // 'list' | 'detail'
 
-  // Form state
   const [form, setForm] = useState({
     title: '', date: new Date().toISOString().split('T')[0],
     duration: 90, intensity: 'media', objective: '', exercises: [], notes: ''
@@ -76,6 +80,8 @@ export default function Entrenamientos() {
     setActiveTraining(t);
     fetchScores(t.id);
     setShowScoring(false);
+    setShowDistributor(false);
+    if (isMobile) setMobileView('detail');
   };
 
   const addExercise = () => {
@@ -104,12 +110,34 @@ export default function Entrenamientos() {
     } catch { alert('Error al crear el entrenamiento.'); }
   };
 
+  const suggestTraining = async () => {
+    if (!form.title) { alert('Pon un título a tu propuesta'); return; }
+    try {
+      const payload = {
+        title: form.title,
+        duration: form.duration,
+        intensity: form.intensity,
+        objective: form.objective,
+        exercises: form.exercises
+      };
+      await supabase.from('feedback').insert([{
+        player_id: profile?.id,
+        type: 'training_proposal',
+        content: JSON.stringify(payload)
+      }]);
+      alert('Propuesta de sesión enviada al cuerpo técnico con éxito.');
+      setShowForm(false);
+      setForm({ title: '', date: new Date().toISOString().split('T')[0], duration: 90, intensity: 'media', objective: '', exercises: [], notes: '' });
+    } catch { alert('Error al enviar la propuesta.'); }
+  };
+
   const deleteTraining = async (id) => {
     if (!confirm('¿Eliminar este entrenamiento?')) return;
     await supabase.from('trainings').delete().eq('id', id);
     const remaining = trainings.filter(t => t.id !== id);
     setTrainings(remaining);
     setActiveTraining(remaining[0] || null);
+    if (isMobile) setMobileView('list');
   };
 
   const saveScore = async (playerId, score, comment) => {
@@ -128,97 +156,107 @@ export default function Entrenamientos() {
   };
 
   const intInfo = (id) => INTENSITIES.find(i => i.id === id) || INTENSITIES[1];
-
-  // Player view: only show their own scores
   const myScores = !isAdmin ? scores.filter(s => s.player_id === user?.id) : [];
 
   if (loading) return <div style={{ padding: 20, color: '#96a0b5' }}>Cargando entrenamientos...</div>;
 
+  // ── Mobile: only show one panel at a time ──────────────────────────────
+  if (isMobile) {
+    if (mobileView === 'detail' && activeTraining) {
+      return (
+        <div>
+          {/* Back button */}
+          <button onClick={() => setMobileView('list')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#0057ff', fontWeight: 700, fontSize: 13, marginBottom: 12, padding: 0 }}>
+            <ChevronLeft size={18} /> Entrenamientos
+          </button>
+          {showDistributor ? (
+            <SessionDistributor 
+              activeTraining={activeTraining} 
+              players={players} 
+              onClose={() => setShowDistributor(false)} 
+              onSave={(updated) => {
+                setActiveTraining(updated);
+                setTrainings(trainings.map(t => t.id === updated.id ? updated : t));
+                setShowDistributor(false);
+              }}
+            />
+          ) : (
+            <TrainingDetail
+              activeTraining={activeTraining}
+              isAdmin={isAdmin}
+              showScoring={showScoring}
+              setShowScoring={setShowScoring}
+              showDistributor={showDistributor}
+              setShowDistributor={setShowDistributor}
+              scores={scores}
+              players={players}
+              myScores={myScores}
+              saveScore={saveScore}
+              deleteTraining={deleteTraining}
+              intInfo={intInfo}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // Mobile list view
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Entrenamientos</span>
+          <button className={isAdmin ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm"} onClick={() => setShowForm(!showForm)}>
+            <Plus size={14} /> {isAdmin ? 'Nuevo' : 'Sugerir Sesión'}
+          </button>
+        </div>
+
+        {showForm && <TrainingForm form={form} setForm={setForm} exerciseInput={exerciseInput} setExerciseInput={setExerciseInput} showGallery={showGallery} setShowGallery={setShowGallery} addExercise={addExercise} removeExercise={removeExercise} createTraining={isAdmin ? createTraining : suggestTraining} setShowForm={setShowForm} isSuggestion={!isAdmin} />}
+
+        {trainings.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 30, color: '#96a0b5', fontSize: 12 }}>
+            No hay entrenamientos aún.
+            {isAdmin && <div style={{ marginTop: 6 }}>Pulsa <strong>Nuevo</strong> para crear uno.</div>}
+          </div>
+        ) : trainings.map(t => {
+          const int = intInfo(t.intensity);
+          return (
+            <div key={t.id} onClick={() => selectTraining(t)}
+              style={{
+                padding: "12px 14px", borderRadius: 10,
+                border: `1.5px solid ${activeTraining?.id === t.id ? "#0057ff" : "#e0e4ed"}`,
+                background: activeTraining?.id === t.id ? "#eef3ff" : "white",
+                cursor: "pointer", transition: 'all .12s'
+              }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{t.title}</div>
+                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 10, background: `${int.color}15`, color: int.color, fontWeight: 700 }}>{int.icon} {int.label}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 10, color: '#96a0b5' }}>
+                <span><Calendar size={10} style={{ verticalAlign: 'middle' }} /> {t.date}</span>
+                <span><Clock size={10} style={{ verticalAlign: 'middle' }} /> {t.duration}min</span>
+                <span>📝 {(t.exercises || []).length} ejercicios</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ── Desktop: side-by-side layout ──────────────────────────────────────
   return (
     <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 100px)' }}>
       {/* Left: Training List */}
       <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Entrenamientos</span>
-          {isAdmin && (
-            <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
-              <Plus size={14} /> Nuevo
-            </button>
-          )}
+          <button className={isAdmin ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm"} onClick={() => setShowForm(!showForm)}>
+            <Plus size={14} /> {isAdmin ? 'Nuevo' : 'Sugerir Sesión'}
+          </button>
         </div>
 
-        {/* Create form */}
-        {showForm && isAdmin && (
-          <div className="card" style={{ padding: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Nuevo Entrenamiento</div>
-            <input className="input-field" placeholder="Título (ej: Técnica + Rondo)" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={{ marginBottom: 6 }} />
-            <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-              <input type="date" className="input-field" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={{ flex: 1 }} />
-              <input type="number" className="input-field" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: parseInt(e.target.value) || 90 }))} style={{ width: 70 }} placeholder="min" />
-            </div>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-              {INTENSITIES.map(int => (
-                <button key={int.id} onClick={() => setForm(f => ({ ...f, intensity: int.id }))}
-                  style={{ flex: 1, padding: '4px 6px', borderRadius: 6, border: `1.5px solid ${form.intensity === int.id ? int.color : '#e0e4ed'}`, background: form.intensity === int.id ? `${int.color}15` : 'white', cursor: 'pointer', fontSize: 10, fontWeight: 600, color: form.intensity === int.id ? int.color : '#64748b' }}>
-                  {int.icon} {int.label}
-                </button>
-              ))}
-            </div>
-            <textarea className="input-field" placeholder="Objetivo del entrenamiento" value={form.objective} onChange={e => setForm(f => ({ ...f, objective: e.target.value }))} rows={2} style={{ marginBottom: 6, resize: 'vertical' }} />
+        {showForm && <TrainingForm form={form} setForm={setForm} exerciseInput={exerciseInput} setExerciseInput={setExerciseInput} showGallery={showGallery} setShowGallery={setShowGallery} addExercise={addExercise} removeExercise={removeExercise} createTraining={isAdmin ? createTraining : suggestTraining} setShowForm={setShowForm} isSuggestion={!isAdmin} />}
 
-            {/* Quick-add exercises */}
-            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#4a5568' }}>⚡ Añadir rápido:</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 8 }}>
-              {QUICK_EXERCISES.map(ex => (
-                <button key={ex.name}
-                  onClick={() => setForm(f => ({ ...f, exercises: [...f.exercises, { ...ex, id: Date.now() + Math.random(), image: '' }] }))}
-                  style={{ fontSize: 9, padding: '3px 7px', borderRadius: 10, border: '1px solid #e0e4ed', background: '#f8f9fb', cursor: 'pointer', fontWeight: 600, color: '#334155' }}>
-                  {ex.name} ({ex.duration}')
-                </button>
-              ))}
-            </div>
-
-            {/* Exercises list */}
-            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#4a5568' }}>📝 Ejercicios del día:</div>
-            {form.exercises.map(ex => (
-              <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, marginBottom: 3, fontSize: 11 }}>
-                {ex.image && <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
-                <span style={{ flex: 1, fontSize: 10 }}>{ex.name} <span style={{ color: '#0057ff', fontWeight: 700 }}>({ex.duration}min)</span></span>
-                <button onClick={() => removeExercise(ex.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><X size={12} /></button>
-              </div>
-            ))}
-
-            {/* Custom exercise input */}
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 3, marginTop: 4 }}>O añade uno personalizado:</div>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-              {exerciseInput.image && (
-                <img src={import.meta.env.BASE_URL + 'exercises/' + exerciseInput.image} alt="selected" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
-              )}
-              <button className="btn btn-outline btn-sm" onClick={() => setShowGallery(!showGallery)} style={{ padding: '0 8px' }} title="Imagen">
-                <ImageIcon size={14} />
-              </button>
-              <input className="input-field" placeholder="Nombre ejercicio" value={exerciseInput.name} onChange={e => setExerciseInput(ei => ({ ...ei, name: e.target.value }))} style={{ flex: 1 }} />
-              <input type="number" className="input-field" value={exerciseInput.duration} onChange={e => setExerciseInput(ei => ({ ...ei, duration: parseInt(e.target.value) || 15 }))} style={{ width: 50 }} />
-              <button className="btn btn-outline btn-sm" onClick={addExercise}>+</button>
-            </div>
-            {showGallery && (
-              <div style={{ background: '#f8f9fb', padding: 8, borderRadius: 8, marginBottom: 6, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
-                {EXERCISE_IMAGES.map(img => (
-                  <img key={img} src={import.meta.env.BASE_URL + 'exercises/' + img} alt="ejercicio"
-                    onClick={() => { setExerciseInput(ei => ({ ...ei, image: img })); setShowGallery(false); }}
-                    style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, cursor: 'pointer', border: exerciseInput.image === img ? '2.5px solid #0057ff' : '1.5px solid transparent' }} />
-                ))}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={createTraining}><Save size={12} /> Crear</button>
-              <button className="btn btn-outline btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
-            </div>
-          </div>
-        )}
-
-        {/* Training list */}
         {trainings.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 30, color: '#96a0b5', fontSize: 12 }}>
             No hay entrenamientos aún.
@@ -251,124 +289,33 @@ export default function Entrenamientos() {
       {/* Right: Training Detail */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {activeTraining ? (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{activeTraining.title}</h2>
-                <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 12, color: '#64748b' }}>
-                  <span>📅 {activeTraining.date}</span>
-                  <span>⏱️ {activeTraining.duration} min</span>
-                  <span>{intInfo(activeTraining.intensity).icon} {intInfo(activeTraining.intensity).label}</span>
-                </div>
-                {activeTraining.objective && (
-                  <div style={{ marginTop: 8, padding: '8px 12px', background: '#f0f9ff', borderRadius: 8, borderLeft: '3px solid #0057ff', fontSize: 12, color: '#334155' }}>
-                    🎯 <strong>Objetivo:</strong> {activeTraining.objective}
-                  </div>
-                )}
-              </div>
-              {isAdmin && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowScoring(!showScoring)}>
-                    <Star size={12} /> {showScoring ? 'Ocultar puntuación' : 'Puntuar jugadores'}
-                  </button>
-                  <button className="btn btn-outline btn-sm" onClick={() => deleteTraining(activeTraining.id)} style={{ color: '#ef4444' }}>
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Exercises */}
-            {(activeTraining.exercises || []).length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>📝 Ejercicios del día</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {(activeTraining.exercises || []).map((ex, i) => (
-                    <div key={i} style={{ padding: '12px 16px', background: 'white', borderRadius: 12, border: '1px solid #e2e6ed', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: '#0057ff', flexShrink: 0 }}>
-                          {i + 1}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 800, fontSize: 14, color: '#1e293b' }}>{ex.name}</div>
-                          {ex.description && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{ex.description}</div>}
-                        </div>
-                        <div style={{ fontSize: 12, color: '#0057ff', fontWeight: 700, padding: '4px 10px', background: '#eef3ff', borderRadius: 8 }}>{ex.duration} min</div>
-                      </div>
-                      {ex.image && (
-                        <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e6ed', background: '#f8f9fb' }}>
-                          <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block' }} />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTraining.notes && (
-              <div style={{ padding: '10px 14px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fde68a', fontSize: 12, marginBottom: 20 }}>
-                📌 <strong>Notas:</strong> {activeTraining.notes}
-              </div>
-            )}
-
-            {/* Scoring Panel (Admin) */}
-            {showScoring && isAdmin && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14 }}>⭐ Puntuaciones del entrenamiento</div>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>
-                    {scores.length}/{players.length} evaluados
-                  </div>
-                </div>
-                {/* Summary bar */}
-                {scores.length > 0 && (
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#f0f9ff', borderRadius: 10, border: '1px solid #bae6fd' }}>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: '#0057ff' }}>{(scores.reduce((s, r) => s + r.score, 0) / scores.length).toFixed(1)}</div>
-                      <div style={{ fontSize: 9, color: '#64748b' }}>Media grupo</div>
-                    </div>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981' }}>{Math.max(...scores.map(s => s.score))}</div>
-                      <div style={{ fontSize: 9, color: '#64748b' }}>Mejor nota</div>
-                    </div>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: '#f59e0b' }}>{scores.filter(s => s.score >= 7).length}</div>
-                      <div style={{ fontSize: 9, color: '#64748b' }}>Con nota ≥7</div>
-                    </div>
-                  </div>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {players.map(player => {
-                    const existing = scores.find(s => s.player_id === player.id);
-                    return (
-                      <PlayerScoreRow
-                        key={player.id}
-                        player={player}
-                        existing={existing}
-                        onSave={saveScore}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Player view: show my scores */}
-            {!isAdmin && myScores.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>⭐ Tu puntuación</div>
-                {myScores.map(s => (
-                  <div key={s.id} style={{ padding: '12px 16px', background: 'white', borderRadius: 10, border: '1px solid #e2e6ed' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ fontSize: 28, fontWeight: 800, color: s.score >= 7 ? '#10b981' : s.score >= 5 ? '#f59e0b' : '#ef4444' }}>{s.score}/10</div>
-                      {s.comment && <div style={{ fontSize: 12, color: '#64748b' }}>💬 {s.comment}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          showDistributor ? (
+            <SessionDistributor 
+              activeTraining={activeTraining} 
+              players={players} 
+              onClose={() => setShowDistributor(false)} 
+              onSave={(updated) => {
+                setActiveTraining(updated);
+                setTrainings(trainings.map(t => t.id === updated.id ? updated : t));
+                setShowDistributor(false);
+              }}
+            />
+          ) : (
+            <TrainingDetail
+              activeTraining={activeTraining}
+              isAdmin={isAdmin}
+              showScoring={showScoring}
+              setShowScoring={setShowScoring}
+              showDistributor={showDistributor}
+              setShowDistributor={setShowDistributor}
+              scores={scores}
+              players={players}
+              myScores={myScores}
+              saveScore={saveScore}
+              deleteTraining={deleteTraining}
+              intInfo={intInfo}
+            />
+          )
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#96a0b5' }}>
             <div style={{ textAlign: 'center' }}>
@@ -377,6 +324,197 @@ export default function Entrenamientos() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Extracted components ───────────────────────────────────────────────
+
+function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, showDistributor, setShowDistributor, scores, players, myScores, saveScore, deleteTraining, intInfo }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{activeTraining.title}</h2>
+          <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 12, color: '#64748b', flexWrap: 'wrap' }}>
+            <span>📅 {activeTraining.date}</span>
+            <span>⏱️ {activeTraining.duration} min</span>
+            <span>{intInfo(activeTraining.intensity).icon} {intInfo(activeTraining.intensity).label}</span>
+          </div>
+          {activeTraining.objective && (
+            <div style={{ marginTop: 8, padding: '8px 12px', background: '#f0f9ff', borderRadius: 8, borderLeft: '3px solid #0057ff', fontSize: 12, color: '#334155' }}>
+              🎯 <strong>Objetivo:</strong> {activeTraining.objective}
+            </div>
+          )}
+        </div>
+        {isAdmin && (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowDistributor(true)}>
+              <Users size={12} /> Grupos
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={() => setShowScoring(!showScoring)}>
+              <Star size={12} /> {showScoring ? 'Ocultar' : 'Puntuar'}
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={() => deleteTraining(activeTraining.id)} style={{ color: '#ef4444' }}>
+              <Trash2 size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {(activeTraining.exercises || []).length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>📝 Ejercicios del día</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(activeTraining.exercises || []).map((ex, i) => (
+              <div key={i} style={{ padding: '12px 16px', background: 'white', borderRadius: 12, border: '1px solid #e2e6ed', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: '#0057ff', flexShrink: 0 }}>
+                    {i + 1}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#1e293b' }}>{ex.name}</div>
+                    {ex.description && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{ex.description}</div>}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#0057ff', fontWeight: 700, padding: '4px 10px', background: '#eef3ff', borderRadius: 8 }}>{ex.duration} min</div>
+                </div>
+                {ex.image && (
+                  <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e6ed', background: '#f8f9fb' }}>
+                    <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block' }} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTraining.notes && (
+        <div style={{ padding: '10px 14px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fde68a', fontSize: 12, marginBottom: 20 }}>
+          📌 <strong>Notas:</strong> {activeTraining.notes}
+        </div>
+      )}
+
+      {showScoring && isAdmin && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>⭐ Puntuaciones del entrenamiento</div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>{scores.length}/{players.length} evaluados</div>
+          </div>
+          {scores.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#f0f9ff', borderRadius: 10, border: '1px solid #bae6fd' }}>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#0057ff' }}>{(scores.reduce((s, r) => s + r.score, 0) / scores.length).toFixed(1)}</div>
+                <div style={{ fontSize: 9, color: '#64748b' }}>Media grupo</div>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981' }}>{Math.max(...scores.map(s => s.score))}</div>
+                <div style={{ fontSize: 9, color: '#64748b' }}>Mejor nota</div>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#f59e0b' }}>{scores.filter(s => s.score >= 7).length}</div>
+                <div style={{ fontSize: 9, color: '#64748b' }}>Con nota ≥7</div>
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {players.map(player => {
+              const existing = scores.find(s => s.player_id === player.id);
+              return <PlayerScoreRow key={player.id} player={player} existing={existing} onSave={saveScore} />;
+            })}
+          </div>
+        </div>
+      )}
+
+      {!isAdmin && myScores.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>⭐ Tu puntuación</div>
+          {myScores.map(s => (
+            <div key={s.id} style={{ padding: '12px 16px', background: 'white', borderRadius: 10, border: '1px solid #e2e6ed' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: s.score >= 7 ? '#10b981' : s.score >= 5 ? '#f59e0b' : '#ef4444' }}>{s.score}/10</div>
+                {s.comment && <div style={{ fontSize: 12, color: '#64748b' }}>💬 {s.comment}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGallery, setShowGallery, addExercise, removeExercise, createTraining, setShowForm, isSuggestion }) {
+  return (
+    <div className="card" style={{ padding: 12 }}>
+      <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Nuevo Entrenamiento</div>
+      <input className="input-field" placeholder="Título (ej: Técnica + Rondo)" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={{ marginBottom: 6 }} />
+      <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+        <input type="date" className="input-field" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={{ flex: 1 }} />
+        <input type="number" className="input-field" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: parseInt(e.target.value) || 90 }))} style={{ width: 70 }} placeholder="min" />
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+        {INTENSITIES.map(int => (
+          <button key={int.id} onClick={() => setForm(f => ({ ...f, intensity: int.id }))}
+            style={{ flex: 1, padding: '4px 6px', borderRadius: 6, border: `1.5px solid ${form.intensity === int.id ? int.color : '#e0e4ed'}`, background: form.intensity === int.id ? `${int.color}15` : 'white', cursor: 'pointer', fontSize: 10, fontWeight: 600, color: form.intensity === int.id ? int.color : '#64748b' }}>
+            {int.icon} {int.label}
+          </button>
+        ))}
+      </div>
+      <textarea className="input-field" placeholder="Objetivo del entrenamiento" value={form.objective} onChange={e => setForm(f => ({ ...f, objective: e.target.value }))} rows={2} style={{ marginBottom: 6, resize: 'vertical' }} />
+
+      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#4a5568' }}>⚡ Añadir rápido:</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 8 }}>
+        {QUICK_EXERCISES.map(ex => (
+          <button key={ex.name}
+            onClick={() => setForm(f => ({ ...f, exercises: [...f.exercises, { ...ex, id: Date.now() + Math.random(), image: '' }] }))}
+            style={{ fontSize: 9, padding: '3px 7px', borderRadius: 10, border: '1px solid #e0e4ed', background: '#f8f9fb', cursor: 'pointer', fontWeight: 600, color: '#334155' }}>
+            {ex.name} ({ex.duration}')
+          </button>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#4a5568' }}>📝 Ejercicios del día:</div>
+      {form.exercises.map(ex => (
+        <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, marginBottom: 3, fontSize: 11 }}>
+          {ex.image && <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
+          <span style={{ flex: 1, fontSize: 10 }}>{ex.name} <span style={{ color: '#0057ff', fontWeight: 700 }}>({ex.duration}min)</span></span>
+          <button onClick={() => removeExercise(ex.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><X size={12} /></button>
+        </div>
+      ))}
+
+      <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 3, marginTop: 4 }}>O añade uno personalizado:</div>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+        {exerciseInput.image && (
+          <img src={import.meta.env.BASE_URL + 'exercises/' + exerciseInput.image} alt="selected" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+        )}
+        <button className="btn btn-outline btn-sm" onClick={() => setShowGallery(!showGallery)} style={{ padding: '0 8px' }} title="Imagen">
+          <ImageIcon size={14} />
+        </button>
+        <input className="input-field" placeholder="Nombre ejercicio" value={exerciseInput.name} onChange={e => setExerciseInput(ei => ({ ...ei, name: e.target.value }))} style={{ flex: 1 }} />
+        <input type="number" className="input-field" value={exerciseInput.duration} onChange={e => setExerciseInput(ei => ({ ...ei, duration: parseInt(e.target.value) || 15 }))} style={{ width: 50 }} />
+        <button className="btn btn-outline btn-sm" onClick={addExercise}>+</button>
+      </div>
+      {showGallery && (
+        <div style={{ background: '#f8f9fb', padding: 8, borderRadius: 8, marginBottom: 6, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+          {EXERCISES_DATA.map(exData => (
+            <div key={exData.id} style={{ position: 'relative', cursor: 'pointer' }} onClick={() => { 
+              setExerciseInput(ei => ({ ...ei, image: exData.image, name: exData.name, description: exData.description || '', duration: exData.duration || 15 })); 
+              setShowGallery(false); 
+            }}>
+              <img src={import.meta.env.BASE_URL + 'exercises/' + exData.image} alt={exData.name}
+                style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: exerciseInput.image === exData.image ? '2.5px solid #0057ff' : '1.5px solid transparent' }} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 8, padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderBottomLeftRadius: 6, borderBottomRightRadius: 6 }}>
+                {exData.name}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={createTraining}><Save size={12} /> {isSuggestion ? 'Enviar Propuesta' : 'Crear'}</button>
+        <button className="btn btn-outline btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
       </div>
     </div>
   );
@@ -395,20 +533,19 @@ function PlayerScoreRow({ player, existing, onSave }) {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 10, border: `1.5px solid ${saved ? '#a7f3d0' : '#e2e6ed'}`, transition: 'border-color .2s' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'white', borderRadius: 10, border: `1.5px solid ${saved ? '#a7f3d0' : '#e2e6ed'}`, transition: 'border-color .2s', flexWrap: 'wrap' }}>
       <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#0057ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
         {player.number || player.name?.[0]}
       </div>
-      <div style={{ minWidth: 100 }}>
+      <div style={{ minWidth: 90 }}>
         <div style={{ fontWeight: 700, fontSize: 12 }}>{player.name} {player.surname}</div>
         <div style={{ fontSize: 10, color: '#96a0b5' }}>{player.position || 'Sin posición'}</div>
       </div>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Stars (half = 1 star out of 5 mapped from 1-10) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 160 }}>
         <div style={{ display: 'flex', gap: 2 }}>
           {[2, 4, 6, 8, 10].map(v => (
             <span key={v} onClick={() => { setLocalScore(v); setSaved(false); }}
-              style={{ fontSize: 18, cursor: 'pointer', color: localScore >= v ? '#f59e0b' : '#d1d5db', transition: 'color .1s' }}>
+              style={{ fontSize: 20, cursor: 'pointer', color: localScore >= v ? '#f59e0b' : '#d1d5db', transition: 'color .1s' }}>
               ★
             </span>
           ))}
@@ -418,15 +555,17 @@ function PlayerScoreRow({ player, existing, onSave }) {
         </div>
         <input type="range" min="1" max="10" value={localScore}
           onChange={e => { setLocalScore(parseInt(e.target.value)); setSaved(false); }}
-          style={{ width: 90, accentColor: scoreColor }} />
+          style={{ flex: 1, minWidth: 60, accentColor: scoreColor }} />
       </div>
-      <input className="input-field" placeholder="Comentario del entrenador..."
-        value={localComment} onChange={e => { setLocalComment(e.target.value); setSaved(false); }}
-        style={{ width: 180, fontSize: 10 }} />
-      <button className="btn btn-sm" onClick={handleSave}
-        style={{ background: saved ? '#10b981' : '#0057ff', color: 'white', border: 'none', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', flexShrink: 0 }}>
-        {saved ? '✓' : <Save size={12} />}
-      </button>
+      <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+        <input className="input-field" placeholder="Comentario del entrenador..."
+          value={localComment} onChange={e => { setLocalComment(e.target.value); setSaved(false); }}
+          style={{ flex: 1, fontSize: 12 }} />
+        <button className="btn btn-sm" onClick={handleSave}
+          style={{ background: saved ? '#10b981' : '#0057ff', color: 'white', border: 'none', borderRadius: 7, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
+          {saved ? '✓' : <Save size={12} />}
+        </button>
+      </div>
     </div>
   );
 }

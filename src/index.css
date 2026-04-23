@@ -114,3 +114,29 @@ input, textarea, select {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ── Mobile overrides ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
+  .input-field,
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Larger touch targets */
+  .btn {
+    padding: 9px 14px;
+    min-height: 40px;
+  }
+
+  .btn-sm {
+    padding: 7px 11px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+
+  /* Prevent text overflow in cards */
+  .card {
+    min-width: 0;
+  }
+}

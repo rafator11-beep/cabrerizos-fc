@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MessageSquare, Dumbbell, Send } from 'lucide-react';
+import { MessageSquare, Dumbbell, Send, Calendar } from 'lucide-react';
 
 export default function Feedback() {
   const { profile, isAdmin } = useAuth();
@@ -147,14 +147,37 @@ export default function Feedback() {
                 </div>
                 <span style={{ 
                   display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                  background: f.type === 'exercise_suggestion' ? '#eef3ff' : '#ecfdf5',
-                  color: f.type === 'exercise_suggestion' ? '#0057ff' : '#059669'
+                  background: f.type === 'exercise_suggestion' ? '#eef3ff' : f.type === 'training_proposal' ? '#fef3c7' : '#ecfdf5',
+                  color: f.type === 'exercise_suggestion' ? '#0057ff' : f.type === 'training_proposal' ? '#d97706' : '#059669'
                 }}>
-                  {f.type === 'exercise_suggestion' ? <><Dumbbell size={10}/> Sugerencia</> : <><MessageSquare size={10}/> Comentario</>}
+                  {f.type === 'exercise_suggestion' ? <><Dumbbell size={10}/> Sugerencia</> : f.type === 'training_proposal' ? <><Calendar size={10}/> Sesión Propuesta</> : <><MessageSquare size={10}/> Comentario</>}
                 </span>
               </div>
               <div style={{ color: '#111', fontSize: 13, lineHeight: '1.5' }}>
-                {f.content}
+                {f.type === 'training_proposal' ? (
+                  <div style={{ background: '#f8f9fb', padding: 12, borderRadius: 8, border: '1px solid #e2e6ed' }}>
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(f.content);
+                        return (
+                          <>
+                            <div style={{ fontWeight: 800, color: '#0057ff', marginBottom: 2 }}>{parsed.title} ({parsed.duration} min)</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Intensidad: {parsed.intensity.toUpperCase()}</div>
+                            {parsed.objective && <div style={{ fontSize: 12, marginBottom: 8, fontStyle: 'italic' }}>"{parsed.objective}"</div>}
+                            <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}>Ejercicios propuestos ({parsed.exercises?.length}):</div>
+                            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: '#4a5568' }}>
+                              {parsed.exercises?.map((ex, i) => <li key={i}>{ex.name} ({ex.duration} min)</li>)}
+                            </ul>
+                          </>
+                        );
+                      } catch {
+                        return f.content;
+                      }
+                    })()}
+                  </div>
+                ) : (
+                  f.content
+                )}
               </div>
             </div>
           ))}
