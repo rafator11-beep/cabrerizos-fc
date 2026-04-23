@@ -16,6 +16,7 @@ const ARROW_CONFIGS = {
 
 const VIEW_BOXES = {
   full: `0 0 ${W} ${H}`,
+  half: `${Math.round(W * 0.17)} 0 ${Math.round(W * 0.66)} ${H}`,
   left: `0 0 ${Math.round(W * 0.7)} ${H}`,
   right: `${Math.round(W * 0.3)} 0 ${Math.round(W * 0.7)} ${H}`,
   corner_r: `${Math.round(W * 0.3)} ${Math.round(H * 0.01)} ${Math.round(W * 0.7)} ${Math.round(H * 0.98)}`,
@@ -284,7 +285,7 @@ const FieldCanvas = forwardRef(function FieldCanvas({
     const isSelected = selectedTokenId === token.id;
     const isMyRole = myRosterId && token.assigned_player_id === myRosterId;
     const crowded = crowdedPlayerIds.has(token.id);
-    const tokenScale = viewMode === 'full' ? 0.76 : 0.6;
+    const tokenScale = viewMode === 'full' ? 0.68 : viewMode === 'half' ? 0.62 : 0.56;
     const transitionStyle = animating ? { transition: 'transform 0.65s cubic-bezier(.4,0,.2,1)' } : {};
     const eventProps = {
       transform: `translate(${token.x}, ${token.y}) scale(${tokenScale})`,
@@ -293,7 +294,6 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       onTouchStart: (e) => onTokenTouchStart(e, token),
       onClick: (e) => {
         e.stopPropagation();
-        if (presentationMode) return;
         onSelectToken?.(isSelected ? null : token.id);
       },
       onContextMenu: (e) => onTokenDelete(e, token.id),
@@ -308,11 +308,15 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       const labelText = shortPlayerName(token.name, crowded);
       const labelWidth = Math.max(16, labelText.length * 5 + 8);
       const placeLabelAbove = hashId(token.id) % 2 === 0;
-      const labelY = crowded ? (placeLabelAbove ? -21 : 23) : 22;
-      const labelRectY = crowded ? (placeLabelAbove ? -29 : 15) : 14;
+      const labelY = crowded ? (placeLabelAbove ? -19 : 21) : 20;
+      const labelRectY = crowded ? (placeLabelAbove ? -27 : 13) : 12;
+      const hasInstruction = !!(token.tactical_note || token.tactical_role);
 
       return (
         <g key={token.id} {...eventProps}>
+          {(token.tactical_note || token.tactical_role) ? (
+            <title>{[token.tactical_role, token.tactical_note].filter(Boolean).join(' - ')}</title>
+          ) : null}
           {selectionRing}
           {isMyRole && (
             <circle cx={0} cy={0} r={18} fill="rgba(251,191,36,.22)" stroke="#fbbf24" strokeWidth="1.6" strokeDasharray="4,2">
@@ -320,14 +324,15 @@ const FieldCanvas = forwardRef(function FieldCanvas({
               <animate attributeName="opacity" values="1;0.38;1" dur="1.5s" repeatCount="indefinite" />
             </circle>
           )}
-          <circle cx={0} cy={0} r={11.5} fill={token.color || '#e74c3c'} stroke={isMyRole ? '#fbbf24' : 'white'} strokeWidth={isMyRole ? '2.2' : '1.9'} />
-          <text x={0} y={0} textAnchor="middle" dy="2.8" fontSize="9" fontWeight="900" fill="white">
+          <circle cx={0} cy={0} r={10.2} fill={token.color || '#e74c3c'} stroke={isMyRole ? '#fbbf24' : 'white'} strokeWidth={isMyRole ? '2' : '1.8'} />
+          {hasInstruction && <circle cx={8.5} cy={-8.5} r={3.1} fill="#fbbf24" stroke="#0f172a" strokeWidth="1.2" />}
+          <text x={0} y={0} textAnchor="middle" dy="2.5" fontSize="8.2" fontWeight="900" fill="white">
             {token.label}
           </text>
           {labelText && (
             <g style={{ pointerEvents: 'none' }}>
-              <rect x={-labelWidth / 2} y={labelRectY} width={labelWidth} height={10} rx={5} fill="rgba(15,23,42,.82)" stroke="rgba(255,255,255,.12)" strokeWidth="0.5" />
-              <text x={0} y={labelY} textAnchor="middle" fontSize="6.1" fontWeight="900" fill="rgba(255,255,255,.97)" letterSpacing="0.15">
+              <rect x={-labelWidth / 2} y={labelRectY} width={labelWidth} height={9.5} rx={4.75} fill="rgba(15,23,42,.82)" stroke="rgba(255,255,255,.12)" strokeWidth="0.5" />
+              <text x={0} y={labelY} textAnchor="middle" fontSize="5.8" fontWeight="900" fill="rgba(255,255,255,.97)" letterSpacing="0.12">
                 {labelText}
               </text>
             </g>

@@ -55,6 +55,21 @@ const VECTOR_STYLES = [
   { id: 'shoot',   label: 'Tiro/Remate',   icon: <Target size={14} /> },
 ];
 
+const DARK_PANEL = {
+  background: 'linear-gradient(180deg, rgba(15,23,42,0.96), rgba(2,6,23,0.96))',
+  border: '1px solid rgba(148,163,184,0.16)',
+  boxShadow: '0 24px 60px rgba(2,6,23,0.32)',
+  borderRadius: 24,
+  color: '#e2e8f0',
+};
+
+const DARK_CARD = {
+  background: 'rgba(15,23,42,0.72)',
+  border: '1px solid rgba(148,163,184,0.12)',
+  borderRadius: 18,
+  color: '#e2e8f0',
+};
+
 export default function Tactica() {
   const { isAdmin, profile } = useAuth();
   const isMobile = useIsMobile();
@@ -104,11 +119,10 @@ const lastAutosavedRef = useRef('');
   const { queueUpdate } = useOfflineSync();
 
   const VIEWS = [
-    { id: 'full',     label: '⬛ Campo completo',   ratio: '550/366' },
-    { id: 'left',     label: '◧ Mitad izquierda',  ratio: '308/366' },
-    { id: 'right',    label: '◨ Mitad derecha',    ratio: '308/366' },
-    { id: 'corner_r', label: '↘️ Área Derecha',    ratio: '247/293' },
-    { id: 'corner_l', label: '↙️ Área Izquierda',  ratio: '247/293' },
+    { id: 'full', label: 'Campo completo', ratio: '550/366' },
+    { id: 'half', label: 'Medio campo', ratio: '360/366' },
+    { id: 'left', label: 'Lado izquierdo', ratio: '385/366' },
+    { id: 'right', label: 'Lado derecho', ratio: '385/366' },
   ];
 
   // Aspect ratio of the current view so the container never distorts the field
@@ -182,11 +196,11 @@ const lastAutosavedRef = useRef('');
     fetchPlays();
     fetchPlayers();
 
-    // Auto-adjust field view based on category for optimal tactical design
+    // Suggest an initial focus, but keep the 4 admin view modes predictable.
     if (activeCategory === 'corners' || activeCategory === 'free_kicks_for') {
-      setFieldView('corner_r');
+      setFieldView('right');
     } else if (activeCategory === 'build_up' || activeCategory === 'free_kicks_against') {
-      setFieldView('corner_l');
+      setFieldView('left');
     } else {
       setFieldView('full');
     }
@@ -211,7 +225,12 @@ const lastAutosavedRef = useRef('');
         const safePlays = data.map(p => {
           const isMigrated = p.tokens && Array.isArray(p.tokens) && p.tokens.length > 0 && p.tokens[0].step !== undefined;
           if (!isMigrated) {
-            return { ...p, tokens: [{ step: 1, tokens: p.tokens || [], arrows: p.arrows || [], zones: p.zones || [] }] };
+            return { ...p, tokens: [{ step: 1, tokens: p.tokens || [], arrows: p.arrows || [], zones: p.zones || [], playComment: '' }] };
+          }
+          if (typeof p.tokens?.[0]?.playComment === 'undefined') {
+            const next = [...p.tokens];
+            next[0] = { ...next[0], playComment: '' };
+            return { ...p, tokens: next };
           }
           return p;
         });
@@ -245,6 +264,21 @@ const lastAutosavedRef = useRef('');
     activeCategory === 'free_kicks_against' ||
     (currentStep.tokens || []).length >= 8 ||
     (currentStep.arrows || []).length >= 4;
+  const selectedToken = (currentStep.tokens || []).find(t => t.id === selectedTokenId) || null;
+  const selectedPlayerToken = selectedToken?.kind === 'player' ? selectedToken : null;
+  const playComment = steps[0]?.playComment || '';
+  const squadTokens = (currentStep.tokens || []).filter(t => t.kind === 'player' && !t.isRival);
+  const rivalTokens = (currentStep.tokens || []).filter(t => t.kind === 'player' && t.isRival);
+  const myInstructionToken = !isAdmin
+    ? (currentStep.tokens || []).find(t => t.kind === 'player' && t.assigned_player_id === myRosterId)
+    : null;
+
+  const updatePlayComment = (value) => {
+    const nextSteps = [...steps];
+    const base = nextSteps[0] || { step: 1, tokens: [], arrows: [], zones: [] };
+    nextSteps[0] = { ...base, playComment: value };
+    sync({ ...activePlay, tokens: nextSteps });
+  };
 
   const updateCurrentStep = (updates) => {
     if (!activePlay) return;
@@ -362,6 +396,7 @@ const lastAutosavedRef = useRef('');
     if (has) {
       updateCurrentStep({ tokens: (currentStep.tokens || []).filter(t => t.id !== has.id) });
     } else {
+      const fullName = [p.name, p.surname].filter(Boolean).join(' ').trim();
       updateCurrentStep({
         tokens: [...(currentStep.tokens || []), {
           id: `pl${label}${isRival ? 'R' : ''}t${Date.now()}`,
@@ -370,8 +405,12 @@ const lastAutosavedRef = useRef('');
           y: 40 + Math.random() * 280,
           color: isRival ? '#ef4444' : '#0057ff',
           label,
-          name: isRival ? null : p.name,
-          isRival
+          name: isRival ? null : fullName || p.name,
+          photo_url: isRival ? '' : (p.photo_url || ''),
+          assigned_player_id: isRival ? null : p.id,
+          tactical_role: '',
+          tactical_note: '',
+          isRival,
         }]
       });
     }
@@ -380,7 +419,7 @@ const lastAutosavedRef = useRef('');
   const createNewPlay = async () => {
     const name = prompt("Nombre de la nueva jugada:");
     if (!name) return;
-    const np = { name, category: activeCategory, type: "Táctica", tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }], arrows: [] };
+    const np = { name, category: activeCategory, type: "Táctica", tokens: [{ step: 1, tokens: [], arrows: [], zones: [], playComment: '' }], arrows: [] };
     
     try {
       const { data, error } = await supabase.from('plays').insert([
@@ -668,6 +707,163 @@ const lastAutosavedRef = useRef('');
     </>
   );
 
+  const DesktopLibraryPanel = () => (
+    <div style={{ ...DARK_PANEL, padding: 18, display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: catInfo.color, marginBottom: 4 }}>Biblioteca táctica</div>
+          <div style={{ fontSize: 19, fontWeight: 900, color: '#f8fafc' }}>{catInfo.label}</div>
+        </div>
+        {isAdmin && (
+          <button onClick={createNewPlay} style={{ width: 38, height: 38, borderRadius: 14, border: '1px solid rgba(96,165,250,.25)', background: 'rgba(59,130,246,.16)', color: '#93c5fd', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Plus size={18} />
+          </button>
+        )}
+      </div>
+
+      <div style={{ ...DARK_CARD, padding: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8 }}>Categorías</div>
+        <div style={{ display: 'grid', gap: 6 }}>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => { setActiveCategory(cat.id); setActivePlay(null); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 12px',
+                borderRadius: 12,
+                border: `1px solid ${activeCategory === cat.id ? `${cat.color}55` : 'rgba(148,163,184,0.08)'}`,
+                background: activeCategory === cat.id ? `${cat.color}20` : 'rgba(15,23,42,0.45)',
+                color: activeCategory === cat.id ? '#fff' : '#cbd5e1',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: activeCategory === cat.id ? 800 : 600,
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: cat.color }} />
+              <span>{cat.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px' }}>
+        <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#94a3b8' }}>Jugadas</span>
+        <span style={{ fontSize: 11, fontWeight: 800, color: '#e2e8f0' }}>{plays.length}</span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 4 }}>
+        {loading ? (
+          <div style={{ ...DARK_CARD, padding: 20, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>Cargando...</div>
+        ) : plays.length === 0 ? (
+          <div style={{ ...DARK_CARD, padding: 20, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>No hay jugadas en esta categoría.</div>
+        ) : (
+          plays.map(p => (
+            <button
+              key={p.id}
+              onClick={() => { setActivePlay(p); setActiveStepIndex(0); }}
+              style={{
+                ...DARK_CARD,
+                padding: '14px 16px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                border: `1px solid ${activePlay?.id === p.id ? catInfo.color : 'rgba(148,163,184,0.12)'}`,
+                background: activePlay?.id === p.id ? `${catInfo.color}1f` : 'rgba(15,23,42,0.7)',
+              }}
+            >
+              <div style={{ fontWeight: 900, fontSize: 13, color: '#f8fafc' }}>{p.name}</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{p.tokens?.length || 1} pasos</div>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  const DesktopRosterPanel = () => (
+    <div style={{ ...DARK_PANEL, padding: 18, display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>Plantilla</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: '#f8fafc' }}>Jugadores en campo</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ padding: '8px 10px', borderRadius: 14, background: 'rgba(59,130,246,.12)', color: '#93c5fd', fontSize: 11, fontWeight: 800 }}>{squadTokens.length} CFC</div>
+          <div style={{ padding: '8px 10px', borderRadius: 14, background: 'rgba(239,68,68,.12)', color: '#fca5a5', fontSize: 11, fontWeight: 800 }}>{rivalTokens.length} Rival</div>
+        </div>
+      </div>
+
+      <div style={{ ...DARK_CARD, padding: 10, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {players.map((p) => {
+          const label = String(p.number || '?');
+          const on = squadTokens.some(t => t.label === label && !t.isRival);
+          return (
+            <button
+              key={p.id}
+              onClick={() => togglePlayer(p, false)}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '42px minmax(0,1fr) auto',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 12px',
+                borderRadius: 16,
+                border: `1px solid ${on ? 'rgba(96,165,250,.45)' : 'rgba(148,163,184,0.12)'}`,
+                background: on ? 'rgba(37,99,235,.16)' : 'rgba(15,23,42,0.5)',
+                cursor: 'pointer',
+                color: '#e2e8f0',
+                textAlign: 'left',
+              }}
+            >
+              {p.photo_url ? (
+                <img src={p.photo_url} alt={p.name || 'Jugador'} style={{ width: 42, height: 42, borderRadius: 12, objectFit: 'cover', border: '1px solid rgba(255,255,255,.12)' }} />
+              ) : (
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: on ? '#2563eb' : 'rgba(30,41,59,0.9)', border: '1px solid rgba(148,163,184,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff' }}>
+                  {p.number || (p.name?.[0] || '?')}
+                </div>
+              )}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name} {p.surname}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>#{p.number || '?'} {on ? 'en el campo' : 'añadir'}</div>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 900, color: on ? '#93c5fd' : '#64748b' }}>{on ? 'QUITAR' : 'PONER'}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ ...DARK_CARD, padding: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#fca5a5', marginBottom: 10 }}>Rival</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 8 }}>
+          {Array.from({ length: 11 }).map((_, i) => {
+            const num = String(i + 1);
+            const on = rivalTokens.some(t => t.label === num);
+            return (
+              <button
+                key={`r-${num}`}
+                onClick={() => togglePlayer({ number: i + 1 }, true)}
+                style={{
+                  height: 42,
+                  borderRadius: 14,
+                  border: `1px solid ${on ? 'rgba(248,113,113,.58)' : 'rgba(248,113,113,.22)'}`,
+                  background: on ? 'rgba(127,29,29,.85)' : 'rgba(69,10,10,.35)',
+                  color: on ? '#fff' : '#fca5a5',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                {num}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
   // ── Canvas toolbar (shared) ───────────────────────────────────────────
   const Toolbar = () => (
     isAdmin && activePlay ? (
@@ -796,6 +992,146 @@ const lastAutosavedRef = useRef('');
     ) : null
   );
 
+  const DesktopToolbar = () => (
+    isAdmin && activePlay ? (
+      <div style={{ ...DARK_PANEL, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div title={isOnline ? 'En línea — cambios en tiempo real' : 'Sin conexión — guardado local'} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999, background: isOnline ? (liveFlash ? 'rgba(16,185,129,.18)' : 'rgba(15,118,110,.18)') : 'rgba(249,115,22,.14)', border: `1px solid ${isOnline ? 'rgba(52,211,153,.28)' : 'rgba(251,146,60,.28)'}` }}>
+          {isOnline ? <Wifi size={11} color="#059669" /> : <WifiOff size={11} color="#f97316" />}
+          <span style={{ fontSize: 9, fontWeight: 700, color: isOnline ? '#34d399' : '#fb923c' }}>{liveFlash ? '¡LIVE!' : isOnline ? 'Online' : 'Offline'}</span>
+        </div>
+        <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.14)' }} />
+        {[
+          { id: 'move', icon: <Move size={16} />, title: 'Mover' },
+          { id: 'arrow', icon: <ArrowRight size={16} />, title: 'Flecha' },
+          { id: 'zone', icon: <Layers size={16} />, title: 'Zona' },
+        ].map(item => (
+          <button key={item.id} onClick={() => { setTool(item.id); if (item.id === 'zone') setZoneColor('red'); }} title={item.title}
+            style={{ width: 36, height: 36, borderRadius: 12, border: `1px solid ${tool === item.id ? 'rgba(96,165,250,.45)' : 'rgba(148,163,184,0.14)'}`, background: tool === item.id ? 'rgba(37,99,235,.18)' : 'rgba(15,23,42,.62)', color: item.id === 'zone' && tool !== item.id ? '#f87171' : tool === item.id ? '#93c5fd' : '#cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {item.icon}
+          </button>
+        ))}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {QUICK_TOOL_BTNS.map(btn => (
+            <button key={btn.id} onClick={() => setTool(btn.id)} title={btn.title}
+              style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${tool === btn.id ? 'rgba(96,165,250,.45)' : 'rgba(148,163,184,0.14)'}`, background: tool === btn.id ? 'rgba(37,99,235,.18)' : 'rgba(15,23,42,.62)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: tool === btn.id ? '#93c5fd' : '#cbd5e1', fontSize: 14, fontWeight: 700 }}>
+              {btn.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => { if (selectedTokenId) onDeleteToken(selectedTokenId); }} disabled={!selectedTokenId} className="btn btn-outline btn-sm" style={{ color: selectedTokenId ? '#f87171' : '#94a3b8', background: 'rgba(15,23,42,.62)', borderColor: 'rgba(148,163,184,0.16)' }}>
+          <Trash2 size={12} />
+        </button>
+        <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.14)' }} />
+        <button onClick={undoArrow} className="btn btn-outline btn-sm" style={{ background: 'rgba(15,23,42,.62)', borderColor: 'rgba(148,163,184,0.16)', color: '#cbd5e1' }}><Undo2 size={12}/></button>
+        <button onClick={clearArrows} className="btn btn-outline btn-sm" style={{ background: 'rgba(15,23,42,.62)', borderColor: 'rgba(148,163,184,0.16)', color: '#cbd5e1' }}><Trash2 size={12}/></button>
+        <button onClick={deletePlay} className="btn btn-outline btn-sm" style={{ color: '#f87171', background: 'rgba(15,23,42,.62)', borderColor: 'rgba(248,113,113,.2)' }}><Trash2 size={12}/></button>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {VIEWS.map(v => (
+            <button key={v.id} onClick={() => setFieldView(v.id)}
+              style={{ padding: '0 12px', height: 34, borderRadius: 999, border: `1px solid ${fieldView === v.id ? 'rgba(96,165,250,.42)' : 'rgba(148,163,184,0.14)'}`, background: fieldView === v.id ? 'rgba(37,99,235,.22)' : 'rgba(15,23,42,.62)', color: fieldView === v.id ? '#bfdbfe' : '#cbd5e1', cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setShowHeatmap(h => !h)} title="Mapa de calor"
+          style={{ width: 36, height: 36, borderRadius: 12, border: `1px solid ${showHeatmap ? 'rgba(251,146,60,.42)' : 'rgba(148,163,184,0.14)'}`, background: showHeatmap ? 'rgba(194,65,12,.24)' : 'rgba(15,23,42,.62)', color: showHeatmap ? '#fdba74' : '#cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Thermometer size={16} />
+        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+          <button onClick={exportPlay} disabled={exporting || steps.length < 2} className="btn btn-outline btn-sm" title="Exportar jugada como video" style={{ background: 'rgba(15,23,42,.62)', borderColor: 'rgba(148,163,184,0.16)', color: '#cbd5e1' }}>
+            <Download size={12}/> {exporting ? 'Grabando...' : 'Exportar'}
+          </button>
+          <button onClick={() => setPresentationMode(true)} className="btn btn-outline btn-sm" style={{ background: 'rgba(15,23,42,.62)', borderColor: 'rgba(148,163,184,0.16)', color: '#cbd5e1' }}>
+            <Monitor size={14}/> TV Mode
+          </button>
+          <button onClick={savePlay} className="btn btn-primary btn-sm"><Save size={12}/> Guardar</button>
+        </div>
+      </div>
+    ) : null
+  );
+
+  const DesktopEditorRail = () => (
+    <div style={{ ...DARK_PANEL, padding: 18, display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>Editor</div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: '#f8fafc' }}>{activePlay?.name || 'Sin jugada'}</div>
+      </div>
+
+      <div style={{ ...DARK_CARD, padding: 14 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8 }}>Comentario general</div>
+        <textarea
+          value={playComment}
+          onChange={(e) => updatePlayComment(e.target.value)}
+          placeholder="Objetivo, variantes, puntos clave y consignas colectivas de la jugada..."
+          style={{ width: '100%', minHeight: 120, resize: 'vertical', borderRadius: 14, border: '1px solid rgba(148,163,184,0.18)', background: 'rgba(15,23,42,0.76)', color: '#f8fafc', padding: '12px 14px', fontSize: 13, lineHeight: 1.5, outline: 'none' }}
+        />
+      </div>
+
+      <div style={{ ...DARK_CARD, padding: 14, overflowY: 'auto' }}>
+        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 10 }}>Jugador seleccionado</div>
+        {selectedPlayerToken ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0,1fr)', gap: 10, alignItems: 'center' }}>
+              {selectedPlayerToken.photo_url ? (
+                <img src={selectedPlayerToken.photo_url} alt={selectedPlayerToken.name || 'Jugador'} style={{ width: 44, height: 44, borderRadius: 12, objectFit: 'cover', border: '1px solid rgba(255,255,255,.14)' }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: selectedPlayerToken.isRival ? '#991b1b' : '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900 }}>
+                  {selectedPlayerToken.label}
+                </div>
+              )}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedPlayerToken.name || `Jugador ${selectedPlayerToken.label}`}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{selectedPlayerToken.isRival ? 'Rival' : 'Cabrerizos FC'} {selectedPlayerToken.tactical_note ? '• con instrucción' : ''}</div>
+              </div>
+            </div>
+            {!selectedPlayerToken.isRival && (
+              <select className="input-field" style={{ padding: '10px 12px', fontSize: 12, background: 'rgba(15,23,42,0.76)', color: '#f8fafc', borderColor: 'rgba(148,163,184,0.18)' }}
+                value={selectedPlayerToken.assigned_player_id || ''}
+                onChange={e => updateSelectedToken({ assigned_player_id: e.target.value })}
+              >
+                <option value="">-- Vincular jugador --</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.name} {p.surname}</option>)}
+              </select>
+            )}
+            <input className="input-field" placeholder="Rol corto (Ej: Bloqueo primer palo)" style={{ padding: '10px 12px', fontSize: 12, background: 'rgba(15,23,42,0.76)', color: '#f8fafc', borderColor: 'rgba(148,163,184,0.18)' }}
+              value={selectedPlayerToken.tactical_role || ''}
+              onChange={e => updateSelectedToken({ tactical_role: e.target.value })}
+            />
+            <textarea
+              value={selectedPlayerToken.tactical_note || ''}
+              onChange={e => updateSelectedToken({ tactical_note: e.target.value })}
+              placeholder="Instrucción individual: qué hace, cuándo salta, a qué zona va, variante si cambia el rival..."
+              style={{ width: '100%', minHeight: 118, resize: 'vertical', borderRadius: 14, border: '1px solid rgba(148,163,184,0.18)', background: 'rgba(15,23,42,0.76)', color: '#f8fafc', padding: '12px 14px', fontSize: 13, lineHeight: 1.45, outline: 'none' }}
+            />
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>Selecciona un jugador del campo para añadirle una instrucción individual persistida dentro de la jugada.</div>
+        )}
+      </div>
+
+      <div style={{ ...DARK_CARD, padding: 14 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 10 }}>Trazos</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 6, marginBottom: 10 }}>
+          {VECTOR_STYLES.map(styleItem => (
+            <button key={styleItem.id} onClick={() => { setArrowStyle(styleItem.id); setTool('arrow'); }}
+              style={{ height: 36, borderRadius: 12, border: `1px solid ${arrowStyle === styleItem.id ? 'rgba(96,165,250,.42)' : 'rgba(148,163,184,0.14)'}`, background: arrowStyle === styleItem.id ? 'rgba(37,99,235,.18)' : 'rgba(15,23,42,.62)', color: arrowStyle === styleItem.id ? '#bfdbfe' : '#cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {styleItem.icon}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gap: 6 }}>
+          {VECTOR_COLORS.map(colorItem => (
+            <button key={colorItem.id} onClick={() => { setArrowColor(colorItem.id); setTool('arrow'); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, border: `1px solid ${arrowColor === colorItem.id ? 'rgba(96,165,250,.42)' : 'rgba(148,163,184,0.14)'}`, background: arrowColor === colorItem.id ? 'rgba(37,99,235,.12)' : 'rgba(15,23,42,.55)', color: '#e2e8f0', cursor: 'pointer' }}>
+              <div style={{ width: 14, height: 14, borderRadius: '50%', background: colorItem.hex }} />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>{colorItem.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   if (presentationMode) {
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -867,6 +1203,24 @@ const lastAutosavedRef = useRef('');
             </div>
           )}
         </div>
+
+        {(playComment || myInstructionToken?.tactical_note || myInstructionToken?.tactical_role) && (
+          <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {playComment && (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#64748b', marginBottom: 6 }}>Explicación de la jugada</div>
+                <div style={{ fontSize: 13, lineHeight: 1.5, color: '#1e293b', fontWeight: 600 }}>{playComment}</div>
+              </div>
+            )}
+            {(myInstructionToken?.tactical_role || myInstructionToken?.tactical_note) && (
+              <div style={{ padding: '12px 14px', background: '#eff6ff', borderRadius: 14, border: '1px solid #bfdbfe' }}>
+                <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#1d4ed8', marginBottom: 6 }}>Tu instrucción</div>
+                {myInstructionToken?.tactical_role && <div style={{ fontSize: 12, fontWeight: 800, color: '#1e3a8a', marginBottom: myInstructionToken?.tactical_note ? 6 : 0 }}>{myInstructionToken.tactical_role}</div>}
+                {myInstructionToken?.tactical_note && <div style={{ fontSize: 13, lineHeight: 1.5, color: '#1e293b', fontWeight: 600 }}>{myInstructionToken.tactical_note}</div>}
+              </div>
+            )}
+          </div>
+        )}
 
         <Timeline />
 
@@ -999,15 +1353,29 @@ const lastAutosavedRef = useRef('');
 
   // ── Desktop layout ────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', gap: 12, height: 'calc(100vh - 100px)' }}>
-      <div style={{ width: 230, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 5 }}>
-        <SidebarContent />
+    <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr) 320px', gap: 16, height: 'calc(100vh - 100px)' }}>
+      <div style={{ display: 'grid', gridTemplateRows: 'minmax(0,0.95fr) minmax(0,1.05fr)', gap: 16, minHeight: 0 }}>
+        <DesktopLibraryPanel />
+        <DesktopRosterPanel />
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Toolbar />
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ aspectRatio: fieldRatio, height: '100%', width: 'auto', maxWidth: '100%', background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)", position: 'relative' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0, minHeight: 0 }}>
+        <DesktopToolbar />
+        <div style={{ ...DARK_PANEL, padding: 18, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: catInfo.color, marginBottom: 4 }}>Vista táctica</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#f8fafc' }}>{activePlay?.name || 'Selecciona una jugada'}</div>
+            </div>
+            {playComment && (
+              <div style={{ maxWidth: 360, fontSize: 12, lineHeight: 1.45, color: '#cbd5e1', background: 'rgba(15,23,42,.64)', border: '1px solid rgba(148,163,184,0.1)', padding: '10px 12px', borderRadius: 14 }}>
+                {playComment}
+              </div>
+            )}
+          </div>
+
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ aspectRatio: fieldRatio, height: '100%', width: 'auto', maxWidth: '100%', background: '#2a6118', borderRadius: 28, overflow: 'hidden', boxShadow: '0 32px 90px rgba(2,6,23,.45)', position: 'relative', border: '1px solid rgba(255,255,255,.06)' }}>
             {showHeatmap ? (
               <Heatmap plays={allPlays} includeArrows />
             ) : activePlay ? (
@@ -1029,21 +1397,24 @@ const lastAutosavedRef = useRef('');
                 viewMode={fieldView}
                 animating={animating}
                 selectedTokenId={selectedTokenId} onSelectToken={setSelectedTokenId}
-                adaptiveView={!isAdmin || shouldOpenFieldView}
+                myRosterId={myRosterId}
+                adaptiveView={false}
               />
             ) : (
               <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)', padding: 20 }}>
                 <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>Selecciona una categoría y una jugada</div>
-                <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>
-                  {isAdmin ? 'O crea una nueva con el botón +' : 'El entrenador irá subiendo jugadas'}
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#f8fafc' }}>Selecciona una categoría y una jugada</div>
+                <div style={{ fontSize: 12, marginTop: 6, opacity: 0.75 }}>
+                  {isAdmin ? 'Elige una acción de la biblioteca o crea una nueva.' : 'El entrenador irá subiendo jugadas.'}
                 </div>
               </div>
             )}
           </div>
         </div>
+        </div>
         <Timeline />
       </div>
+      <DesktopEditorRail />
     </div>
   );
 }

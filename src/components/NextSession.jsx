@@ -27,12 +27,15 @@ export default function NextSession({ training, myRosterId }) {
       const myRoles = [];
       data.forEach(play => {
         const tokens = play.tokens?.[0]?.tokens || [];
+        const playComment = play.tokens?.[0]?.playComment || '';
         const myToken = tokens.find(t => t.assigned_player_id === myRosterId);
-        if (myToken && myToken.tactical_role) {
+        if (myToken && (myToken.tactical_role || myToken.tactical_note || playComment)) {
           myRoles.push({
             playName: play.name,
             category: play.category,
-            role: myToken.tactical_role
+            role: myToken.tactical_role || '',
+            note: myToken.tactical_note || '',
+            playComment,
           });
         }
       });
@@ -69,9 +72,11 @@ export default function NextSession({ training, myRosterId }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {tacticalRoles.map((r, i) => (
-              <div key={i} style={{ padding: '8px 12px', background: 'white', borderRadius: 8, border: '1px solid #fde68a' }}>
+                <div key={i} style={{ padding: '8px 12px', background: 'white', borderRadius: 8, border: '1px solid #fde68a' }}>
                 <div style={{ fontSize: 10, color: '#d97706', fontWeight: 800, textTransform: 'uppercase' }}>Estrategia | {r.playName}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginTop: 2 }}>"{r.role}"</div>
+                {r.role && <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginTop: 2 }}>{r.role}</div>}
+                {r.note && <div style={{ fontSize: 12, color: '#475569', marginTop: 4, lineHeight: 1.45 }}>{r.note}</div>}
+                {r.playComment && <div style={{ fontSize: 11, color: '#92400e', marginTop: 6, lineHeight: 1.45 }}>{r.playComment}</div>}
               </div>
             ))}
           </div>
