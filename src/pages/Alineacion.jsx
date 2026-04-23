@@ -39,7 +39,8 @@ const H = 370;
 
 export default function Alineacion() {
   const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
-const isPlayerMode = !isRealAdmin || viewAsPlayer;
+  const isPlayerMode = !isRealAdmin || viewAsPlayer;
+  const viewerIsAdmin = isAdmin && !isPlayerMode;
   const isMobile = useIsMobile();
   const [lineups, setLineups] = useState([]);
   const [activeLineup, setActiveLineup] = useState(null);
@@ -84,7 +85,7 @@ const applyLineupUpdate = (patch) => {
 }, [activeLineup?.id]);
 
 useEffect(() => {
-  if (!isAdmin || !activeLineup?.id) return;
+  if (!viewerIsAdmin || !activeLineup?.id) return;
 
   const snapshot = JSON.stringify({
     starters: activeLineup.starters || [],
@@ -110,7 +111,7 @@ useEffect(() => {
   }, 450);
 
   return () => clearTimeout(autosaveRef.current);
-}, [activeLineup?.id, activeLineup?.starters, activeLineup?.substitutes, isAdmin]);
+}, [activeLineup?.id, activeLineup?.starters, activeLineup?.substitutes, viewerIsAdmin]);
   
 
   const fetchAll = async () => {
@@ -229,7 +230,7 @@ const toggleSubstitute = (playerId) => {
 
   applyLineupUpdate({ starters, substitutes });
 };
-  const onMD = (e, idx) => { if (!isAdmin) return; e.preventDefault(); drag.current = idx; };
+  const onMD = (e, idx) => { if (!viewerIsAdmin) return; e.preventDefault(); drag.current = idx; };
  const onMM = useCallback((e) => {
   if (drag.current === null || !activeLineup) return;
 
@@ -291,7 +292,7 @@ const toggleSubstitute = (playerId) => {
             const p = s.player_id ? players.find(pl => pl.id === s.player_id) : null;
             const hasPhoto = !!p?.photo_url;
             return (
-              <g key={i} onMouseDown={e => onMD(e, i)} onTouchStart={e => onMD(e, i)} style={{ cursor: isAdmin ? 'grab' : 'default' }}>
+              <g key={i} onMouseDown={e => onMD(e, i)} onTouchStart={e => onMD(e, i)} style={{ cursor: viewerIsAdmin ? 'grab' : 'default' }}>
                 {hasPhoto ? (
                   <g>
                     <rect x={s.x - 15} y={s.y - 19} width={30} height={38} rx={9} ry={9} fill="#0b1220" stroke="white" strokeWidth="2.5" opacity={0.95} />
@@ -388,7 +389,7 @@ const toggleSubstitute = (playerId) => {
     const TABS = [
       { id: 'list', label: '📋 Listas' },
       { id: 'field', label: '⚽ Campo' },
-      ...(isAdmin && activeLineup ? [{ id: 'players', label: '👥 Jugadores' }] : []),
+      ...(viewerIsAdmin && activeLineup ? [{ id: 'players', label: '👥 Jugadores' }] : []),
     ];
 
     return (
@@ -408,9 +409,9 @@ const toggleSubstitute = (playerId) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Alineaciones</span>
-              {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={14} /></button>}
+             {viewerIsAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={14} /></button>}
             </div>
-            {showForm && isAdmin && (
+            {showForm && viewerIsAdmin && (
               <div className="card" style={{ padding: 10 }}>
                 <input className="input-field" placeholder="Nombre (ej: J12 vs Villamayor)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ marginBottom: 6 }} />
                 <select className="input-field" value={form.formation} onChange={e => setForm(f => ({ ...f, formation: e.target.value }))} style={{ marginBottom: 6 }}>
@@ -433,7 +434,7 @@ const toggleSubstitute = (playerId) => {
         {/* FIELD tab */}
         {mobileTab === 'field' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {activeLineup && isAdmin && (
+           {activeLineup && viewerIsAdmin && (
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="btn btn-primary btn-sm" onClick={saveLineup}><Save size={12} /> Guardar</button>
                 <button className="btn btn-outline btn-sm" onClick={deleteLineup} style={{ color: '#ef4444' }}><Trash2 size={12} /> Eliminar</button>
@@ -445,7 +446,7 @@ const toggleSubstitute = (playerId) => {
         )}
 
         {/* PLAYERS tab */}
-        {mobileTab === 'players' && activeLineup && isAdmin && (
+        {mobileTab === 'players' && activeLineup && viewerIsAdmin && (
           <div>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Asignar jugadores</div>
             <PlayersPanel />
@@ -462,9 +463,9 @@ const toggleSubstitute = (playerId) => {
       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Alineaciones</span>
-          {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={14} /></button>}
+         {viewerIsAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={14} /></button>}
         </div>
-        {showForm && isAdmin && (
+        {showForm && viewerIsAdmin && (
           <div className="card" style={{ padding: 10 }}>
             <input className="input-field" placeholder="Nombre (ej: J12 vs Villamayor)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ marginBottom: 6 }} />
             <select className="input-field" value={form.formation} onChange={e => setForm(f => ({ ...f, formation: e.target.value }))} style={{ marginBottom: 6 }}>
@@ -482,7 +483,7 @@ const toggleSubstitute = (playerId) => {
           </div>
         ))}
 
-        {activeLineup && isAdmin && (
+        {activeLineup && viewerIsAdmin && (
           <div className="card" style={{ padding: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <div style={{ fontWeight: 800, fontSize: 12, color: '#1e293b' }}>👥 Jugadores</div>
@@ -495,7 +496,7 @@ const toggleSubstitute = (playerId) => {
 
       {/* Right: Field */}
       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {activeLineup && isAdmin && (
+        {activeLineup && viewerIsAdmin && (
           <div style={{ display: 'flex', gap: 6 }}>
             <button className="btn btn-primary btn-sm" onClick={saveLineup}><Save size={12} /> Guardar</button>
             <button className="btn btn-outline btn-sm" onClick={deleteLineup} style={{ color: '#ef4444' }}><Trash2 size={12} /> Eliminar</button>

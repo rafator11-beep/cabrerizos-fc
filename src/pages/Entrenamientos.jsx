@@ -43,6 +43,7 @@ const EXERCISES_CATALOG = (Array.isArray(EXERCISES_DATA) ? EXERCISES_DATA : []).
 export default function Entrenamientos() {
  const { isAdmin, isRealAdmin, viewAsPlayer, profile, user } = useAuth();
 const isPlayerMode = !isRealAdmin || viewAsPlayer;
+const viewerIsAdmin = isAdmin && !isPlayerMode;
   const isMobile = useIsMobile();
   const [trainings, setTrainings] = useState([]);
   const [activeTraining, setActiveTraining] = useState(null);
@@ -202,7 +203,7 @@ const isPlayerMode = !isRealAdmin || viewAsPlayer;
           ) : (
             <TrainingDetail
               activeTraining={activeTraining}
-              isAdmin={isAdmin}
+              isAdmin={viewerIsAdmin}
               user={user}
               showScoring={showScoring}
               setShowScoring={setShowScoring}
@@ -234,7 +235,7 @@ const isPlayerMode = !isRealAdmin || viewAsPlayer;
           <TrainingForm
             form={form} setForm={setForm}
             players={players}
-            isAdmin={isAdmin}
+            isAdmin={viewerIsAdmin}
             exerciseInput={exerciseInput} setExerciseInput={setExerciseInput}
             showGallery={showGallery} setShowGallery={setShowGallery}
             addExercise={addExercise} removeExercise={removeExercise}
@@ -291,7 +292,7 @@ const isPlayerMode = !isRealAdmin || viewAsPlayer;
           <TrainingForm
             form={form} setForm={setForm}
             players={players}
-            isAdmin={isAdmin}
+            isAdmin={viewerIsAdmin}
             exerciseInput={exerciseInput} setExerciseInput={setExerciseInput}
             showGallery={showGallery} setShowGallery={setShowGallery}
             addExercise={addExercise} removeExercise={removeExercise}
@@ -347,7 +348,7 @@ const isPlayerMode = !isRealAdmin || viewAsPlayer;
           ) : (
             <TrainingDetail
               activeTraining={activeTraining}
-              isAdmin={isAdmin}
+              isAdmin={viewerIsAdmin}
               user={user}
               showScoring={showScoring}
               setShowScoring={setShowScoring}
