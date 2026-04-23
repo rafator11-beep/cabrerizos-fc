@@ -94,6 +94,7 @@ export default function Tactica() {
   const [exporting, setExporting] = useState(false);
   const fieldSvgRef = useRef(null);
 const autosaveRef = useRef(null);
+const lastAutosavedRef = useRef('');
   const { queueUpdate } = useOfflineSync();
 
   const VIEWS = [
@@ -206,6 +207,33 @@ const autosaveRef = useRef(null);
     setActivePlay(upd);
     setPlays(ps => ps.map(p => p.id === upd.id ? upd : p));
   };
+  useEffect(() => {
+  if (!activePlay?.id) return;
+  lastAutosavedRef.current = JSON.stringify(activePlay.tokens || []);
+}, [activePlay?.id]);
+
+useEffect(() => {
+  if (!isAdmin || !activePlay?.id) return;
+  if (String(activePlay.id).length < 10) return;
+
+  const snapshot = JSON.stringify(activePlay.tokens || []);
+  if (snapshot === lastAutosavedRef.current) return;
+
+  clearTimeout(autosaveRef.current);
+
+  autosaveRef.current = setTimeout(async () => {
+    const { error } = await queueUpdate('plays', activePlay.id, {
+      tokens: activePlay.tokens || [],
+      arrows: [],
+    });
+
+    if (!error) {
+      lastAutosavedRef.current = snapshot;
+    }
+  }, 450);
+
+  return () => clearTimeout(autosaveRef.current);
+}, [activePlay?.id, activePlay?.tokens, isAdmin, queueUpdate]);
   useEffect(() => {
   if (!isAdmin || !activePlay?.id) return;
   if (String(activePlay.id).length < 10) return;
