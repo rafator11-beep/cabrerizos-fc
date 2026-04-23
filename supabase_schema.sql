@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS trainings (
   intensity TEXT DEFAULT 'media', -- 'baja', 'media', 'alta'
   objective TEXT DEFAULT '',
   exercises JSONB NOT NULL DEFAULT '[]'::jsonb, -- [{name, description, duration, category}]
+  attendees JSONB NOT NULL DEFAULT '[]'::jsonb, -- [roster_id, roster_id, ...] asistencia del dia
   notes TEXT DEFAULT '',
   created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL

@@ -7,6 +7,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import SessionDistributor from '../components/SessionDistributor';
 import FieldCanvas from '../components/FieldCanvas';
 import { resolveExerciseImageSrc } from '../utils/exerciseImages';
+import { decorateExercise, EXERCISE_GROUPS } from '../utils/exerciseCatalog';
 
 const EXERCISE_CATS = [
   { id: 'all',          label: 'Todos' },
@@ -37,6 +38,8 @@ const QUICK_EXERCISES = [
   { name: 'Vuelta a la calma', description: 'Estiramientos estáticos y relajación activa', duration: 10 },
 ];
 
+const EXERCISES_CATALOG = (Array.isArray(EXERCISES_DATA) ? EXERCISES_DATA : []).map(decorateExercise);
+
 export default function Entrenamientos() {
   const { isAdmin, profile, user } = useAuth();
   const isMobile = useIsMobile();
@@ -52,7 +55,7 @@ export default function Entrenamientos() {
 
   const [form, setForm] = useState({
     title: '', date: new Date().toISOString().split('T')[0],
-    duration: 90, intensity: 'media', objective: '', exercises: [], notes: ''
+    duration: 90, intensity: 'media', objective: '', attendees: [], exercises: [], notes: ''
   });
   const [exerciseInput, setExerciseInput] = useState({ name: '', description: '', duration: 15, image: '' });
   const [showGallery, setShowGallery] = useState(false);
@@ -115,7 +118,12 @@ export default function Entrenamientos() {
         setActiveTraining(data);
         setScores([]);
         setShowForm(false);
-        setForm({ title: '', date: new Date().toISOString().split('T')[0], duration: 90, intensity: 'media', objective: '', exercises: [], notes: '' });
+        // After creation, jump into planning groups/positions so players know in advance.
+        if (isAdmin) {
+          setShowDistributor(true);
+          if (isMobile) setMobileView('detail');
+        }
+        setForm({ title: '', date: new Date().toISOString().split('T')[0], duration: 90, intensity: 'media', objective: '', attendees: [], exercises: [], notes: '' });
       }
     } catch { alert('Error al crear el entrenamiento.'); }
   };
@@ -137,7 +145,7 @@ export default function Entrenamientos() {
       }]);
       alert('Propuesta de sesión enviada al cuerpo técnico con éxito.');
       setShowForm(false);
-      setForm({ title: '', date: new Date().toISOString().split('T')[0], duration: 90, intensity: 'media', objective: '', exercises: [], notes: '' });
+      setForm({ title: '', date: new Date().toISOString().split('T')[0], duration: 90, intensity: 'media', objective: '', attendees: [], exercises: [], notes: '' });
     } catch { alert('Error al enviar la propuesta.'); }
   };
 
@@ -194,6 +202,7 @@ export default function Entrenamientos() {
             <TrainingDetail
               activeTraining={activeTraining}
               isAdmin={isAdmin}
+              user={user}
               showScoring={showScoring}
               setShowScoring={setShowScoring}
               showDistributor={showDistributor}
@@ -220,7 +229,19 @@ export default function Entrenamientos() {
           </button>
         </div>
 
-        {showForm && <TrainingForm form={form} setForm={setForm} exerciseInput={exerciseInput} setExerciseInput={setExerciseInput} showGallery={showGallery} setShowGallery={setShowGallery} addExercise={addExercise} removeExercise={removeExercise} createTraining={isAdmin ? createTraining : suggestTraining} setShowForm={setShowForm} isSuggestion={!isAdmin} />}
+        {showForm && (
+          <TrainingForm
+            form={form} setForm={setForm}
+            players={players}
+            isAdmin={isAdmin}
+            exerciseInput={exerciseInput} setExerciseInput={setExerciseInput}
+            showGallery={showGallery} setShowGallery={setShowGallery}
+            addExercise={addExercise} removeExercise={removeExercise}
+            createTraining={isAdmin ? createTraining : suggestTraining}
+            setShowForm={setShowForm}
+            isSuggestion={!isAdmin}
+          />
+        )}
 
         {trainings.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 30, color: '#96a0b5', fontSize: 12 }}>
@@ -265,7 +286,19 @@ export default function Entrenamientos() {
           </button>
         </div>
 
-        {showForm && <TrainingForm form={form} setForm={setForm} exerciseInput={exerciseInput} setExerciseInput={setExerciseInput} showGallery={showGallery} setShowGallery={setShowGallery} addExercise={addExercise} removeExercise={removeExercise} createTraining={isAdmin ? createTraining : suggestTraining} setShowForm={setShowForm} isSuggestion={!isAdmin} />}
+        {showForm && (
+          <TrainingForm
+            form={form} setForm={setForm}
+            players={players}
+            isAdmin={isAdmin}
+            exerciseInput={exerciseInput} setExerciseInput={setExerciseInput}
+            showGallery={showGallery} setShowGallery={setShowGallery}
+            addExercise={addExercise} removeExercise={removeExercise}
+            createTraining={isAdmin ? createTraining : suggestTraining}
+            setShowForm={setShowForm}
+            isSuggestion={!isAdmin}
+          />
+        )}
 
         {trainings.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 30, color: '#96a0b5', fontSize: 12 }}>
@@ -314,6 +347,7 @@ export default function Entrenamientos() {
             <TrainingDetail
               activeTraining={activeTraining}
               isAdmin={isAdmin}
+              user={user}
               showScoring={showScoring}
               setShowScoring={setShowScoring}
               showDistributor={showDistributor}
@@ -341,7 +375,37 @@ export default function Entrenamientos() {
 
 // ── Extracted components ───────────────────────────────────────────────
 
-function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, showDistributor, setShowDistributor, scores, players, myScores, saveScore, deleteTraining, intInfo }) {
+function TrainingDetail({ activeTraining, isAdmin, user, showScoring, setShowScoring, showDistributor, setShowDistributor, scores, players, myScores, saveScore, deleteTraining, intInfo }) {
+  const roster = Array.isArray(players) ? players : [];
+  const myRoster = user?.id ? roster.find(p => p.auth_profile_id === user.id) : null;
+  const myRosterId = myRoster?.id || null;
+
+  const getMyGroupForExercise = (ex) => {
+    if (!myRosterId) return null;
+    const ga = ex?.group_assignments || {};
+    for (const [k, members] of Object.entries(ga)) {
+      if (Array.isArray(members) && members.includes(myRosterId)) return k;
+    }
+    return null;
+  };
+
+  const buildPlanTokens = (ex) => {
+    const ga = ex?.group_assignments || {};
+    const savedTokens = Array.isArray(ex?.canvas_tokens) ? ex.canvas_tokens : [];
+    return roster.map((p, idx) => {
+      const groupKey = Object.entries(ga).find(([, members]) => Array.isArray(members) && members.includes(p.id))?.[0] || null;
+      const saved = savedTokens.find(t => t.id === p.id);
+      return {
+        id: p.id,
+        kind: 'player',
+        x: saved?.x ?? 25 + (idx % 12) * 38,
+        y: saved?.y ?? 25 + Math.floor(idx / 12) * 38,
+        label: (p.surname || p.name || '?').substring(0, 3).toUpperCase(),
+        name: p.name,
+        color: groupKey === 'red' ? '#ef4444' : groupKey === 'yellow' ? '#eab308' : groupKey === 'green' ? '#22c55e' : groupKey === 'blue' ? '#3b82f6' : groupKey === 'pink' ? '#ec4899' : '#94a3b8',
+      };
+    });
+  };
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
@@ -355,6 +419,18 @@ function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, 
           {activeTraining.objective && (
             <div style={{ marginTop: 8, padding: '8px 12px', background: '#f0f9ff', borderRadius: 8, borderLeft: '3px solid #0057ff', fontSize: 12, color: '#334155' }}>
               🎯 <strong>Objetivo:</strong> {activeTraining.objective}
+            </div>
+          )}
+          {Array.isArray(activeTraining.attendees) && activeTraining.attendees.length > 0 && (
+            <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#0057ff', background: '#eef3ff', padding: '4px 10px', borderRadius: 999 }}>
+                👥 Asistentes: {activeTraining.attendees.length}
+              </span>
+              {!isAdmin && myRosterId && (
+                <span style={{ fontSize: 11, fontWeight: 800, color: activeTraining.attendees.includes(myRosterId) ? '#16a34a' : '#ef4444', background: activeTraining.attendees.includes(myRosterId) ? '#dcfce7' : '#fee2e2', padding: '4px 10px', borderRadius: 999 }}>
+                  {activeTraining.attendees.includes(myRosterId) ? 'Asistencia: OK' : 'Asistencia: No marcado'}
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -409,6 +485,41 @@ function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, 
                       tool="move"
                       viewMode="full"
                       presentationMode={true}
+                    />
+                  </div>
+                )}
+
+                {/* Player view: show planned group + optional marked positions (from SessionDistributor) */}
+                {!isAdmin && myRosterId && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {(() => {
+                      const myGroup = getMyGroupForExercise(ex);
+                      if (!myGroup) {
+                        return <span style={{ fontSize: 11, color: '#64748b' }}>No estÃ¡s asignado a este ejercicio.</span>;
+                      }
+                      const label = myGroup === 'red' ? 'Equipo A' : myGroup === 'yellow' ? 'Equipo B' : myGroup === 'green' ? 'Equipo C' : myGroup === 'blue' ? 'Equipo D' : 'Comodines';
+                      const color = myGroup === 'red' ? '#991b1b' : myGroup === 'yellow' ? '#854d0e' : myGroup === 'green' ? '#166534' : myGroup === 'blue' ? '#1e3a8a' : '#831843';
+                      const bg = myGroup === 'red' ? '#fee2e2' : myGroup === 'yellow' ? '#fef9c3' : myGroup === 'green' ? '#dcfce7' : myGroup === 'blue' ? '#dbeafe' : '#fce7f3';
+                      const border = myGroup === 'red' ? '#fca5a5' : myGroup === 'yellow' ? '#fde047' : myGroup === 'green' ? '#86efac' : myGroup === 'blue' ? '#93c5fd' : '#f9a8d4';
+                      return (
+                        <span style={{ fontSize: 11, fontWeight: 800, color, background: bg, border: `2px solid ${border}`, padding: '6px 10px', borderRadius: 999 }}>
+                          Tu grupo: {label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {Array.isArray(ex.canvas_tokens) && ex.canvas_tokens.length > 0 && resolveExerciseImageSrc(ex.image) && (
+                  <div style={{ marginTop: 6, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e6ed', background: '#111827', aspectRatio: '550/366', width: '100%' }}>
+                    <FieldCanvas
+                      tokens={buildPlanTokens(ex)}
+                      arrows={[]}
+                      zones={[]}
+                      tool="move"
+                      viewMode="full"
+                      presentationMode={true}
+                      backgroundImage={resolveExerciseImageSrc(ex.image)}
                     />
                   </div>
                 )}
@@ -472,8 +583,11 @@ function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, 
   );
 }
 
-function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGallery, setShowGallery, addExercise, removeExercise, createTraining, setShowForm, isSuggestion }) {
+function TrainingForm({ form, setForm, players, isAdmin, exerciseInput, setExerciseInput, showGallery, setShowGallery, addExercise, removeExercise, createTraining, setShowForm, isSuggestion }) {
   const [galleryCategory, setGalleryCategory] = useState('all');
+  const [galleryGroup, setGalleryGroup] = useState('all');
+  const [query, setQuery] = useState('');
+  const [step, setStep] = useState(isSuggestion ? 'plan' : 'attendance'); // admin: attendance first
   const [showPizarra, setShowPizarra] = useState(false);
   const [pzTokens, setPzTokens] = useState([]);
   const [pzArrows, setPzArrows] = useState([]);
@@ -482,9 +596,29 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
   const [pzArrowType, setPzArrowType] = useState('pass');
   const [pzDrawPt, setPzDrawPt] = useState(null);
 
-  const filteredExercises = galleryCategory === 'all'
-    ? EXERCISES_DATA
-    : EXERCISES_DATA.filter(e => e.category === galleryCategory);
+  const attendees = Array.isArray(form?.attendees) ? form.attendees : [];
+  const roster = Array.isArray(players) ? players : [];
+
+  const toggleAttendee = (pid) => {
+    setForm(f => {
+      const prev = Array.isArray(f.attendees) ? f.attendees : [];
+      const next = prev.includes(pid) ? prev.filter(id => id !== pid) : [...prev, pid];
+      return { ...f, attendees: next };
+    });
+  };
+
+  const selectAllAttendees = () => setForm(f => ({ ...f, attendees: roster.map(p => p.id) }));
+  const clearAttendees = () => setForm(f => ({ ...f, attendees: [] }));
+
+  const filteredExercises = EXERCISES_CATALOG
+    .filter(e => galleryCategory === 'all' ? true : e.category === galleryCategory)
+    .filter(e => galleryGroup === 'all' ? true : e.meta?.group === galleryGroup)
+    .filter(e => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      const hay = `${e.name || ''} ${e.description || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
 
   const savePizarra = () => {
     setExerciseInput(ei => ({ ...ei, canvas_drawing: { tokens: pzTokens, arrows: pzArrows, zones: pzZones } }));
@@ -583,7 +717,86 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
         </div>
       )}
 
-      <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Nuevo Entrenamiento</div>
+      {/* Stepper: admin creates training by setting attendance first */}
+      {isAdmin && !isSuggestion && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10, background: '#f0f2f5', padding: 4, borderRadius: 10 }}>
+          <button
+            type="button"
+            onClick={() => setStep('attendance')}
+            style={{
+              flex: 1, padding: '8px 6px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              fontWeight: 800, fontSize: 11,
+              background: step === 'attendance' ? 'white' : 'transparent',
+              color: step === 'attendance' ? '#0057ff' : '#64748b',
+              boxShadow: step === 'attendance' ? '0 1px 4px rgba(0,0,0,.08)' : 'none',
+            }}
+          >
+            1) Asistencia
+          </button>
+          <button
+            type="button"
+            onClick={() => { if (attendees.length) setStep('plan'); }}
+            style={{
+              flex: 1, padding: '8px 6px', borderRadius: 8, border: 'none',
+              cursor: attendees.length ? 'pointer' : 'not-allowed',
+              fontWeight: 800, fontSize: 11,
+              background: step === 'plan' ? 'white' : 'transparent',
+              color: step === 'plan' ? '#0057ff' : (attendees.length ? '#64748b' : '#cbd5e1'),
+              boxShadow: step === 'plan' ? '0 1px 4px rgba(0,0,0,.08)' : 'none',
+              opacity: attendees.length ? 1 : 0.85,
+            }}
+          >
+            2) Sesión
+          </button>
+        </div>
+      )}
+
+      {/* Attendance step */}
+      {isAdmin && !isSuggestion && step === 'attendance' && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <div style={{ fontWeight: 800, fontSize: 12, color: '#1e293b' }}>👥 Asistentes del día</div>
+            <div style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#0057ff', background: '#eef3ff', padding: '2px 8px', borderRadius: 20 }}>
+              {attendees.length}/{roster.length}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            <button type="button" className="btn btn-outline btn-sm" onClick={selectAllAttendees} style={{ flex: 1 }}>Todos</button>
+            <button type="button" className="btn btn-outline btn-sm" onClick={clearAttendees} style={{ flex: 1, color: '#ef4444' }}>Ninguno</button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setStep('plan')}
+              disabled={!attendees.length}
+              style={{ flex: 1 }}
+            >
+              Continuar
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 320, overflowY: 'auto' }}>
+            {roster.map(p => {
+              const on = attendees.includes(p.id);
+              return (
+                <label key={p.id} onClick={() => toggleAttendee(p.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 10, cursor: 'pointer', userSelect: 'none',
+                    background: on ? '#eef3ff' : '#f8fafc', border: `1.5px solid ${on ? '#0057ff' : '#e2e8f0'}` }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${on ? '#0057ff' : '#cbd5e1'}`, background: on ? '#0057ff' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {on && <svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: on ? 800 : 600, color: on ? '#0057ff' : '#475569' }}>
+                    {p.number ? `#${p.number} ` : ''}{p.name} {p.surname}
+                  </span>
+                  {p.position && <span style={{ marginLeft: 'auto', fontSize: 9, color: '#94a3b8', fontWeight: 700 }}>{p.position}</span>}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {(!isAdmin || isSuggestion || step === 'plan') && (
+        <>
+          <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Nuevo Entrenamiento</div>
       <input className="input-field" placeholder="Título (ej: Técnica + Rondo)" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={{ marginBottom: 6 }} />
       <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
         <input type="date" className="input-field" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={{ flex: 1 }} />
@@ -662,7 +875,7 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
           {/* Category tabs */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
             {EXERCISE_CATS.map(cat => {
-              const count = cat.id === 'all' ? EXERCISES_DATA.length : EXERCISES_DATA.filter(e => e.category === cat.id).length;
+              const count = cat.id === 'all' ? EXERCISES_CATALOG.length : EXERCISES_CATALOG.filter(e => e.category === cat.id).length;
               return (
                 <button key={cat.id} onClick={() => setGalleryCategory(cat.id)}
                   style={{ padding: '3px 8px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 9, fontWeight: 700,
@@ -673,10 +886,31 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
               );
             })}
           </div>
+
+          {/* Group tabs */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
+            {EXERCISE_GROUPS.map(g => (
+              <button key={g.id} onClick={() => setGalleryGroup(g.id)}
+                style={{ padding: '3px 8px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 9, fontWeight: 800,
+                  background: galleryGroup === g.id ? '#111827' : '#e2e6ed',
+                  color: galleryGroup === g.id ? 'white' : '#64748b' }}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+
+          <input
+            className="input-field"
+            placeholder="Buscar ejercicio..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            style={{ marginBottom: 6, minHeight: 36, fontSize: 12 }}
+          />
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
             {filteredExercises.map(exData => (
               <div key={exData.id} style={{ position: 'relative', cursor: 'pointer' }} onClick={() => {
-                setExerciseInput(ei => ({ ...ei, image: exData.image, name: exData.name, description: exData.description || '', duration: exData.duration || 15 }));
+                setExerciseInput(ei => ({ ...ei, image: exData.image, name: exData.name, description: exData.description || '', duration: exData.duration || 15, category: exData.category, meta: exData.meta }));
                 setShowGallery(false);
               }}>
                 <img
@@ -699,6 +933,8 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
         <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={createTraining}><Save size={12} /> {isSuggestion ? 'Enviar Propuesta' : 'Crear'}</button>
         <button className="btn btn-outline btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
       </div>
+        </>
+      )}
     </div>
   );
 }
