@@ -71,7 +71,7 @@ export default function Tactica() {
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState([]);
   const [fieldView, setFieldView] = useState('full');
-  const [mobileTab, setMobileTab] = useState('jugadas'); // 'jugadas' | 'campo'
+ const [mobileTab, setMobileTab] = useState('campo');// 'jugadas' | 'campo'
 
   // Pilar 1 — Live indicator for realtime updates
   const [liveFlash, setLiveFlash] = useState(false);
