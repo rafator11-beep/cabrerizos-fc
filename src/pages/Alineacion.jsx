@@ -38,7 +38,8 @@ const W = 500;
 const H = 370;
 
 export default function Alineacion() {
-  const { isAdmin, profile } = useAuth();
+  const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
+const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
   const [lineups, setLineups] = useState([]);
   const [activeLineup, setActiveLineup] = useState(null);
