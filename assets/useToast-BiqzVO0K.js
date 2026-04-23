@@ -1,0 +1,1 @@
+import{s as e}from"./index-DmdmKBLu.js";var t=()=>{let{showToast:t}=e();return{showToast:t}};export{t};
