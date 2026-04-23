@@ -9,7 +9,6 @@ export default function Home() {
   const { profile, isAdmin, user } = useAuth();
   const today = new Date().toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
   
-  // Use profile name, fallback to metadata, fallback to "Mister" or "Jugador"
   const displayName = profile?.name || user?.user_metadata?.name || (isAdmin ? "Míster" : "Jugador");
 
   const [playerCount, setPlayerCount] = useState(0);
@@ -69,7 +68,6 @@ export default function Home() {
   ];
 
   return (
-<<<<<<< HEAD
     <div className="space-y-6 md:space-y-10 animate-fade-in">
       
       {/* MINIMALIST HERO */}
@@ -83,20 +81,9 @@ export default function Home() {
         <p className="text-muted text-xs md:text-base font-medium max-w-md opacity-60">
           Central de mando del Juvenil B. Gestiona la pizarra y el equipo.
         </p>
-=======
-    <div>
-      {/* Hero */}
-      <div style={{ background: "linear-gradient(130deg,#0a1628,#0d2248 55%,#0a1628)", borderRadius: 13, padding: isMobile ? "16px 16px" : "22px 24px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: -20, right: -20, width: 130, height: 130, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,87,255,.18),transparent 70%)" }}/>
-        <div style={{ fontSize: 10, color: "rgba(255,255,255,.55)", textTransform: "uppercase", letterSpacing: .7, marginBottom: 3 }}>📅 {today}</div>
-        <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: "white", marginBottom: 2 }}>
-          {isAdmin ? "Panel Entrenador" : `¡Hola, ${profile?.name || 'Jugador'}!`}
-        </div>
-        <div style={{ color: "rgba(255,255,255,.58)", fontSize: 12 }}>Temporada 2024/25 · Juveniles División Honor</div>
->>>>>>> origin/main
       </div>
 
-      {/* STATS GRID - 2 COLUMNS ON MOBILE */}
+      {/* STATS GRID */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(x => (
           <div key={x.l} className="card !p-5 flex flex-col items-start justify-between min-h-[120px] md:min-h-[160px] active:scale-95 transition-all">
@@ -107,10 +94,6 @@ export default function Home() {
               <div className="text-2xl md:text-4xl font-black text-white leading-none">{x.v}</div>
               <div className="text-[10px] font-bold uppercase tracking-widest text-muted/50 mt-1">{x.l}</div>
             </div>
-<<<<<<< HEAD
-=======
-            <div style={{ fontSize: 10, color: "#334155", fontWeight: 650 }}>{x.l}</div>
->>>>>>> origin/main
           </div>
         ))}
       </div>
@@ -127,7 +110,6 @@ export default function Home() {
             </div>
             <div className="p-6 flex-1">
               {recentTraining ? (
-<<<<<<< HEAD
                 <div className="space-y-4">
                   <h4 className="text-xl font-bold text-white leading-tight">{recentTraining.title}</h4>
                   <div className="flex items-center gap-4 text-[11px] font-bold text-muted uppercase tracking-wider">
@@ -136,30 +118,12 @@ export default function Home() {
                   </div>
                   <Link to="/entrenamientos" className="inline-flex items-center gap-2 text-accent text-[11px] font-black uppercase tracking-widest hover:gap-3 transition-all">
                     GESTIONAR <ChevronRight size={14} />
-=======
-                <>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{recentTraining.title}</div>
-                  <div style={{ fontSize: 11, color: "#334155", marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span><Calendar size={11} /> {recentTraining.date}</span>
-                    <span><Clock size={11} /> {recentTraining.duration} min</span>
-                  </div>
-                  {recentTraining.objective && (
-                    <div style={{ fontSize: 11, color: "#334155" }}>🎯 {recentTraining.objective}</div>
-                  )}
-                  <Link to="/entrenamientos" style={{ display: 'inline-block', marginTop: 8, fontSize: 11, fontWeight: 600, color: '#0057ff', textDecoration: 'none' }}>
-                    Ver todos →
->>>>>>> origin/main
                   </Link>
                 </div>
               ) : (
-<<<<<<< HEAD
                 <div className="py-8 text-center opacity-30 flex flex-col items-center gap-2">
                   <Dumbbell size={32} />
                   <p className="text-[10px] font-black uppercase tracking-widest">Sin sesiones</p>
-=======
-                <div style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
-                  No hay entrenamientos aún.
->>>>>>> origin/main
                 </div>
               )}
             </div>
@@ -168,7 +132,7 @@ export default function Home() {
 
         <div className="card !p-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted">Notas del Equipo</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted">Evaluaciones</span>
             <Star size={14} className="text-amber-500" />
           </div>
           <div className="p-5">
@@ -181,38 +145,9 @@ export default function Home() {
                       <div className="text-xs font-bold text-white truncate">{s.trainings?.title}</div>
                       <div className="text-[9px] text-muted font-medium">{s.trainings?.date}</div>
                     </div>
-<<<<<<< HEAD
+                    {s.comment && <div className="text-[10px] text-muted truncate max-w-[100px]">💬 {s.comment}</div>}
                   </div>
                 ))}
-=======
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600 }}>{s.trainings?.title || 'Entrenamiento'}</div>
-                      <div style={{ fontSize: 10, color: '#64748b' }}>{s.trainings?.date}</div>
-                    </div>
-                    {s.comment && <div style={{ fontSize: 10, color: '#64748b', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>💬 {s.comment}</div>}
-                  </div>
-                ))
-              ) : (
-                <div style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
-                  Aún no tienes puntuaciones.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Notifications */}
-        {isAdmin && (
-          <div className="card">
-            <div style={{ padding: "11px 14px", borderBottom: "1px solid #e2e6ed" }}>
-              <span style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CheckCircle size={16} color="#00b96b"/> Actividad reciente
-              </span>
-            </div>
-            <div style={{ padding: 14 }}>
-              <div style={{ color: "#64748b", fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
-                Todo al día. Sin notificaciones nuevas.
->>>>>>> origin/main
               </div>
             ) : (
               <div className="py-8 text-center opacity-20 flex flex-col items-center gap-2">
@@ -224,7 +159,6 @@ export default function Home() {
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* QUICK ACCESS GRID */}
       <div className="space-y-4">
         <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted/40 ml-1">Atajos Rápidos</h3>
@@ -242,22 +176,6 @@ export default function Home() {
             </Link>
           ))}
         </div>
-=======
-      {/* Quick links — 3 cols on mobile, 5 on desktop */}
-      <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Acceso rápido</div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 3 : 5}, 1fr)`, gap: 8 }}>
-        {quickLinks.map(link => (
-          <Link key={link.to} to={link.to} style={{ textDecoration: 'none' }}>
-            <div className="card" style={{ padding: isMobile ? '12px 8px' : '14px 12px', textAlign: 'center', transition: 'all .15s', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-              <div style={{ color: link.color, marginBottom: 6 }}>{link.icon}</div>
-              <div style={{ fontWeight: 700, fontSize: isMobile ? 11 : 12, color: '#1e293b' }}>{link.label}</div>
-              {!isMobile && <div style={{ fontSize: 9, color: '#64748b', marginTop: 2 }}>{link.desc}</div>}
-            </div>
-          </Link>
-        ))}
->>>>>>> origin/main
       </div>
     </div>
   );
