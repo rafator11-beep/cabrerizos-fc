@@ -92,8 +92,8 @@ export default function Tactica() {
   const [allPlays, setAllPlays] = useState([]); // full-category plays for heatmap
   // Pilar 4 — Export state
   const [exporting, setExporting] = useState(false);
-  const fieldSvgRef = useRef(null); // forwarded into FieldCanvas → SVG DOM element
-
+  const fieldSvgRef = useRef(null);
+const autosaveRef = useRef(null);
   const { queueUpdate } = useOfflineSync();
 
   const VIEWS = [
@@ -206,6 +206,22 @@ export default function Tactica() {
     setActivePlay(upd);
     setPlays(ps => ps.map(p => p.id === upd.id ? upd : p));
   };
+  useEffect(() => {
+  if (!isAdmin || !activePlay?.id) return;
+  if (String(activePlay.id).length < 10) return;
+  if (!Array.isArray(activePlay.tokens)) return;
+
+  clearTimeout(autosaveRef.current);
+
+  autosaveRef.current = setTimeout(async () => {
+    await queueUpdate('plays', activePlay.id, {
+      tokens: activePlay.tokens || [],
+      arrows: [],
+    });
+  }, 350);
+
+  return () => clearTimeout(autosaveRef.current);
+}, [activePlay, isAdmin, queueUpdate]);
 
   const addStep = () => {
     const newSteps = [...steps, { 
