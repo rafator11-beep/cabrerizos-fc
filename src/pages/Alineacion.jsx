@@ -46,11 +46,59 @@ export default function Alineacion() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', formation: '4-3-3', match_date: '' });
-  const [mobileTab, setMobileTab] = useState('list'); // 'list' | 'field' | 'players'
+ const [mobileTab, setMobileTab] = useState('field');
   const svgRef = useRef(null);
-  const drag = useRef(null);
+const drag = useRef(null);
+const autosaveRef = useRef(null);
+const lastAutosavedRef = useRef('');
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const applyLineupUpdate = (patch) => {
+  if (!activeLineup) return;
+  const next = { ...activeLineup, ...patch };
+  setActiveLineup(next);
+  setLineups(ls => ls.map(l => l.id === next.id ? next : l));
+};
 
   useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+  if (!activeLineup?.id) return;
+  lastAutosavedRef.current = JSON.stringify({
+    starters: activeLineup.starters || [],
+    substitutes: activeLineup.substitutes || [],
+  });
+}, [activeLineup?.id]);
+
+useEffect(() => {
+  if (!isAdmin || !activeLineup?.id) return;
+
+  const snapshot = JSON.stringify({
+    starters: activeLineup.starters || [],
+    substitutes: activeLineup.substitutes || [],
+  });
+
+  if (snapshot === lastAutosavedRef.current) return;
+
+  clearTimeout(autosaveRef.current);
+
+  autosaveRef.current = setTimeout(async () => {
+    const { error } = await supabase
+      .from('lineups')
+      .update({
+        starters: activeLineup.starters || [],
+        substitutes: activeLineup.substitutes || [],
+      })
+      .eq('id', activeLineup.id);
+
+    if (!error) {
+      lastAutosavedRef.current = snapshot;
+    }
+  }, 450);
+
+  return () => clearTimeout(autosaveRef.current);
+}, [activeLineup?.id, activeLineup?.starters, activeLineup?.substitutes, isAdmin]);
+  
 
   const fetchAll = async () => {
     setLoading(true);
@@ -104,25 +152,47 @@ export default function Alineacion() {
     } catch { alert('❌ Error al guardar.'); }
   };
 
-  const assignPlayer = (slotIndex, playerId) => {
-    if (!activeLineup) return;
-    const p = players.find(pl => pl.id === playerId);
-    const starters = (activeLineup.starters || []).map((s, i) => {
-      if (i === slotIndex) return { ...s, player_id: playerId, number: p?.number || null, name: p ? `${p.name}` : null };
-      if (s.player_id === playerId) return { ...s, player_id: null, number: null, name: null };
-      return s;
-    });
-    setActiveLineup({ ...activeLineup, starters });
-    setLineups(ls => ls.map(l => l.id === activeLineup.id ? { ...activeLineup, starters } : l));
-  };
+ const assignPlayer = (slotIndex, playerId) => {
+  if (!activeLineup) return;
 
-  const clearSlot = (slotIndex) => {
-    if (!activeLineup) return;
-    const starters = (activeLineup.starters || []).map((s, i) =>
-      i === slotIndex ? { ...s, player_id: null, number: null, name: null } : s
-    );
-    setActiveLineup({ ...activeLineup, starters });
-  };
+  const cleanPlayerId = playerId || null;
+  const p = players.find(pl => pl.id === cleanPlayerId);
+
+  const starters = (activeLineup.starters || []).map((s, i) => {
+    if (i === slotIndex) {
+      return {
+        ...s,
+        player_id: cleanPlayerId,
+        number: p?.number || null,
+        name: p ? `${p.name}` : null,
+      };
+    }
+
+    if (cleanPlayerId && s.player_id === cleanPlayerId) {
+      return { ...s, player_id: null, number: null, name: null };
+    }
+
+    return s;
+  });
+
+  const substitutes = (activeLineup.substitutes || []).filter(
+    s => s.player_id !== cleanPlayerId
+  );
+
+  applyLineupUpdate({ starters, substitutes });
+};
+
+const clearSlot = (slotIndex) => {
+  if (!activeLineup) return;
+
+  const starters = (activeLineup.starters || []).map((s, i) =>
+    i === slotIndex
+      ? { ...s, player_id: null, number: null, name: null }
+      : s
+  );
+
+  applyLineupUpdate({ starters });
+};
 
   const toggleSubstitute = (playerId) => {
     if (!activeLineup) return;
@@ -138,20 +208,45 @@ export default function Alineacion() {
     setActiveLineup({ ...activeLineup, substitutes: newSubs });
   };
 
-  const toSVG = (cx, cy) => {
-    const r = svgRef.current?.getBoundingClientRect();
-    if (!r) return { x: 0, y: 0 };
-    return { x: ((cx - r.left) / r.width) * W, y: ((cy - r.top) / r.height) * H };
-  };
+const toggleSubstitute = (playerId) => {
+  if (!activeLineup) return;
 
+  const subs = activeLineup.substitutes || [];
+  const exists = subs.find(s => s.player_id === playerId);
+
+  const starters = (activeLineup.starters || []).map(s =>
+    s.player_id === playerId
+      ? { ...s, player_id: null, number: null, name: null }
+      : s
+  );
+
+  let substitutes;
+  if (exists) {
+    substitutes = subs.filter(s => s.player_id !== playerId);
+  } else {
+    const p = players.find(pl => pl.id === playerId);
+    substitutes = [...subs, { player_id: playerId, number: p?.number || null }];
+  }
+
+  applyLineupUpdate({ starters, substitutes });
+};
   const onMD = (e, idx) => { if (!isAdmin) return; e.preventDefault(); drag.current = idx; };
-  const onMM = useCallback((e) => {
-    if (drag.current === null || !activeLineup) return;
-    const pt = e.touches ? e.touches[0] : e;
-    const c = toSVG(pt.clientX, pt.clientY);
-    const starters = (activeLineup.starters || []).map((s, i) => i === drag.current ? { ...s, x: c.x, y: c.y } : s);
-    setActiveLineup(prev => ({ ...prev, starters }));
-  }, [activeLineup]);
+ const onMM = useCallback((e) => {
+  if (drag.current === null || !activeLineup) return;
+
+  const pt = e.touches ? e.touches[0] : e;
+  const c = toSVG(pt.clientX, pt.clientY);
+
+  const nextX = clamp(c.x, 28, W - 28);
+  const nextY = clamp(c.y, 28, H - 28);
+
+  const starters = (activeLineup.starters || []).map((s, i) =>
+    i === drag.current ? { ...s, x: nextX, y: nextY } : s
+  );
+
+  applyLineupUpdate({ starters });
+}, [activeLineup]);
+  
   const onMU = () => { drag.current = null; };
 
   const assignedIds = new Set((activeLineup?.starters || []).filter(s => s.player_id).map(s => s.player_id));
