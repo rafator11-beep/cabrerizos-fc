@@ -1,17 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            // Cache Supabase REST API with Network-First (fresh data preferred, fall back to cache)
             urlPattern: /^https:\/\/yaltxcmspsvnhnxomhwa\.supabase\.co\/rest\/.*/i,
             handler: 'NetworkFirst',
             options: {
@@ -21,7 +22,6 @@ export default defineConfig({
             },
           },
           {
-            // Cache exercise images with Cache-First (static assets, rarely change)
             urlPattern: /\/exercises\/.*/i,
             handler: 'CacheFirst',
             options: {
@@ -36,8 +36,8 @@ export default defineConfig({
         name: 'Cabrerizos F.C.',
         short_name: 'CFC',
         description: 'Gestión táctica y técnica del equipo de fútbol',
-        theme_color: '#0057ff',
-        background_color: '#111827',
+        theme_color: '#0a0a0a',
+        background_color: '#0a0a0a',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/cabrerizos-fc/',
@@ -47,9 +47,7 @@ export default defineConfig({
           { src: '/cabrerizos-fc/escudo.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
-      devOptions: {
-        enabled: false, // keep dev fast; SW only active in production build
-      },
+      devOptions: { enabled: false },
     }),
   ],
   base: '/cabrerizos-fc/',
