@@ -255,10 +255,10 @@ const toggleSubstitute = (playerId) => {
 
   // ── Field SVG (shared between mobile and desktop) ──────────────────────
   const FieldSVG = () => (
-    <div style={{ background: '#2a6118', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,.2)' }}>
+    <div style={{ background: '#2a6118', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(0,0,0,.06)', aspectRatio: `${W}/${H}` }}>
       {activeLineup ? (
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
-          style={{ display: 'block', width: '100%', height: 'auto' }}
+          style={{ display: 'block', width: '100%', height: '100%', touchAction: 'none' }}
           onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}
           onTouchMove={e => { e.preventDefault(); onMM(e); }} onTouchEnd={onMU}>
           {Array.from({ length: 10 }).map((_, i) => (
