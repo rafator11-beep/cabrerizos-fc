@@ -390,9 +390,27 @@ function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, 
                 </div>
                 {ex.image && (
                   <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e6ed', background: '#f8f9fb' }}>
-                    <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block' }} />
-                  </div>
-                )}
+<img
+  src={
+    String(ex.image || '').startsWith('http')
+      ? ex.image
+      : `${import.meta.env.BASE_URL}exercises/${String(ex.image || '').replace(/^\/+/, '')}`
+  }
+  alt={ex.name || 'ejercicio'}
+  style={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block' }}
+  onError={(e) => {
+    const raw = String(ex.image || '');
+    const fallback = raw.startsWith('http')
+      ? ''
+      : `${import.meta.env.BASE_URL}${raw.replace(/^\/+/, '')}`;
+
+    if (fallback && e.currentTarget.src !== fallback) {
+      e.currentTarget.src = fallback;
+    } else {
+      e.currentTarget.style.display = 'none';
+    }
+  }}
+/>
                 {ex.canvas_drawing && (
                   <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #c7d8ff', background: '#111827', aspectRatio: '550/366', width: '100%' }}>
                     <FieldCanvas
