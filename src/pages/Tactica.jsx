@@ -56,7 +56,8 @@ const VECTOR_STYLES = [
 ];
 
 export default function Tactica() {
-  const { isAdmin, profile } = useAuth();
+  const { isAdmin, viewAsPlayer } = useAuth();
+  const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
   const [plays, setPlays] = useState([]);
   const [activePlay, setActivePlay] = useState(null);
