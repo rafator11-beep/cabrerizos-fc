@@ -19,30 +19,17 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [viewAsPlayer, setViewAsPlayer] = useState(false);
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const registerDevice = async (userId) => {
+    const deviceId = getDeviceId();
+    try {
+      await supabase
+        .from('profiles')
+        .update({ device_id: deviceId })
+        .eq('id', userId);
+    } catch (err) {
+      console.error('Error registering device:', err);
+    }
+  };
 
   const fetchProfile = async (userId) => {
     try {
@@ -90,18 +77,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register the current device for this user (1 device per account)
-  const registerDevice = async (userId) => {
-    const deviceId = getDeviceId();
-    try {
-      await supabase
-        .from('profiles')
-        .update({ device_id: deviceId })
-        .eq('id', userId);
-    } catch (err) {
-      console.error('Error registering device:', err);
-    }
-  };
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const buildEmail = (name, surname, surname2 = '') => {
     const n = name.trim().toLowerCase().replace(/\s+/g, '.');

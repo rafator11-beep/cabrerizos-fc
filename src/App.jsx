@@ -16,19 +16,19 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        height: '100vh',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#111827',
-        color: 'white',
-        flexDirection: 'column',
-        gap: 12
-      }}>
-        <div style={{ fontSize: 40 }}>⚽</div>
-        <div style={{ fontWeight: 700, fontSize: 16 }}>Cargando Cabrerizos F.C...</div>
-        <div style={{ color: 'rgba(255,255,255,.3)', fontSize: 11 }}>Conectando con el servidor</div>
+      <div className="flex flex-col items-center justify-center h-screen bg-bg text-text animate-fade-in">
+        <div className="w-20 h-20 bg-surface-2 rounded-3xl p-4 flex items-center justify-center mb-6 border border-border shadow-2xl animate-bounce">
+          <img 
+            src={import.meta.env.BASE_URL + 'escudo.png'} 
+            alt="Escudo" 
+            className="w-full h-full object-contain" 
+          />
+        </div>
+        <div className="text-xl font-black tracking-tight mb-2">Cabrerizos F.C.</div>
+        <div className="flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-[0.2em]">
+          <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          Sincronizando Sistema
+        </div>
       </div>
     );
   }

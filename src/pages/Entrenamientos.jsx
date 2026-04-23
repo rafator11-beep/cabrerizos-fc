@@ -1,39 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Calendar, Clock, Star, Trash2, Save, X, Image as ImageIcon, ChevronLeft, Users, PenTool } from 'lucide-react';
-import EXERCISES_DATA from '../exercises_data.json';
+import { Plus, Calendar, Clock, Star, Trash2, Save, X, ChevronLeft, Users, PenTool, Dumbbell, Activity, ChevronRight, Target } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
-import SessionDistributor from '../components/SessionDistributor';
 import FieldCanvas from '../components/FieldCanvas';
 
-const EXERCISE_CATS = [
-  { id: 'all',          label: 'Todos' },
-  { id: 'tecnica',      label: 'Técnica' },
-  { id: 'tactica',      label: 'Táctica' },
-  { id: 'fisico',       label: 'Físico' },
-  { id: 'calentamiento',label: 'Calentamiento' },
-];
-
 const INTENSITIES = [
-  { id: 'baja', label: 'Baja', color: '#10b981', icon: '🟢' },
-  { id: 'media', label: 'Media', color: '#f59e0b', icon: '🟡' },
-  { id: 'alta', label: 'Alta', color: '#ef4444', icon: '🔴' },
-];
-
-const QUICK_EXERCISES = [
-  { name: 'Calentamiento articular', description: 'Rotaciones de articulaciones de mayor a menor', duration: 8 },
-  { name: 'Trote continuo', description: 'Carrera suave alrededor del campo', duration: 8 },
-  { name: 'Estiramientos dinámicos', description: 'Zancadas, rodillas al pecho, talones al glúteo', duration: 7 },
-  { name: 'Rondo 4v2', description: 'Posesión en cuadrado 8×8 m, 4 contra 2', duration: 10 },
-  { name: 'Pases por parejas', description: 'Pase-control-recepción en movimiento', duration: 8 },
-  { name: 'Conducción + regate', description: 'Slalom entre conos con cambio de ritmo', duration: 10 },
-  { name: 'Sprint + recuperación', description: 'Sprints cortos 10–20 m con pausa activa', duration: 8 },
-  { name: 'Fuerza y core', description: 'Plancha, cuadrupedias, puente de glúteos', duration: 10 },
-  { name: 'Técnica individual', description: 'Control orientado y toque con ambas piernas', duration: 10 },
-  { name: 'Juego posicional', description: 'Posesión con superioridad numérica', duration: 15 },
-  { name: 'Partido reducido', description: 'Juego en espacio reducido 5v5 o 6v6', duration: 20 },
-  { name: 'Vuelta a la calma', description: 'Estiramientos estáticos y relajación activa', duration: 10 },
+  { id: 'baja', label: 'Baja', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: '🟢' },
+  { id: 'media', label: 'Media', color: 'text-amber-500', bg: 'bg-amber-500/10', icon: '🟡' },
+  { id: 'alta', label: 'Alta', color: 'text-rose-500', bg: 'bg-rose-500/10', icon: '🔴' },
 ];
 
 export default function Entrenamientos() {
@@ -41,687 +16,220 @@ export default function Entrenamientos() {
   const isMobile = useIsMobile();
   const [trainings, setTrainings] = useState([]);
   const [activeTraining, setActiveTraining] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [showScoring, setShowScoring] = useState(false);
-  const [showDistributor, setShowDistributor] = useState(false);
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'detail'
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ title: '', date: new Date().toISOString().split('T')[0], intensity: 'media', duration: '90', objective: '' });
 
-  const [form, setForm] = useState({
-    title: '', date: new Date().toISOString().split('T')[0],
-    duration: 90, intensity: 'media', objective: '', exercises: [], notes: ''
-  });
-  const [exerciseInput, setExerciseInput] = useState({ name: '', description: '', duration: 15, image: '' });
-  const [showGallery, setShowGallery] = useState(false);
+  useEffect(() => { fetchTrainings(); }, []);
 
-  useEffect(() => { fetchTrainings(); fetchPlayers(); }, []);
+  const createTraining = async () => {
+    if (!form.title) return;
+    const { data } = await supabase.from('trainings').insert([{ ...form, exercises: [], created_by: profile?.id }]).select().single();
+    if (data) {
+      setTrainings([data, ...trainings]);
+      setActiveTraining(data);
+      setShowForm(false);
+      setForm({ title: '', date: new Date().toISOString().split('T')[0], intensity: 'media', duration: '90', objective: '' });
+      if (isMobile) setMobileView('detail');
+    }
+  };
+
+  const deleteTraining = async (id) => {
+    if (!confirm('¿Eliminar sesión?')) return;
+    await supabase.from('trainings').delete().eq('id', id);
+    const rem = trainings.filter(t => t.id !== id);
+    setTrainings(rem);
+    if (activeTraining?.id === id) setActiveTraining(rem[0] || null);
+    if (isMobile) setMobileView('list');
+  };
 
   const fetchTrainings = async () => {
     setLoading(true);
-    try {
-      const { data } = await supabase.from('trainings').select('*').order('date', { ascending: false });
-      setTrainings(data || []);
-      if (data?.length > 0) {
-        setActiveTraining(data[0]);
-        fetchScores(data[0].id);
-      }
-    } catch { }
+    const { data } = await supabase.from('trainings').select('*').order('date', { ascending: false });
+    if (data) {
+      setTrainings(data);
+      if (data.length > 0) setActiveTraining(data[0]);
+    }
     setLoading(false);
-  };
-
-  const fetchPlayers = async () => {
-    try {
-      const { data } = await supabase.from('roster').select('*').order('number');
-      setPlayers(data || []);
-    } catch { }
-  };
-
-  const fetchScores = async (trainingId) => {
-    try {
-      const { data } = await supabase.from('training_scores').select('*').eq('training_id', trainingId);
-      setScores(data || []);
-    } catch { }
   };
 
   const selectTraining = (t) => {
     setActiveTraining(t);
-    fetchScores(t.id);
-    setShowScoring(false);
-    setShowDistributor(false);
     if (isMobile) setMobileView('detail');
   };
 
-  const addExercise = () => {
-    if (!exerciseInput.name) return;
-    setForm(f => ({ ...f, exercises: [...f.exercises, { ...exerciseInput, id: Date.now() }] }));
-    setExerciseInput({ name: '', description: '', duration: 15, image: '' });
-  };
-
-  const removeExercise = (id) => {
-    setForm(f => ({ ...f, exercises: f.exercises.filter(e => e.id !== id) }));
-  };
-
-  const createTraining = async () => {
-    if (!form.title) { alert('Pon un título al entrenamiento'); return; }
-    try {
-      const { data } = await supabase.from('trainings').insert([{
-        ...form, created_by: profile?.id
-      }]).select().single();
-      if (data) {
-        setTrainings([data, ...trainings]);
-        setActiveTraining(data);
-        setScores([]);
-        setShowForm(false);
-        setForm({ title: '', date: new Date().toISOString().split('T')[0], duration: 90, intensity: 'media', objective: '', exercises: [], notes: '' });
-      }
-    } catch { alert('Error al crear el entrenamiento.'); }
-  };
-
-  const suggestTraining = async () => {
-    if (!form.title) { alert('Pon un título a tu propuesta'); return; }
-    try {
-      const payload = {
-        title: form.title,
-        duration: form.duration,
-        intensity: form.intensity,
-        objective: form.objective,
-        exercises: form.exercises
-      };
-      await supabase.from('feedback').insert([{
-        player_id: profile?.id,
-        type: 'training_proposal',
-        content: JSON.stringify(payload)
-      }]);
-      alert('Propuesta de sesión enviada al cuerpo técnico con éxito.');
-      setShowForm(false);
-      setForm({ title: '', date: new Date().toISOString().split('T')[0], duration: 90, intensity: 'media', objective: '', exercises: [], notes: '' });
-    } catch { alert('Error al enviar la propuesta.'); }
-  };
-
-  const deleteTraining = async (id) => {
-    if (!confirm('¿Eliminar este entrenamiento?')) return;
-    await supabase.from('trainings').delete().eq('id', id);
-    const remaining = trainings.filter(t => t.id !== id);
-    setTrainings(remaining);
-    setActiveTraining(remaining[0] || null);
-    if (isMobile) setMobileView('list');
-  };
-
-  const saveScore = async (playerId, score, comment) => {
-    try {
-      const existing = scores.find(s => s.player_id === playerId);
-      if (existing) {
-        await supabase.from('training_scores').update({ score, comment }).eq('id', existing.id);
-        setScores(scores.map(s => s.id === existing.id ? { ...s, score, comment } : s));
-      } else {
-        const { data } = await supabase.from('training_scores').insert([{
-          training_id: activeTraining.id, player_id: playerId, score, comment
-        }]).select().single();
-        if (data) setScores([...scores, data]);
-      }
-    } catch { alert('Error al guardar la puntuación.'); }
-  };
-
-  const intInfo = (id) => INTENSITIES.find(i => i.id === id) || INTENSITIES[1];
-  const myScores = !isAdmin ? scores.filter(s => s.player_id === user?.id) : [];
-
-  if (loading) return <div style={{ padding: 20, color: '#96a0b5' }}>Cargando entrenamientos...</div>;
-
-  // ── Mobile: only show one panel at a time ──────────────────────────────
-  if (isMobile) {
-    if (mobileView === 'detail' && activeTraining) {
-      return (
-        <div>
-          {/* Back button */}
-          <button onClick={() => setMobileView('list')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#0057ff', fontWeight: 700, fontSize: 13, marginBottom: 12, padding: 0 }}>
-            <ChevronLeft size={18} /> Entrenamientos
-          </button>
-          {showDistributor ? (
-            <SessionDistributor 
-              activeTraining={activeTraining} 
-              players={players} 
-              onClose={() => setShowDistributor(false)} 
-              onSave={(updated) => {
-                setActiveTraining(updated);
-                setTrainings(trainings.map(t => t.id === updated.id ? updated : t));
-                setShowDistributor(false);
-              }}
-            />
-          ) : (
-            <TrainingDetail
-              activeTraining={activeTraining}
-              isAdmin={isAdmin}
-              showScoring={showScoring}
-              setShowScoring={setShowScoring}
-              showDistributor={showDistributor}
-              setShowDistributor={setShowDistributor}
-              scores={scores}
-              players={players}
-              myScores={myScores}
-              saveScore={saveScore}
-              deleteTraining={deleteTraining}
-              intInfo={intInfo}
-            />
-          )}
-        </div>
-      );
-    }
-
-    // Mobile list view
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Entrenamientos</span>
-          <button className={isAdmin ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm"} onClick={() => setShowForm(!showForm)}>
-            <Plus size={14} /> {isAdmin ? 'Nuevo' : 'Sugerir Sesión'}
-          </button>
-        </div>
-
-        {showForm && <TrainingForm form={form} setForm={setForm} exerciseInput={exerciseInput} setExerciseInput={setExerciseInput} showGallery={showGallery} setShowGallery={setShowGallery} addExercise={addExercise} removeExercise={removeExercise} createTraining={isAdmin ? createTraining : suggestTraining} setShowForm={setShowForm} isSuggestion={!isAdmin} />}
-
-        {trainings.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 30, color: '#96a0b5', fontSize: 12 }}>
-            No hay entrenamientos aún.
-            {isAdmin && <div style={{ marginTop: 6 }}>Pulsa <strong>Nuevo</strong> para crear uno.</div>}
-          </div>
-        ) : trainings.map(t => {
-          const int = intInfo(t.intensity);
-          return (
-            <div key={t.id} onClick={() => selectTraining(t)}
-              style={{
-                padding: "12px 14px", borderRadius: 10,
-                border: `1.5px solid ${activeTraining?.id === t.id ? "#0057ff" : "#e0e4ed"}`,
-                background: activeTraining?.id === t.id ? "#eef3ff" : "white",
-                cursor: "pointer", transition: 'all .12s'
-              }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{t.title}</div>
-                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 10, background: `${int.color}15`, color: int.color, fontWeight: 700 }}>{int.icon} {int.label}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 10, color: '#96a0b5' }}>
-                <span><Calendar size={10} style={{ verticalAlign: 'middle' }} /> {t.date}</span>
-                <span><Clock size={10} style={{ verticalAlign: 'middle' }} /> {t.duration}min</span>
-                <span>📝 {(t.exercises || []).length} ejercicios</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // ── Desktop: side-by-side layout ──────────────────────────────────────
-  return (
-    <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 100px)' }}>
-      {/* Left: Training List */}
-      <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Entrenamientos</span>
-          <button className={isAdmin ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm"} onClick={() => setShowForm(!showForm)}>
-            <Plus size={14} /> {isAdmin ? 'Nuevo' : 'Sugerir Sesión'}
-          </button>
-        </div>
-
-        {showForm && <TrainingForm form={form} setForm={setForm} exerciseInput={exerciseInput} setExerciseInput={setExerciseInput} showGallery={showGallery} setShowGallery={setShowGallery} addExercise={addExercise} removeExercise={removeExercise} createTraining={isAdmin ? createTraining : suggestTraining} setShowForm={setShowForm} isSuggestion={!isAdmin} />}
-
-        {trainings.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 30, color: '#96a0b5', fontSize: 12 }}>
-            No hay entrenamientos aún.
-            {isAdmin && <div style={{ marginTop: 6 }}>Pulsa <strong>Nuevo</strong> para crear uno.</div>}
-          </div>
-        ) : trainings.map(t => {
-          const int = intInfo(t.intensity);
-          return (
-            <div key={t.id} onClick={() => selectTraining(t)}
-              style={{
-                padding: "10px 12px", borderRadius: 10,
-                border: `1.5px solid ${activeTraining?.id === t.id ? "#0057ff" : "#e0e4ed"}`,
-                background: activeTraining?.id === t.id ? "#eef3ff" : "white",
-                cursor: "pointer", transition: 'all .12s'
-              }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{t.title}</div>
-                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 10, background: `${int.color}15`, color: int.color, fontWeight: 700 }}>{int.icon} {int.label}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 10, color: '#96a0b5' }}>
-                <span><Calendar size={10} style={{ verticalAlign: 'middle' }} /> {t.date}</span>
-                <span><Clock size={10} style={{ verticalAlign: 'middle' }} /> {t.duration}min</span>
-                <span>📝 {(t.exercises || []).length} ejercicios</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Right: Training Detail */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {activeTraining ? (
-          showDistributor ? (
-            <SessionDistributor 
-              activeTraining={activeTraining} 
-              players={players} 
-              onClose={() => setShowDistributor(false)} 
-              onSave={(updated) => {
-                setActiveTraining(updated);
-                setTrainings(trainings.map(t => t.id === updated.id ? updated : t));
-                setShowDistributor(false);
-              }}
-            />
-          ) : (
-            <TrainingDetail
-              activeTraining={activeTraining}
-              isAdmin={isAdmin}
-              showScoring={showScoring}
-              setShowScoring={setShowScoring}
-              showDistributor={showDistributor}
-              setShowDistributor={setShowDistributor}
-              scores={scores}
-              players={players}
-              myScores={myScores}
-              saveScore={saveScore}
-              deleteTraining={deleteTraining}
-              intInfo={intInfo}
-            />
-          )
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#96a0b5' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Selecciona un entrenamiento</div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Extracted components ───────────────────────────────────────────────
-
-function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, showDistributor, setShowDistributor, scores, players, myScores, saveScore, deleteTraining, intInfo }) {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-        <div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{activeTraining.title}</h2>
-          <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 12, color: '#64748b', flexWrap: 'wrap' }}>
-            <span>📅 {activeTraining.date}</span>
-            <span>⏱️ {activeTraining.duration} min</span>
-            <span>{intInfo(activeTraining.intensity).icon} {intInfo(activeTraining.intensity).label}</span>
-          </div>
-          {activeTraining.objective && (
-            <div style={{ marginTop: 8, padding: '8px 12px', background: '#f0f9ff', borderRadius: 8, borderLeft: '3px solid #0057ff', fontSize: 12, color: '#334155' }}>
-              🎯 <strong>Objetivo:</strong> {activeTraining.objective}
-            </div>
-          )}
-        </div>
-        {isAdmin && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowDistributor(true)}>
-              <Users size={12} /> Grupos
-            </button>
-            <button className="btn btn-outline btn-sm" onClick={() => setShowScoring(!showScoring)}>
-              <Star size={12} /> {showScoring ? 'Ocultar' : 'Puntuar'}
-            </button>
-            <button className="btn btn-outline btn-sm" onClick={() => deleteTraining(activeTraining.id)} style={{ color: '#ef4444' }}>
-              <Trash2 size={12} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {(activeTraining.exercises || []).length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>📝 Ejercicios del día</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {(activeTraining.exercises || []).map((ex, i) => (
-              <div key={i} style={{ padding: '12px 16px', background: 'white', borderRadius: 12, border: '1px solid #e2e6ed', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: '#0057ff', flexShrink: 0 }}>
-                    {i + 1}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: '#1e293b' }}>{ex.name}</div>
-                    {ex.description && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{ex.description}</div>}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#0057ff', fontWeight: 700, padding: '4px 10px', background: '#eef3ff', borderRadius: 8 }}>{ex.duration} min</div>
-                </div>
-                {ex.image && (
-                  <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e6ed', background: '#f8f9fb' }}>
-                    <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block' }} />
-                  </div>
-                )}
-                {ex.canvas_drawing && (
-                  <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #c7d8ff', background: '#111827', aspectRatio: '550/366', width: '100%' }}>
-                    <FieldCanvas
-                      tokens={ex.canvas_drawing.tokens || []}
-                      arrows={ex.canvas_drawing.arrows || []}
-                      zones={ex.canvas_drawing.zones || []}
-                      tool="move"
-                      viewMode="full"
-                      presentationMode={true}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeTraining.notes && (
-        <div style={{ padding: '10px 14px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fde68a', fontSize: 12, marginBottom: 20 }}>
-          📌 <strong>Notas:</strong> {activeTraining.notes}
-        </div>
-      )}
-
-      {showScoring && isAdmin && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>⭐ Puntuaciones del entrenamiento</div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>{scores.length}/{players.length} evaluados</div>
-          </div>
-          {scores.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#f0f9ff', borderRadius: 10, border: '1px solid #bae6fd' }}>
-              <div style={{ textAlign: 'center', flex: 1 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#0057ff' }}>{(scores.reduce((s, r) => s + r.score, 0) / scores.length).toFixed(1)}</div>
-                <div style={{ fontSize: 9, color: '#64748b' }}>Media grupo</div>
-              </div>
-              <div style={{ textAlign: 'center', flex: 1 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981' }}>{Math.max(...scores.map(s => s.score))}</div>
-                <div style={{ fontSize: 9, color: '#64748b' }}>Mejor nota</div>
-              </div>
-              <div style={{ textAlign: 'center', flex: 1 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f59e0b' }}>{scores.filter(s => s.score >= 7).length}</div>
-                <div style={{ fontSize: 9, color: '#64748b' }}>Con nota ≥7</div>
-              </div>
-            </div>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {players.map(player => {
-              const existing = scores.find(s => s.player_id === player.id);
-              return <PlayerScoreRow key={player.id} player={player} existing={existing} onSave={saveScore} />;
-            })}
-          </div>
-        </div>
-      )}
-
-      {!isAdmin && myScores.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>⭐ Tu puntuación</div>
-          {myScores.map(s => (
-            <div key={s.id} style={{ padding: '12px 16px', background: 'white', borderRadius: 10, border: '1px solid #e2e6ed' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: s.score >= 7 ? '#10b981' : s.score >= 5 ? '#f59e0b' : '#ef4444' }}>{s.score}/10</div>
-                {s.comment && <div style={{ fontSize: 12, color: '#64748b' }}>💬 {s.comment}</div>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGallery, setShowGallery, addExercise, removeExercise, createTraining, setShowForm, isSuggestion }) {
-  const [galleryCategory, setGalleryCategory] = useState('all');
-  const [showPizarra, setShowPizarra] = useState(false);
-  const [pzTokens, setPzTokens] = useState([]);
-  const [pzArrows, setPzArrows] = useState([]);
-  const [pzZones, setPzZones] = useState([]);
-  const [pzTool, setPzTool] = useState('move');
-  const [pzArrowType, setPzArrowType] = useState('pass');
-  const [pzDrawPt, setPzDrawPt] = useState(null);
-
-  const filteredExercises = galleryCategory === 'all'
-    ? EXERCISES_DATA
-    : EXERCISES_DATA.filter(e => e.category === galleryCategory);
-
-  const savePizarra = () => {
-    setExerciseInput(ei => ({ ...ei, canvas_drawing: { tokens: pzTokens, arrows: pzArrows, zones: pzZones } }));
-    setShowPizarra(false);
-  };
-
-  const clearPizarra = () => {
-    setExerciseInput(ei => ({ ...ei, canvas_drawing: null }));
-    setPzTokens([]); setPzArrows([]); setPzZones([]);
-  };
-
-  const PZ_TOOLS = [
-    { id: 'move', label: '✋', title: 'Mover' },
-    { id: 'player', label: '⬤', title: 'Jugador' },
-    { id: 'ball', label: '⚽', title: 'Balón' },
-    { id: 'cone', label: '🔺', title: 'Cono' },
-    { id: 'arrow', label: '→', title: 'Flecha' },
-  ];
-  const PZ_ARROW_TYPES = [
-    { id: 'pass', label: 'Pase', color: '#4ade80' },
-    { id: 'run', label: 'Carrera', color: '#ffe066' },
-    { id: 'shoot', label: 'Tiro', color: '#ff6b6b' },
-    { id: 'curved', label: 'Curvo', color: '#c084fc' },
-  ];
-
-  const playerColors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c'];
+  const getIntensity = (id) => INTENSITIES.find(i => i.id === id) || INTENSITIES[1];
 
   return (
-    <div className="card" style={{ padding: 12 }}>
-      {/* ── Pizarra modal ─────────────────────────────────────────── */}
-      {showPizarra && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
-          <div style={{ background: '#111827', borderRadius: 14, width: '100%', maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
-            {/* header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#1e293b' }}>
-              <PenTool size={15} color="#60a5fa" />
-              <span style={{ color: 'white', fontWeight: 700, fontSize: 13, flex: 1 }}>Pizarra del ejercicio</span>
-              <button onClick={() => setShowPizarra(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,.5)', display: 'flex' }}><X size={16} /></button>
+    <div className="flex flex-col gap-6 h-full animate-fade-in relative">
+      
+      {showForm && (
+        <div className="absolute inset-0 z-50 bg-bg/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-lg space-y-6 animate-slide-up">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-white">Nueva Sesión</h2>
+              <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-muted"><X size={18}/></button>
             </div>
-
-            {/* toolbar */}
-            <div style={{ display: 'flex', gap: 6, padding: '8px 12px', background: '#1a2332', flexWrap: 'wrap', alignItems: 'center' }}>
-              {PZ_TOOLS.map(t => (
-                <button key={t.id} title={t.title} onClick={() => setPzTool(t.id)}
-                  style={{ padding: '5px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13,
-                    background: pzTool === t.id ? '#0057ff' : 'rgba(255,255,255,.1)',
-                    color: 'white', fontWeight: 700 }}>
-                  {t.label}
-                </button>
-              ))}
-              {pzTool === 'arrow' && (
-                <div style={{ display: 'flex', gap: 4, marginLeft: 6 }}>
-                  {PZ_ARROW_TYPES.map(at => (
-                    <button key={at.id} onClick={() => setPzArrowType(at.id)}
-                      style={{ padding: '4px 8px', borderRadius: 6, border: `2px solid ${pzArrowType === at.id ? at.color : 'transparent'}`,
-                        background: 'rgba(255,255,255,.08)', color: at.color, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
-                      {at.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button onClick={() => { setPzTokens([]); setPzArrows([]); setPzZones([]); }}
-                style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,.2)', background: 'transparent', color: 'rgba(255,255,255,.5)', fontSize: 10, cursor: 'pointer' }}>
-                Limpiar
-              </button>
-            </div>
-
-            {/* canvas */}
-            <div style={{ width: '100%', aspectRatio: '550/366', position: 'relative' }}>
-              <FieldCanvas
-                tokens={pzTokens} arrows={pzArrows} zones={pzZones}
-                tool={pzTool} arrowType={pzArrowType}
-                drawPt={pzDrawPt} setDrawPt={setPzDrawPt}
-                onMove={(id, x, y) => setPzTokens(ts => ts.map(t => t.id === id ? { ...t, x, y } : t))}
-                onPlace={(kind, x, y) => {
-                  if (kind === 'player') {
-                    setPzTokens(ts => [...ts, { id: 'p' + Date.now(), kind: 'player', x, y, color: playerColors[ts.filter(t=>t.kind==='player').length % playerColors.length], label: String(ts.filter(t=>t.kind==='player').length + 1) }]);
-                  } else {
-                    setPzTokens(ts => [...ts, { id: 'k' + Date.now(), kind, x, y }]);
-                  }
-                }}
-                onArrow={a => setPzArrows(as => [...as, a])}
-                onDelete={id => { setPzTokens(ts => ts.filter(t => t.id !== id)); setPzArrows(as => as.filter(a => a.id !== id)); }}
-                onZoneAdd={z => setPzZones(zs => [...zs, z])}
-                onZoneDelete={id => setPzZones(zs => zs.filter(z => z.id !== id))}
-                viewMode="full"
-              />
-            </div>
-
-            {/* footer */}
-            <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: '#1e293b' }}>
-              <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={savePizarra}><Save size={12} /> Guardar dibujo</button>
-              <button className="btn btn-outline btn-sm" onClick={() => setShowPizarra(false)}>Cancelar</button>
+            <div className="space-y-4">
+              <input className="w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none" placeholder="Título de la sesión" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-4">
+                <input type="date" className="w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+                <input type="number" className="w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none" placeholder="Minutos" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} />
+              </div>
+              <select className="w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none" value={form.intensity} onChange={e => setForm(f => ({ ...f, intensity: e.target.value }))}>
+                {INTENSITIES.map(i => <option key={i.id} value={i.id} className="bg-bg">{i.label}</option>)}
+              </select>
+              <textarea className="w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none min-h-[100px]" placeholder="Objetivo de la sesión..." value={form.objective} onChange={e => setForm(f => ({ ...f, objective: e.target.value }))} />
+              <button className="w-full py-4 bg-accent text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-accent/20" onClick={createTraining}>CREAR ENTRENAMIENTO</button>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Nuevo Entrenamiento</div>
-      <input className="input-field" placeholder="Título (ej: Técnica + Rondo)" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={{ marginBottom: 6 }} />
-      <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-        <input type="date" className="input-field" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={{ flex: 1 }} />
-        <input type="number" className="input-field" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: parseInt(e.target.value) || 90 }))} style={{ width: 70 }} placeholder="min" />
-      </div>
-      <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-        {INTENSITIES.map(int => (
-          <button key={int.id} onClick={() => setForm(f => ({ ...f, intensity: int.id }))}
-            style={{ flex: 1, padding: '4px 6px', borderRadius: 6, border: `1.5px solid ${form.intensity === int.id ? int.color : '#e0e4ed'}`, background: form.intensity === int.id ? `${int.color}15` : 'white', cursor: 'pointer', fontSize: 10, fontWeight: 600, color: form.intensity === int.id ? int.color : '#64748b' }}>
-            {int.icon} {int.label}
-          </button>
-        ))}
-      </div>
-      <textarea className="input-field" placeholder="Objetivo del entrenamiento" value={form.objective} onChange={e => setForm(f => ({ ...f, objective: e.target.value }))} rows={2} style={{ marginBottom: 6, resize: 'vertical' }} />
-
-      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#4a5568' }}>⚡ Añadir rápido:</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 8 }}>
-        {QUICK_EXERCISES.map(ex => (
-          <button key={ex.name}
-            onClick={() => setForm(f => ({ ...f, exercises: [...f.exercises, { ...ex, id: Date.now() + Math.random(), image: '' }] }))}
-            style={{ fontSize: 9, padding: '3px 7px', borderRadius: 10, border: '1px solid #e0e4ed', background: '#f8f9fb', cursor: 'pointer', fontWeight: 600, color: '#334155' }}>
-            {ex.name} ({ex.duration}')
-          </button>
-        ))}
-      </div>
-
-      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#4a5568' }}>📝 Ejercicios del día:</div>
-      {form.exercises.map(ex => (
-        <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, marginBottom: 3, fontSize: 11 }}>
-          {ex.image && <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
-          {ex.canvas_drawing && <span style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, background: '#eef3ff', color: '#0057ff', fontWeight: 700, flexShrink: 0 }}>🎨 Pizarra</span>}
-          <span style={{ flex: 1, fontSize: 10 }}>{ex.name} <span style={{ color: '#0057ff', fontWeight: 700 }}>({ex.duration}min)</span></span>
-          <button onClick={() => removeExercise(ex.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><X size={12} /></button>
-        </div>
-      ))}
-
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 3, marginTop: 4 }}>O añade uno personalizado:</div>
-      <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
-        {exerciseInput.image && (
-          <img src={import.meta.env.BASE_URL + 'exercises/' + exerciseInput.image} alt="selected" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
-        )}
-        <button className="btn btn-outline btn-sm" onClick={() => setShowGallery(!showGallery)} style={{ padding: '0 8px' }} title="Galería">
-          <ImageIcon size={14} />
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl md:text-4xl font-black text-white tracking-tighter">Entrenamientos</h2>
+        <button 
+          onClick={() => setShowForm(true)}
+          className="btn btn-primary !rounded-full !px-6 text-[10px] uppercase font-black tracking-widest shadow-lg shadow-accent/20"
+        >
+          <Plus size={14} className="mr-2" /> {isAdmin ? 'Nuevo' : 'Proponer'}
         </button>
-        <button className="btn btn-outline btn-sm" onClick={() => setShowPizarra(true)} style={{ padding: '0 8px', color: exerciseInput.canvas_drawing ? '#0057ff' : undefined }} title="Dibujar en pizarra">
-          <PenTool size={14} />
-        </button>
-        <input className="input-field" placeholder="Nombre ejercicio" value={exerciseInput.name} onChange={e => setExerciseInput(ei => ({ ...ei, name: e.target.value }))} style={{ flex: 1 }} />
-        <input type="number" className="input-field" value={exerciseInput.duration} onChange={e => setExerciseInput(ei => ({ ...ei, duration: parseInt(e.target.value) || 15 }))} style={{ width: 50 }} />
-        <button className="btn btn-outline btn-sm" onClick={addExercise}>+</button>
       </div>
-      {exerciseInput.canvas_drawing && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, padding: '4px 8px', background: '#eef3ff', borderRadius: 6 }}>
-          <PenTool size={11} color="#0057ff" />
-          <span style={{ fontSize: 10, color: '#0057ff', fontWeight: 700, flex: 1 }}>Pizarra dibujada ({exerciseInput.canvas_drawing.tokens?.length || 0} fichas, {exerciseInput.canvas_drawing.arrows?.length || 0} flechas)</span>
-          <button onClick={clearPizarra} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 10 }}>✕ Borrar</button>
-        </div>
-      )}
 
-      {showGallery && (
-        <div style={{ background: '#f8f9fb', padding: 8, borderRadius: 8, marginBottom: 6 }}>
-          {/* Category tabs */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
-            {EXERCISE_CATS.map(cat => {
-              const count = cat.id === 'all' ? EXERCISES_DATA.length : EXERCISES_DATA.filter(e => e.category === cat.id).length;
+      <div className="flex flex-1 gap-8 min-h-0">
+        
+        {/* LIST PANEL */}
+        <div className={`
+          w-full md:w-[350px] flex-col gap-4 flex-shrink-0
+          ${mobileView === 'list' ? 'flex' : 'hidden md:flex'}
+        `}>
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+            {loading ? (
+              <div className="py-20 text-center text-muted animate-pulse font-black text-xs">CARGANDO...</div>
+            ) : trainings.length === 0 ? (
+              <div className="py-20 text-center text-muted/30 font-black text-xs uppercase tracking-[0.2em] italic">Sin registros</div>
+            ) : trainings.map(t => {
+              const intensity = getIntensity(t.intensity);
               return (
-                <button key={cat.id} onClick={() => setGalleryCategory(cat.id)}
-                  style={{ padding: '3px 8px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 9, fontWeight: 700,
-                    background: galleryCategory === cat.id ? '#0057ff' : '#e2e6ed',
-                    color: galleryCategory === cat.id ? 'white' : '#64748b' }}>
-                  {cat.label} <span style={{ opacity: .7 }}>({count})</span>
+                <button 
+                  key={t.id}
+                  onClick={() => selectTraining(t)}
+                  className={`
+                    w-full flex flex-col p-5 rounded-[28px] border transition-all text-left group active:scale-95
+                    ${activeTraining?.id === t.id ? 'bg-accent/5 border-accent/30 shadow-lg' : 'bg-surface-2/20 border-white/5 hover:border-white/10'}
+                  `}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${intensity.bg} ${intensity.color}`}>
+                      {intensity.icon} {intensity.label}
+                    </div>
+                    <span className="text-[10px] font-black text-muted/40">{t.date}</span>
+                  </div>
+                  <h3 className="text-base font-bold text-white mb-3 group-hover:text-accent transition-colors leading-tight">{t.title}</h3>
+                  <div className="flex items-center gap-4 text-[10px] font-bold text-muted/60 uppercase tracking-widest">
+                    <span className="flex items-center gap-1.5"><Clock size={12} /> {t.duration}'</span>
+                    <span className="flex items-center gap-1.5"><Activity size={12} /> {(t.exercises || []).length} Ex.</span>
+                  </div>
                 </button>
               );
             })}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
-            {filteredExercises.map(exData => (
-              <div key={exData.id} style={{ position: 'relative', cursor: 'pointer' }} onClick={() => {
-                setExerciseInput(ei => ({ ...ei, image: exData.image, name: exData.name, description: exData.description || '', duration: exData.duration || 15 }));
-                setShowGallery(false);
-              }}>
-                <img src={import.meta.env.BASE_URL + 'exercises/' + exData.image} alt={exData.name}
-                  style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: exerciseInput.image === exData.image ? '2.5px solid #0057ff' : '1.5px solid transparent' }} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 8, padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderBottomLeftRadius: 6, borderBottomRightRadius: 6 }}>
-                  {exData.name}
+        </div>
+
+        {/* DETAIL PANEL */}
+        <div className={`
+          flex-1 flex flex-col gap-6 min-h-0
+          ${mobileView === 'detail' ? 'flex' : 'hidden md:flex'}
+        `}>
+          {isMobile && (
+            <button onClick={() => setMobileView('list')} className="flex items-center gap-2 text-accent text-xs font-black uppercase tracking-widest mb-2">
+              <ChevronLeft size={16} /> Volver a la lista
+            </button>
+          )}
+
+          {activeTraining ? (
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
+              
+              {/* Header Card */}
+              <div className="glass-card">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-black text-white leading-tight">{activeTraining.title}</h2>
+                    {isAdmin && (
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => deleteTraining(activeTraining.id)} className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20 active:scale-90 transition-all"><Trash2 size={18} /></button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 py-4 border-y border-white/5">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black text-muted uppercase tracking-widest">Fecha</span>
+                      <span className="text-xs font-bold text-white">{activeTraining.date}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black text-muted uppercase tracking-widest">Duración</span>
+                      <span className="text-xs font-bold text-white">{activeTraining.duration} min</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black text-muted uppercase tracking-widest">Intensidad</span>
+                      <span className={`text-xs font-bold ${getIntensity(activeTraining.intensity).color}`}>
+                        {getIntensity(activeTraining.intensity).label}
+                      </span>
+                    </div>
+                  </div>
+                  {activeTraining.objective && (
+                    <div className="p-4 bg-accent/5 rounded-2xl border border-accent/10">
+                      <div className="flex items-center gap-2 text-[9px] font-black text-accent uppercase tracking-widest mb-2">
+                        <Target size={12} /> Objetivo de la sesión
+                      </div>
+                      <p className="text-sm font-medium text-white/80 leading-relaxed italic">"{activeTraining.objective}"</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Exercises List */}
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-2">Secuencia de Ejercicios</h3>
+                <div className="space-y-3">
+                  {(activeTraining.exercises || []).map((ex, i) => (
+                    <div key={i} className="glass-card !p-0 overflow-hidden group">
+                      <div className="p-6 flex items-start gap-5">
+                        <div className="w-10 h-10 rounded-2xl bg-surface-2 flex items-center justify-center text-lg font-black text-white/20 border border-white/5 group-hover:bg-accent group-hover:text-white transition-all shrink-0">
+                          {i + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-lg font-bold text-white group-hover:text-accent transition-colors">{ex.name}</h4>
+                            <span className="text-[11px] font-black text-accent bg-accent/10 px-3 py-1 rounded-full uppercase tracking-widest">{ex.duration}'</span>
+                          </div>
+                          <p className="text-sm text-muted leading-relaxed opacity-60 font-medium">{ex.description}</p>
+                        </div>
+                      </div>
+                      {ex.canvas_drawing && (
+                        <div className="aspect-[550/366] bg-[#111827] border-t border-white/5 relative group-hover:opacity-100 opacity-90 transition-opacity">
+                          <FieldCanvas 
+                            tokens={ex.canvas_drawing.tokens || []}
+                            arrows={ex.canvas_drawing.arrows || []}
+                            zones={ex.canvas_drawing.zones || []}
+                            viewMode="full"
+                            presentationMode={true}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted/20 animate-pulse">
+              <Dumbbell size={80} strokeWidth={1} />
+              <span className="text-xs font-black uppercase tracking-[0.4em] mt-6">Selecciona una sesión</span>
+            </div>
+          )}
         </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={createTraining}><Save size={12} /> {isSuggestion ? 'Enviar Propuesta' : 'Crear'}</button>
-        <button className="btn btn-outline btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
-      </div>
-    </div>
-  );
-}
-
-function PlayerScoreRow({ player, existing, onSave }) {
-  const [localScore, setLocalScore] = useState(existing?.score || 5);
-  const [localComment, setLocalComment] = useState(existing?.comment || '');
-  const [saved, setSaved] = useState(!!existing);
-
-  const scoreColor = localScore >= 8 ? '#10b981' : localScore >= 6 ? '#f59e0b' : localScore >= 4 ? '#f97316' : '#ef4444';
-
-  const handleSave = () => {
-    onSave(player.id, localScore, localComment);
-    setSaved(true);
-  };
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'white', borderRadius: 10, border: `1.5px solid ${saved ? '#a7f3d0' : '#e2e6ed'}`, transition: 'border-color .2s', flexWrap: 'wrap' }}>
-      <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#0057ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
-        {player.number || player.name?.[0]}
-      </div>
-      <div style={{ minWidth: 90 }}>
-        <div style={{ fontWeight: 700, fontSize: 12 }}>{player.name} {player.surname}</div>
-        <div style={{ fontSize: 10, color: '#96a0b5' }}>{player.position || 'Sin posición'}</div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 160 }}>
-        <div style={{ display: 'flex', gap: 2 }}>
-          {[2, 4, 6, 8, 10].map(v => (
-            <span key={v} onClick={() => { setLocalScore(v); setSaved(false); }}
-              style={{ fontSize: 20, cursor: 'pointer', color: localScore >= v ? '#f59e0b' : '#d1d5db', transition: 'color .1s' }}>
-              ★
-            </span>
-          ))}
-        </div>
-        <div style={{ width: 34, height: 34, borderRadius: 8, background: `${scoreColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${scoreColor}` }}>
-          <span style={{ fontWeight: 800, fontSize: 15, color: scoreColor }}>{localScore}</span>
-        </div>
-        <input type="range" min="1" max="10" value={localScore}
-          onChange={e => { setLocalScore(parseInt(e.target.value)); setSaved(false); }}
-          style={{ flex: 1, minWidth: 60, accentColor: scoreColor }} />
-      </div>
-      <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-        <input className="input-field" placeholder="Comentario del entrenador..."
-          value={localComment} onChange={e => { setLocalComment(e.target.value); setSaved(false); }}
-          style={{ flex: 1, fontSize: 12 }} />
-        <button className="btn btn-sm" onClick={handleSave}
-          style={{ background: saved ? '#10b981' : '#0057ff', color: 'white', border: 'none', borderRadius: 7, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
-          {saved ? '✓' : <Save size={12} />}
-        </button>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { KeyRound, User, Shield, Users } from 'lucide-react';
+import { KeyRound, User, Shield, Users, ArrowRight } from 'lucide-react';
 
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -51,7 +51,6 @@ export default function Login() {
       }
 
       if (result.error) {
-        // Translate common Supabase errors to Spanish
         let msg = result.error.message;
         if (msg.includes('Invalid login credentials')) {
           msg = 'Nombre, apellidos o contraseña incorrectos.';
@@ -70,85 +69,65 @@ export default function Login() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a1628 0%, #111827 50%, #0d2248 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 20
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: 16,
-        maxWidth: 380,
-        width: '100%',
-        padding: '32px 28px',
-        textAlign: 'center',
-        boxShadow: '0 12px 48px rgba(0,0,0,.35)'
-      }}>
-        {/* Logo */}
-        <img src={import.meta.env.BASE_URL + 'escudo.png'} alt="Escudo" style={{ width: 64, height: 64, objectFit: 'contain', marginBottom: 8 }} />
-        <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 2, color: '#111' }}>Cabrerizos F.C.</div>
-        <div style={{ color: '#96a0b5', fontSize: 11, marginBottom: 4, letterSpacing: 0.3 }}>
-          {isRegistering ? 'Crear nueva cuenta' : 'Acceso a la plataforma'}
-        </div>
-        <div style={{ color: '#b0b8c9', fontSize: 9, marginBottom: 20, fontWeight: 600 }}>Juvenil B · 2ª Juvenil Grupo 1 · Salamanca</div>
+    <div className="flex items-center justify-center min-h-screen bg-bg p-5 animate-fade-in">
+      {/* Background Decorative Elements */}
+      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-accent/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-accent/10 blur-[120px]" />
+      </div>
 
-        {/* Role selection (register only) */}
+      <div className="glass w-full max-w-md rounded-[32px] p-8 md:p-10 shadow-2xl">
+        {/* Header Section */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-20 h-20 bg-surface-2 rounded-2xl p-3 flex items-center justify-center mb-4 border border-border shadow-inner">
+            <img 
+              src={import.meta.env.BASE_URL + 'escudo.png'} 
+              alt="Escudo" 
+              className="w-full h-full object-contain" 
+            />
+          </div>
+          <h1 className="text-3xl font-bold text-text mb-1">Cabrerizos F.C.</h1>
+          <p className="text-muted text-sm font-medium">
+            {isRegistering ? 'Crear nueva cuenta' : 'Acceso a la plataforma'}
+          </p>
+          <div className="mt-2 px-3 py-1 bg-accent/10 border border-accent/20 rounded-full text-[10px] font-bold text-accent uppercase tracking-wider">
+            Juvenil B · Salamanca
+          </div>
+        </div>
+
+        {/* Role Switcher (Register only) */}
         {isRegistering && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+          <div className="flex gap-3 mb-8">
             <button
               type="button"
               onClick={() => setRole('player')}
-              style={{
-                flex: 1,
-                padding: '12px 10px',
-                borderRadius: 10,
-                border: `2px solid ${role === 'player' ? '#0057ff' : '#e2e6ed'}`,
-                background: role === 'player' ? '#eef3ff' : 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-                transition: 'all .15s'
-              }}
+              className={`flex-1 p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
+                role === 'player' ? 'border-accent bg-accent/10' : 'border-border bg-surface-2'
+              }`}
             >
-              <Users size={20} color={role === 'player' ? '#0057ff' : '#96a0b5'} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: role === 'player' ? '#0057ff' : '#4a5568' }}>Jugador</span>
+              <Users size={20} className={role === 'player' ? 'text-accent' : 'text-muted'} />
+              <span className={`text-xs font-bold ${role === 'player' ? 'text-accent' : 'text-muted'}`}>Jugador</span>
             </button>
             <button
               type="button"
               onClick={() => setRole('admin')}
-              style={{
-                flex: 1,
-                padding: '12px 10px',
-                borderRadius: 10,
-                border: `2px solid ${role === 'admin' ? '#e87c00' : '#e2e6ed'}`,
-                background: role === 'admin' ? '#fff8ef' : 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-                transition: 'all .15s'
-              }}
+              className={`flex-1 p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
+                role === 'admin' ? 'border-accent bg-accent/10' : 'border-border bg-surface-2'
+              }`}
             >
-              <Shield size={20} color={role === 'admin' ? '#e87c00' : '#96a0b5'} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: role === 'admin' ? '#e87c00' : '#4a5568' }}>Entrenador</span>
+              <Shield size={20} className={role === 'admin' ? 'text-accent' : 'text-muted'} />
+              <span className={`text-xs font-bold ${role === 'admin' ? 'text-accent' : 'text-muted'}`}>Entrenador</span>
             </button>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ textAlign: 'left' }}>
-          <div style={{ marginBottom: 12 }}>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
             <label className="label">Nombre</label>
-            <div style={{ position: 'relative' }}>
-              <User size={16} style={{ position: 'absolute', left: 10, top: 9, color: '#96a0b5' }} />
+            <div className="relative">
+              <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
               <input
-                className="input-field"
-                style={{ paddingLeft: 34 }}
+                className="input-field !pl-12"
                 placeholder="Ej: Jesús"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -157,32 +136,22 @@ export default function Login() {
             </div>
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <label className="label">Primer apellido</label>
-            <div style={{ position: 'relative' }}>
-              <User size={16} style={{ position: 'absolute', left: 10, top: 9, color: '#96a0b5' }} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Primer apellido</label>
               <input
                 className="input-field"
-                style={{ paddingLeft: 34 }}
-                placeholder="Ej: García"
+                placeholder="García"
                 value={surname}
                 onChange={e => setSurname(e.target.value)}
                 autoComplete="family-name"
               />
             </div>
-          </div>
-
-          <div style={{ marginBottom: 12 }}>
-            <label className="label">
-              Segundo apellido
-              {!isRegistering && <span style={{ color: '#96a0b5', fontWeight: 400, fontSize: 10 }}> (si tienes cuenta con él)</span>}
-            </label>
-            <div style={{ position: 'relative' }}>
-              <User size={16} style={{ position: 'absolute', left: 10, top: 9, color: '#96a0b5' }} />
+            <div>
+              <label className="label">Segundo apellido</label>
               <input
                 className="input-field"
-                style={{ paddingLeft: 34 }}
-                placeholder="Ej: López"
+                placeholder="López"
                 value={surname2}
                 onChange={e => setSurname2(e.target.value)}
                 autoComplete="additional-name"
@@ -190,15 +159,14 @@ export default function Login() {
             </div>
           </div>
 
-          <div style={{ marginBottom: 20 }}>
+          <div>
             <label className="label">Contraseña</label>
-            <div style={{ position: 'relative' }}>
-              <KeyRound size={16} style={{ position: 'absolute', left: 10, top: 9, color: '#96a0b5' }} />
+            <div className="relative">
+              <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type="password"
-                className="input-field"
-                style={{ paddingLeft: 34 }}
-                placeholder="Mínimo 6 caracteres"
+                className="input-field !pl-12"
+                placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 autoComplete={isRegistering ? 'new-password' : 'current-password'}
@@ -207,57 +175,41 @@ export default function Login() {
           </div>
 
           {error && (
-            <div style={{
-              fontSize: 11,
-              color: '#e74c3c',
-              marginBottom: 12,
-              textAlign: 'center',
-              padding: '8px 10px',
-              background: '#fef2f2',
-              borderRadius: 8,
-              border: '1px solid #fecaca'
-            }}>
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-medium text-center animate-pulse">
               ⚠ {error}
             </div>
           )}
 
           {success && (
-            <div style={{
-              fontSize: 11,
-              color: '#059669',
-              marginBottom: 12,
-              textAlign: 'center',
-              padding: '8px 10px',
-              background: '#ecfdf5',
-              borderRadius: 8,
-              border: '1px solid #a7f3d0'
-            }}>
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-medium text-center">
               ✅ {success}
             </div>
           )}
 
           <button
             type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', justifyContent: 'center', padding: '10px 16px', fontSize: 13 }}
+            className="btn btn-primary w-full py-4 text-base"
             disabled={loading}
           >
-            {loading ? 'Cargando...' : (isRegistering ? 'Registrarme →' : 'Entrar →')}
+            {loading ? 'Procesando...' : (
+              <span className="flex items-center gap-2">
+                {isRegistering ? 'Crear cuenta' : 'Acceder ahora'}
+                <ArrowRight size={18} />
+              </span>
+            )}
           </button>
         </form>
 
-        <div style={{ marginTop: 16, fontSize: 11, color: '#4a5568' }}>
-          {isRegistering ? '¿Ya tienes cuenta? ' : '¿No estás registrado? '}
-          <button
-            onClick={() => { setIsRegistering(!isRegistering); setError(''); setSuccess(''); }}
-            style={{ background: 'none', border: 'none', color: '#0057ff', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-          >
-            {isRegistering ? 'Inicia sesión' : 'Regístrate aquí'}
-          </button>
-        </div>
-
-        <div style={{ marginTop: 14, fontSize: 9, color: '#c0c8d8', lineHeight: 1.4 }}>
-          Puedes acceder desde cualquier dispositivo con tu usuario y contraseña.
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-muted text-sm font-medium">
+            {isRegistering ? '¿Ya tienes cuenta? ' : '¿No estás registrado? '}
+            <button
+              onClick={() => { setIsRegistering(!isRegistering); setError(''); setSuccess(''); }}
+              className="text-accent font-bold hover:underline"
+            >
+              {isRegistering ? 'Inicia sesión' : 'Regístrate aquí'}
+            </button>
+          </p>
         </div>
       </div>
     </div>

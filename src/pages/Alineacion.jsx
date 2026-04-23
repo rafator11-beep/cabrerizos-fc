@@ -1,36 +1,28 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Save, Trash2 } from 'lucide-react';
+import { Plus, Save, Trash2, Users, Layout, Calendar, ChevronRight, X, UserPlus, Shield, UserMinus } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '3-4-3', '4-5-1', '5-3-2', '5-4-1'];
 
 const FORMATION_POSITIONS = {
   '4-3-3': [
-    { x: 50, y: 270 },
-    { x: 130, y: 80 }, { x: 130, y: 170 }, { x: 130, y: 260 }, { x: 130, y: 350 },
-    { x: 270, y: 120 }, { x: 270, y: 215 }, { x: 270, y: 310 },
-    { x: 410, y: 100 }, { x: 410, y: 215 }, { x: 410, y: 330 },
+    { x: 50, y: 185 }, { x: 130, y: 50 }, { x: 130, y: 140 }, { x: 130, y: 230 }, { x: 130, y: 320 },
+    { x: 270, y: 100 }, { x: 270, y: 185 }, { x: 270, y: 270 }, { x: 410, y: 80 }, { x: 410, y: 185 }, { x: 410, y: 290 },
   ],
   '4-4-2': [
-    { x: 50, y: 270 },
-    { x: 150, y: 80 }, { x: 150, y: 170 }, { x: 150, y: 260 }, { x: 150, y: 350 },
-    { x: 290, y: 80 }, { x: 290, y: 170 }, { x: 290, y: 260 }, { x: 290, y: 350 },
-    { x: 420, y: 160 }, { x: 420, y: 280 },
+    { x: 50, y: 185 }, { x: 150, y: 50 }, { x: 150, y: 140 }, { x: 150, y: 230 }, { x: 150, y: 320 },
+    { x: 290, y: 50 }, { x: 290, y: 140 }, { x: 290, y: 230 }, { x: 290, y: 320 }, { x: 420, y: 130 }, { x: 420, y: 240 },
   ],
   '4-2-3-1': [
-    { x: 50, y: 270 },
-    { x: 140, y: 80 }, { x: 140, y: 170 }, { x: 140, y: 260 }, { x: 140, y: 350 },
-    { x: 250, y: 170 }, { x: 250, y: 260 },
-    { x: 360, y: 100 }, { x: 360, y: 215 }, { x: 360, y: 330 },
-    { x: 440, y: 215 },
+    { x: 50, y: 185 }, { x: 140, y: 50 }, { x: 140, y: 140 }, { x: 140, y: 230 }, { x: 140, y: 320 },
+    { x: 250, y: 140 }, { x: 250, y: 230 }, { x: 360, y: 80 }, { x: 360, y: 185 }, { x: 360, y: 290 }, { x: 440, y: 185 },
   ],
   '3-5-2': [
-    { x: 50, y: 270 },
-    { x: 140, y: 130 }, { x: 140, y: 215 }, { x: 140, y: 300 },
-    { x: 270, y: 60 }, { x: 270, y: 140 }, { x: 270, y: 215 }, { x: 270, y: 290 }, { x: 270, y: 370 },
-    { x: 420, y: 160 }, { x: 420, y: 280 },
+    { x: 50, y: 185 }, { x: 140, y: 100 }, { x: 140, y: 185 }, { x: 140, y: 270 },
+    { x: 270, y: 40 }, { x: 270, y: 110 }, { x: 270, y: 185 }, { x: 270, y: 260 }, { x: 270, y: 330 },
+    { x: 420, y: 130 }, { x: 420, y: 240 },
   ],
 };
 
@@ -50,7 +42,19 @@ export default function Alineacion() {
   const svgRef = useRef(null);
   const drag = useRef(null);
 
+  const [dragging, setDragging] = useState(null); // { type: 'starter'|'extra', index: number, x: number, y: number }
+  const [extras, setExtras] = useState(() => {
+    const saved = localStorage.getItem('alineacion_extras');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   useEffect(() => { fetchAll(); }, []);
+
+  useEffect(() => {
+    if (activeLineup) {
+      localStorage.setItem('alineacion_extras', JSON.stringify(extras));
+    }
+  }, [extras]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -67,25 +71,22 @@ export default function Alineacion() {
   };
 
   const createLineup = async () => {
-    if (!form.name) { alert('Pon un nombre'); return; }
+    if (!form.name) return;
     const positions = FORMATION_POSITIONS[form.formation] || FORMATION_POSITIONS['4-3-3'];
     const starters = positions.map((pos, i) => ({ slot: i, player_id: null, x: pos.x, y: pos.y, number: null }));
-    try {
-      const { data } = await supabase.from('lineups').insert([{
-        ...form, starters, substitutes: [], created_by: profile?.id
-      }]).select().single();
-      if (data) {
-        setLineups([data, ...lineups]);
-        setActiveLineup(data);
-        setShowForm(false);
-        setForm({ name: '', formation: '4-3-3', match_date: '' });
-        if (isMobile) setMobileTab('field');
-      }
-    } catch { alert('Error al crear.'); }
+    const { data } = await supabase.from('lineups').insert([{
+      ...form, starters, substitutes: [], created_by: profile?.id
+    }]).select().single();
+    if (data) {
+      setLineups([data, ...lineups]);
+      setActiveLineup(data);
+      setShowForm(false);
+      if (isMobile) setMobileTab('field');
+    }
   };
 
   const deleteLineup = async () => {
-    if (!activeLineup || !confirm('¿Eliminar esta alineación?')) return;
+    if (!activeLineup || !confirm('¿Eliminar?')) return;
     await supabase.from('lineups').delete().eq('id', activeLineup.id);
     const remaining = lineups.filter(l => l.id !== activeLineup.id);
     setLineups(remaining);
@@ -95,13 +96,13 @@ export default function Alineacion() {
 
   const saveLineup = async () => {
     if (!activeLineup) return;
-    try {
-      await supabase.from('lineups').update({
-        starters: activeLineup.starters || [],
-        substitutes: activeLineup.substitutes || [],
-      }).eq('id', activeLineup.id);
-      alert('✅ Alineación guardada.');
-    } catch { alert('❌ Error al guardar.'); }
+    await supabase.from('lineups').update({
+      starters: activeLineup.starters || [],
+      substitutes: activeLineup.substitutes || [],
+    }).eq('id', activeLineup.id);
+    // Also save extras to local storage or could add a column in DB
+    localStorage.setItem('alineacion_extras', JSON.stringify(extras));
+    alert('Guardado con éxito 🔥');
   };
 
   const assignPlayer = (slotIndex, playerId) => {
@@ -112,30 +113,25 @@ export default function Alineacion() {
       if (s.player_id === playerId) return { ...s, player_id: null, number: null, name: null };
       return s;
     });
-    setActiveLineup({ ...activeLineup, starters });
-    setLineups(ls => ls.map(l => l.id === activeLineup.id ? { ...activeLineup, starters } : l));
-  };
-
-  const clearSlot = (slotIndex) => {
-    if (!activeLineup) return;
-    const starters = (activeLineup.starters || []).map((s, i) =>
-      i === slotIndex ? { ...s, player_id: null, number: null, name: null } : s
-    );
-    setActiveLineup({ ...activeLineup, starters });
+    const substitutes = (activeLineup.substitutes || []).filter(s => s.player_id !== playerId);
+    const upd = { ...activeLineup, starters, substitutes };
+    setActiveLineup(upd);
+    setLineups(ls => ls.map(l => l.id === upd.id ? upd : l));
   };
 
   const toggleSubstitute = (playerId) => {
     if (!activeLineup) return;
     const subs = activeLineup.substitutes || [];
     const exists = subs.find(s => s.player_id === playerId);
-    let newSubs;
     if (exists) {
-      newSubs = subs.filter(s => s.player_id !== playerId);
+      const newSubs = subs.filter(s => s.player_id !== playerId);
+      setActiveLineup({ ...activeLineup, substitutes: newSubs });
     } else {
+      const starters = (activeLineup.starters || []).map(s => s.player_id === playerId ? { ...s, player_id: null, number: null, name: null } : s);
       const p = players.find(pl => pl.id === playerId);
-      newSubs = [...subs, { player_id: playerId, number: p?.number }];
+      const newSubs = [...subs, { player_id: playerId, number: p?.number, name: p?.name }];
+      setActiveLineup({ ...activeLineup, starters, substitutes: newSubs });
     }
-    setActiveLineup({ ...activeLineup, substitutes: newSubs });
   };
 
   const toSVG = (cx, cy) => {
@@ -144,257 +140,352 @@ export default function Alineacion() {
     return { x: ((cx - r.left) / r.width) * W, y: ((cy - r.top) / r.height) * H };
   };
 
-  const onMD = (e, idx) => { if (!isAdmin) return; e.preventDefault(); drag.current = idx; };
-  const onMM = useCallback((e) => {
-    if (drag.current === null || !activeLineup) return;
+  const onPointerDown = (e, type, index) => {
+    if (!isAdmin) return;
     const pt = e.touches ? e.touches[0] : e;
     const c = toSVG(pt.clientX, pt.clientY);
-    const starters = (activeLineup.starters || []).map((s, i) => i === drag.current ? { ...s, x: c.x, y: c.y } : s);
-    setActiveLineup(prev => ({ ...prev, starters }));
-  }, [activeLineup]);
-  const onMU = () => { drag.current = null; };
+    setDragging({ type, index, ox: c.x, oy: c.y });
+    if (e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e) => {
+    if (!dragging || !isAdmin) return;
+    const pt = e.touches ? e.touches[0] : e;
+    const c = toSVG(pt.clientX, pt.clientY);
+    
+    if (dragging.type === 'starter') {
+      const starters = [...activeLineup.starters];
+      starters[dragging.index] = { ...starters[dragging.index], x: c.x, y: c.y };
+      setActiveLineup(prev => ({ ...prev, starters }));
+    } else if (dragging.type === 'extra') {
+      const newExtras = [...extras];
+      newExtras[dragging.index] = { ...newExtras[dragging.index], x: c.x, y: c.y };
+      setExtras(newExtras);
+    }
+  };
+
+  const onPointerUp = (e) => {
+    if (!dragging) return;
+    setDragging(null);
+    if (e.target.releasePointerCapture) e.target.releasePointerCapture(e.pointerId);
+  };
+
+  const addExtra = (kind) => {
+    const newExtra = {
+      id: `${kind}-${Date.now()}`,
+      kind,
+      x: W / 2,
+      y: H / 2,
+      color: kind === 'rival' ? '#ef4444' : '#fff'
+    };
+    setExtras([...extras, newExtra]);
+  };
+
+  const deleteExtra = (index) => {
+    setExtras(extras.filter((_, i) => i !== index));
+  };
 
   const assignedIds = new Set((activeLineup?.starters || []).filter(s => s.player_id).map(s => s.player_id));
   const subIds = new Set((activeLineup?.substitutes || []).map(s => s.player_id));
-  const unassigned = players.filter(p => !assignedIds.has(p.id) && !subIds.has(p.id));
 
-  if (loading) return <div style={{ padding: 20, color: '#96a0b5' }}>Cargando...</div>;
+  return (
+    <div className="flex flex-col gap-4 h-full animate-fade-in relative no-scrollbar">
+      
+      {/* MOBILE TABS */}
+      <div className="md:hidden segmented-control mx-auto w-full max-w-sm">
+        <button onClick={() => setMobileTab('list')} className={`segmented-item ${mobileTab === 'list' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>LISTA</button>
+        <button onClick={() => setMobileTab('field')} className={`segmented-item ${mobileTab === 'field' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>CAMPO</button>
+        {isAdmin && <button onClick={() => setMobileTab('players')} className={`segmented-item ${mobileTab === 'players' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>PLANTILLA</button>}
+      </div>
 
-  // ── Field SVG (shared between mobile and desktop) ──────────────────────
-  const FieldSVG = () => (
-    <div style={{ background: '#2a6118', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,.2)' }}>
-      {activeLineup ? (
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
-          style={{ display: 'block', width: '100%', height: 'auto' }}
-          onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}
-          onTouchMove={e => { e.preventDefault(); onMM(e); }} onTouchEnd={onMU}>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <rect key={i} x={i * (W / 10)} y={0} width={W / 10} height={H} fill={i % 2 === 0 ? '#2a6118' : '#2f6e1c'} />
-          ))}
-          <rect x={10} y={10} width={W - 20} height={H - 20} fill="none" stroke="rgba(255,255,255,.35)" strokeWidth="1.5" rx="2" />
-          <line x1={W / 2} y1={10} x2={W / 2} y2={H - 10} stroke="rgba(255,255,255,.3)" strokeWidth="1.2" />
-          <circle cx={W / 2} cy={H / 2} r={40} fill="none" stroke="rgba(255,255,255,.25)" strokeWidth="1.2" />
-          <circle cx={W / 2} cy={H / 2} r={3} fill="rgba(255,255,255,.5)" />
-          <rect x={10} y={H / 2 - 60} width={65} height={120} fill="none" stroke="rgba(255,255,255,.25)" strokeWidth="1.2" />
-          <rect x={10} y={H / 2 - 30} width={25} height={60} fill="none" stroke="rgba(255,255,255,.2)" strokeWidth="1.2" />
-          <rect x={W - 75} y={H / 2 - 60} width={65} height={120} fill="none" stroke="rgba(255,255,255,.25)" strokeWidth="1.2" />
-          <rect x={W - 35} y={H / 2 - 30} width={25} height={60} fill="none" stroke="rgba(255,255,255,.2)" strokeWidth="1.2" />
-          <rect x={0} y={H / 2 - 20} width={10} height={40} fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.5" />
-          <rect x={W - 10} y={H / 2 - 20} width={10} height={40} fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.5" />
-          <defs>
-            {(activeLineup.starters || []).map((s, i) => {
-              const p = s.player_id ? players.find(pl => pl.id === s.player_id) : null;
-              if (!p?.photo_url) return null;
-              return <clipPath key={`clip-${i}`} id={`clip-alin-${i}`}><circle cx={s.x} cy={s.y} r={15} /></clipPath>;
-            })}
-          </defs>
-          {(activeLineup.starters || []).map((s, i) => {
-            const p = s.player_id ? players.find(pl => pl.id === s.player_id) : null;
-            const hasPhoto = !!p?.photo_url;
-            return (
-              <g key={i} onMouseDown={e => onMD(e, i)} onTouchStart={e => onMD(e, i)} style={{ cursor: isAdmin ? 'grab' : 'default' }}>
-                <circle cx={s.x} cy={s.y} r={17}
-                  fill={hasPhoto ? '#1a1a2e' : (p ? '#0057ff' : 'rgba(255,255,255,.2)')}
-                  stroke="white" strokeWidth="2.5" />
-                {hasPhoto ? (
-                  <image href={p.photo_url} x={s.x - 15} y={s.y - 15} width={30} height={30} clipPath={`url(#clip-alin-${i})`} preserveAspectRatio="xMidYMid slice" />
-                ) : (
-                  <text x={s.x} y={s.y} textAnchor="middle" dy="4" fontSize="11" fontWeight="800" fill="white">
-                    {p ? (p.number || p.name?.[0]) : '?'}
-                  </text>
-                )}
-                {hasPhoto && <circle cx={s.x} cy={s.y} r={17} fill="none" stroke="white" strokeWidth="2.5" />}
-                {hasPhoto && p?.number && (
-                  <g>
-                    <circle cx={s.x + 11} cy={s.y - 11} r={7} fill="#0057ff" stroke="white" strokeWidth="1.5" />
-                    <text x={s.x + 11} y={s.y - 11} textAnchor="middle" dy="3.5" fontSize="7" fontWeight="800" fill="white">{p.number}</text>
-                  </g>
-                )}
-                {p && (
-                  <text x={s.x} y={s.y + 27} textAnchor="middle" fontSize="8" fontWeight="700" fill="rgba(255,255,255,.9)">
-                    {p.name}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: 'rgba(255,255,255,.5)' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>Selecciona o crea una alineación</div>
+      <div className="flex flex-1 gap-6 min-h-0">
+        
+        {/* LIST PANEL */}
+        <div className={`
+          w-full md:w-[280px] flex-col gap-4 flex-shrink-0
+          ${mobileTab === 'list' ? 'flex' : 'hidden md:flex'}
+        `}>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Partidos</h2>
+            {isAdmin && (
+              <button onClick={() => setShowForm(!showForm)} className="w-9 h-9 rounded-xl bg-accent/10 text-accent border border-accent/20 flex items-center justify-center active:scale-90 transition-all">
+                {showForm ? <X size={18} /> : <Plus size={18} />}
+              </button>
+            )}
           </div>
-        </div>
-      )}
-    </div>
-  );
 
-  // ── Player assignment panel (shared) ───────────────────────────────────
-  const PlayersPanel = () => (
-    <div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#96a0b5', textTransform: 'uppercase', marginBottom: 4 }}>Titulares</div>
-      {(activeLineup?.starters || []).map((s, i) => {
-        return (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, fontSize: 10 }}>
-            <span style={{ fontWeight: 700, width: 16 }}>{i + 1}.</span>
-            <select className="input-field" style={{ flex: 1, padding: '2px 4px', fontSize: 12 }}
-              value={s.player_id || ''} onChange={e => assignPlayer(i, e.target.value || null)}>
-              <option value="">-- Vacío --</option>
-              {players
-                .filter(pl => !assignedIds.has(pl.id) || s.player_id === pl.id)
-                .map(pl => <option key={pl.id} value={pl.id}>{pl.number ? `#${pl.number} ` : ''}{pl.name} {pl.surname?.[0]}.</option>)}
-            </select>
-            {s.player_id && <button onClick={() => clearSlot(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 10 }}>✕</button>}
-          </div>
-        );
-      })}
-
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#96a0b5', textTransform: 'uppercase', marginTop: 10, marginBottom: 4 }}>Suplentes</div>
-      {unassigned.map(p => (
-        <div key={p.id} onClick={() => toggleSubstitute(p.id)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: subIds.has(p.id) ? '#ecfdf5' : '#f8f9fb', marginBottom: 3, fontSize: 11, border: `1px solid ${subIds.has(p.id) ? '#a7f3d0' : 'transparent'}` }}>
-          <span>{p.number ? `#${p.number}` : '·'}</span>
-          <span style={{ fontWeight: 600 }}>{p.name}</span>
-          {subIds.has(p.id) && <span style={{ marginLeft: 'auto', color: '#059669', fontWeight: 700 }}>SUP</span>}
-        </div>
-      ))}
-      {(activeLineup?.substitutes || []).map(s => {
-        const p = players.find(pl => pl.id === s.player_id);
-        if (!p || unassigned.find(u => u.id === p.id)) return null;
-        return (
-          <div key={s.player_id} onClick={() => toggleSubstitute(s.player_id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: '#ecfdf5', marginBottom: 3, fontSize: 11, border: '1px solid #a7f3d0' }}>
-            <span>{p.number ? `#${p.number}` : '·'}</span>
-            <span style={{ fontWeight: 600 }}>{p.name}</span>
-            <span style={{ marginLeft: 'auto', color: '#059669', fontWeight: 700 }}>SUP</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  // ── Mobile layout ──────────────────────────────────────────────────────
-  if (isMobile) {
-    const TABS = [
-      { id: 'list', label: '📋 Listas' },
-      { id: 'field', label: '⚽ Campo' },
-      ...(isAdmin && activeLineup ? [{ id: 'players', label: '👥 Jugadores' }] : []),
-    ];
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Tab bar */}
-        <div style={{ display: 'flex', gap: 4, background: '#f0f2f5', borderRadius: 10, padding: 4 }}>
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setMobileTab(tab.id)}
-              style={{ flex: 1, padding: '8px 4px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 11, background: mobileTab === tab.id ? 'white' : 'transparent', color: mobileTab === tab.id ? '#0057ff' : '#64748b', boxShadow: mobileTab === tab.id ? '0 1px 4px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* LIST tab */}
-        {mobileTab === 'list' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Alineaciones</span>
-              {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={14} /></button>}
-            </div>
-            {showForm && isAdmin && (
-              <div className="card" style={{ padding: 10 }}>
-                <input className="input-field" placeholder="Nombre (ej: J12 vs Villamayor)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ marginBottom: 6 }} />
-                <select className="input-field" value={form.formation} onChange={e => setForm(f => ({ ...f, formation: e.target.value }))} style={{ marginBottom: 6 }}>
-                  {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-                <input type="date" className="input-field" value={form.match_date} onChange={e => setForm(f => ({ ...f, match_date: e.target.value }))} style={{ marginBottom: 6 }} />
-                <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={createLineup}>Crear</button>
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+            {showForm && (
+              <div className="glass-card !p-4 space-y-3 animate-slide-up border border-accent/20 shadow-[0_0_30px_rgba(0,255,135,0.1)]">
+                <input className="w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-accent/30" placeholder="Nombre del partido" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                <div className="grid grid-cols-2 gap-2">
+                  <select className="bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none" value={form.formation} onChange={e => setForm(f => ({ ...f, formation: e.target.value }))}>
+                    {FORMATIONS.map(f => <option key={f} value={f} className="bg-bg">{f}</option>)}
+                  </select>
+                  <input type="date" className="bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none" value={form.match_date} onChange={e => setForm(f => ({ ...f, match_date: e.target.value }))} />
+                </div>
+                <button className="w-full py-3.5 bg-accent text-bg rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all" onClick={createLineup}>CREAR PARTIDO</button>
               </div>
             )}
+
             {lineups.map(l => (
-              <div key={l.id} onClick={() => { setActiveLineup(l); setMobileTab('field'); }}
-                style={{ padding: '12px 14px', borderRadius: 10, cursor: 'pointer', border: `1.5px solid ${activeLineup?.id === l.id ? '#0057ff' : '#e0e4ed'}`, background: activeLineup?.id === l.id ? '#eef3ff' : 'white' }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{l.name}</div>
-                <div style={{ fontSize: 10, color: '#96a0b5' }}>{l.formation} {l.match_date && `· ${l.match_date}`}</div>
-              </div>
+              <button 
+                key={l.id} 
+                onClick={() => { setActiveLineup(l); if (isMobile) setMobileTab('field'); }}
+                className={`
+                  w-full flex flex-col p-4 rounded-2xl border transition-all text-left active:scale-98
+                  ${activeLineup?.id === l.id ? 'bg-accent/10 border-accent/40 shadow-[0_8px_20px_rgba(0,255,135,0.15)]' : 'bg-surface-2/20 border-white/5 hover:border-white/10'}
+                `}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${activeLineup?.id === l.id ? 'bg-accent text-bg' : 'bg-white/5 text-muted'}`}>{l.formation}</span>
+                  <span className="text-[9px] font-black text-muted/50 uppercase tracking-tighter">{l.match_date || 'Próximamente'}</span>
+                </div>
+                <h3 className={`text-sm font-bold truncate w-full ${activeLineup?.id === l.id ? 'text-white' : 'text-muted'}`}>{l.name}</h3>
+              </button>
             ))}
           </div>
-        )}
+        </div>
 
-        {/* FIELD tab */}
-        {mobileTab === 'field' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {activeLineup && isAdmin && (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button className="btn btn-primary btn-sm" onClick={saveLineup}><Save size={12} /> Guardar</button>
-                <button className="btn btn-outline btn-sm" onClick={deleteLineup} style={{ color: '#ef4444' }}><Trash2 size={12} /> Eliminar</button>
-                <div style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#64748b' }}>{activeLineup.formation}</div>
+        {/* FIELD PANEL */}
+        <div className={`
+          flex-1 flex flex-col gap-4 min-h-0
+          ${mobileTab === 'field' ? 'flex' : 'hidden md:flex'}
+        `}>
+          {activeLineup ? (
+            <>
+              <div className="flex items-center justify-between px-1">
+                <div className="flex flex-col">
+                  <h2 className="text-lg font-black text-white leading-tight">{activeLineup.name}</h2>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[9px] font-black text-accent uppercase tracking-widest">{activeLineup.formation}</span>
+                    <div className="w-1 h-1 rounded-full bg-white/20" />
+                    <span className="text-[9px] font-black text-muted uppercase tracking-widest">{activeLineup.match_date}</span>
+                  </div>
+                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <button onClick={saveLineup} className="h-10 px-4 rounded-xl bg-emerald-500 text-bg flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 active:scale-90 transition-all">
+                      <Save size={16} /> <span className="hidden sm:inline">GUARDAR</span>
+                    </button>
+                    <button onClick={deleteLineup} className="w-10 h-10 rounded-xl bg-white/5 text-rose-500 flex items-center justify-center border border-white/5 active:scale-90 transition-all hover:bg-rose-500/10">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-            <FieldSVG />
-          </div>
-        )}
 
-        {/* PLAYERS tab */}
-        {mobileTab === 'players' && activeLineup && isAdmin && (
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Asignar jugadores</div>
-            <PlayersPanel />
-          </div>
-        )}
-      </div>
-    );
-  }
+              <div className="flex-1 bg-surface-2/20 rounded-[32px] overflow-hidden border border-white/5 relative shadow-2xl touch-none group">
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2a6118] to-[#1e4511] opacity-40 pointer-events-none" />
+                
+                <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full h-full relative z-10"
+                  onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
+                  style={{ touchAction: 'none' }}>
+                  
+                  {/* Field Lines */}
+                  <g opacity="0.4">
+                    <rect x={15} y={15} width={W - 30} height={H - 30} fill="none" stroke="white" strokeWidth="1.5" rx="2" />
+                    <line x1={15} y1={H / 2} x2={W - 15} y2={H / 2} stroke="white" strokeWidth="1.2" />
+                    <circle cx={W / 2} cy={H / 2} r={50} fill="none" stroke="white" strokeWidth="1.2" />
+                    <circle cx={W / 2} cy={H / 2} r={2} fill="white" />
+                    {/* Areas */}
+                    <rect x={W/2 - 80} y={15} width={160} height={40} fill="none" stroke="white" strokeWidth="1.2" />
+                    <rect x={W/2 - 80} y={H - 55} width={160} height={40} fill="none" stroke="white" strokeWidth="1.2" />
+                  </g>
 
-  // ── Desktop layout ─────────────────────────────────────────────────────
-  return (
-    <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 100px)' }}>
-      {/* Left: Lineups list */}
-      <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Alineaciones</span>
-          {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={14} /></button>}
+                  {/* Starters */}
+                  {(activeLineup.starters || []).map((s, i) => {
+                    const p = s.player_id ? players.find(pl => pl.id === s.player_id) : null;
+                    const isDragging = dragging?.type === 'starter' && dragging?.index === i;
+                    
+                    return (
+                      <g key={`s-${i}`} 
+                        onPointerDown={(e) => onPointerDown(e, 'starter', i)}
+                        style={{ cursor: isAdmin ? 'grab' : 'default', transition: isDragging ? 'none' : 'transform 0.1s' }}>
+                        
+                        <filter id={`shadow-${i}`}>
+                          <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
+                        </filter>
+
+                        {/* Player Representation: Real App Feel (Cromito style if has photo) */}
+                        <g transform={`translate(${s.x}, ${s.y}) scale(${isDragging ? 1.15 : 1})`}>
+                          <circle r={22} fill={p ? '#0057ff' : 'rgba(255,255,255,0.05)'} 
+                            stroke={isDragging ? '#00ff87' : 'white'} 
+                            strokeWidth={isDragging ? 3 : 2} 
+                            filter={`url(#shadow-${i})`}
+                          />
+                          
+                          {p?.photo_url ? (
+                            <>
+                              <defs>
+                                <clipPath id={`clip-${i}`}>
+                                  <circle r={20} />
+                                </clipPath>
+                              </defs>
+                              <image href={p.photo_url} x={-20} y={-20} width={40} height={40} clipPath={`url(#clip-${i})`} preserveAspectRatio="xMidYMid slice" />
+                            </>
+                          ) : (
+                            <text textAnchor="middle" dy="6" fontSize="16" fontWeight="900" fill="white" style={{ pointerEvents: 'none' }}>
+                              {p ? p.number : '?'}
+                            </text>
+                          )}
+                          
+                          {p && (
+                            <g transform="translate(0, 34)">
+                              <rect x={-30} y={-8} width={60} height={16} rx={8} fill="rgba(0,0,0,0.6)" backdrop-blur="md" />
+                              <text textAnchor="middle" dy="4" fontSize="9" fontWeight="800" fill="white" className="uppercase tracking-widest">
+                                {p.name.split(' ')[0]}
+                              </text>
+                            </g>
+                          )}
+                        </g>
+                      </g>
+                    );
+                  })}
+
+                  {/* Extras (Ball, Rivals) */}
+                  {extras.map((ex, i) => {
+                    const isDragging = dragging?.type === 'extra' && dragging?.index === i;
+                    return (
+                      <g key={ex.id} 
+                        onPointerDown={(e) => onPointerDown(e, 'extra', i)}
+                        onDoubleClick={() => deleteExtra(i)}
+                        style={{ cursor: 'grab' }}>
+                        <g transform={`translate(${ex.x}, ${ex.y}) scale(${isDragging ? 1.2 : 1})`}>
+                          {ex.kind === 'ball' ? (
+                            <g>
+                              <circle r={12} fill="white" stroke="#333" strokeWidth="1" />
+                              <path d="M-12,0 A12,12 0 0,1 12,0" fill="none" stroke="#ddd" />
+                              <circle r={3} fill="#333" />
+                            </g>
+                          ) : (
+                            <g>
+                              <circle r={18} fill="#ef4444" stroke="white" strokeWidth="2" />
+                              <text textAnchor="middle" dy="4" fontSize="10" fontWeight="900" fill="white">R</text>
+                            </g>
+                          )}
+                        </g>
+                      </g>
+                    );
+                  })}
+                </svg>
+
+                {/* MOBILE PALETTE */}
+                <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between gap-4 p-2 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 md:hidden">
+                  <div className="flex gap-2">
+                    <button onClick={() => addExtra('ball')} className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg active:scale-90 transition-all">
+                      <span className="text-xl">⚽</span>
+                    </button>
+                    <button onClick={() => addExtra('rival')} className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center shadow-lg active:scale-90 transition-all border-2 border-white">
+                      <span className="text-xs font-black text-white">R</span>
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-x-auto flex gap-2 no-scrollbar px-2 border-l border-white/10">
+                    {players.filter(p => !assignedIds.has(p.id) && !subIds.has(p.id)).map(p => (
+                      <button 
+                        key={p.id}
+                        onClick={() => {
+                          const slot = (activeLineup?.starters || []).findIndex(s => !s.player_id);
+                          if (slot !== -1) assignPlayer(slot, p.id);
+                        }}
+                        className="flex-shrink-0 w-10 h-10 bg-accent/20 border border-accent/30 rounded-xl flex items-center justify-center active:scale-90 transition-all"
+                      >
+                        <span className="text-[10px] font-black text-accent">{p.number || p.name[0]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Substitutes Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Convocatoria / Suplentes</h3>
+                  <span className="text-[9px] font-bold text-muted/40 italic">Toca para quitar</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 px-1">
+                  {(activeLineup.substitutes || []).map(s => {
+                    const p = players.find(pl => pl.id === s.player_id);
+                    return (
+                      <button 
+                        key={s.player_id} 
+                        onClick={() => toggleSubstitute(s.player_id)}
+                        className="flex-shrink-0 flex items-center gap-2 bg-surface-2/40 border border-white/5 rounded-xl p-2 pr-4 active:bg-rose-500/10 transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-accent text-bg flex items-center justify-center text-[10px] font-black">{p?.number || '?'}</div>
+                        <span className="text-[10px] font-bold text-white uppercase whitespace-nowrap">{p?.name.split(' ')[0]}</span>
+                        <X size={10} className="text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    );
+                  })}
+                  {activeLineup.substitutes?.length === 0 && (
+                    <div className="text-[9px] font-black text-muted/20 uppercase tracking-widest py-3 px-4 bg-white/5 rounded-xl border border-dashed border-white/5 w-full text-center">Sin suplentes</div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted/10">
+              <Layout size={100} strokeWidth={0.5} />
+              <span className="text-[10px] font-black uppercase tracking-[0.5em] mt-8">Selecciona un partido</span>
+            </div>
+          )}
         </div>
-        {showForm && isAdmin && (
-          <div className="card" style={{ padding: 10 }}>
-            <input className="input-field" placeholder="Nombre (ej: J12 vs Villamayor)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ marginBottom: 6 }} />
-            <select className="input-field" value={form.formation} onChange={e => setForm(f => ({ ...f, formation: e.target.value }))} style={{ marginBottom: 6 }}>
-              {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-            <input type="date" className="input-field" value={form.match_date} onChange={e => setForm(f => ({ ...f, match_date: e.target.value }))} style={{ marginBottom: 6 }} />
-            <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={createLineup}>Crear</button>
-          </div>
-        )}
-        {lineups.map(l => (
-          <div key={l.id} onClick={() => setActiveLineup(l)}
-            style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', border: `1.5px solid ${activeLineup?.id === l.id ? '#0057ff' : '#e0e4ed'}`, background: activeLineup?.id === l.id ? '#eef3ff' : 'white' }}>
-            <div style={{ fontWeight: 700, fontSize: 12 }}>{l.name}</div>
-            <div style={{ fontSize: 10, color: '#96a0b5' }}>{l.formation} {l.match_date && `· ${l.match_date}`}</div>
-          </div>
-        ))}
-      </div>
 
-      {/* Center: Field */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {activeLineup && isAdmin && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-primary btn-sm" onClick={saveLineup}><Save size={12} /> Guardar</button>
-            <button className="btn btn-outline btn-sm" onClick={deleteLineup} style={{ color: '#ef4444' }}><Trash2 size={12} /> Eliminar</button>
-            <div style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#64748b' }}>{activeLineup.formation}</div>
+        {/* ASSIGNMENT PANEL (Desktop) */}
+        <div className={`
+          w-full md:w-[260px] flex-col gap-4 flex-shrink-0
+          ${mobileTab === 'players' ? 'flex' : 'hidden md:flex'}
+        `}>
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Plantilla</h3>
+            <div className="flex gap-1">
+              <div className="w-2 h-2 rounded-full bg-accent/20" />
+              <div className="w-2 h-2 rounded-full bg-emerald-500/20" />
+            </div>
           </div>
-        )}
-        <div style={{ flex: 1, background: '#2a6118', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,.2)' }}>
-          <FieldSVG />
+          
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+            {players.map(p => {
+              const isStarter = assignedIds.has(p.id);
+              const isSub = subIds.has(p.id);
+              return (
+                <div key={p.id} className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isStarter ? 'bg-accent/10 border-accent/30 text-white' : isSub ? 'bg-emerald-500/10 border-emerald-500/20 text-white' : 'bg-surface-2/10 border-white/5 text-muted'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black ${isStarter ? 'bg-accent text-bg shadow-lg shadow-accent/20' : isSub ? 'bg-emerald-500 text-bg shadow-lg shadow-emerald-500/20' : 'bg-white/5 text-muted'}`}>{p.number || '?'}</div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold truncate max-w-[100px] uppercase leading-none mb-1">{p.name}</span>
+                      <span className="text-[8px] font-black opacity-30 uppercase tracking-tighter">{p.position || 'JUGADOR'}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {!isStarter && (
+                      <button onClick={() => {
+                        const slot = (activeLineup?.starters || []).findIndex(s => !s.player_id);
+                        if (slot !== -1) assignPlayer(slot, p.id);
+                      }} title="Asignar al XI" className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-accent hover:text-bg transition-all text-muted hover:text-bg"><Shield size={14} /></button>
+                    )}
+                    {!isSub && (
+                      <button onClick={() => toggleSubstitute(p.id)} title="Convocatoria" className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-emerald-500 hover:text-bg transition-all text-muted hover:text-bg"><UserPlus size={14} /></button>
+                    )}
+                    {(isStarter || isSub) && (
+                      <button onClick={() => {
+                        if (isStarter) {
+                          const idx = activeLineup.starters.findIndex(s => s.player_id === p.id);
+                          const starters = activeLineup.starters.map((s, i) => i === idx ? { ...s, player_id: null, number: null, name: null } : s);
+                          setActiveLineup({ ...activeLineup, starters });
+                        } else {
+                          toggleSubstitute(p.id);
+                        }
+                      }} className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20 active:scale-90"><X size={14} /></button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
-
-      {/* Right: Player assignment */}
-      {activeLineup && isAdmin && (
-        <div style={{ width: 200, flexShrink: 0, overflowY: 'auto' }}>
-          <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Asignar jugadores</div>
-          <PlayersPanel />
-        </div>
-      )}
     </div>
   );
 }

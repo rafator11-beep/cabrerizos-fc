@@ -271,18 +271,39 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       );
       case 'player': 
         const isMyRole = myRosterId && t.assigned_player_id === myRosterId;
+        const hasPhoto = !!t.photo_url;
+        const isRival = t.isRival;
+        const tokenColor = isRival ? '#ef4444' : (t.color || '#0057ff');
+        
         return (
-        <g key={t.id} {...ev}>
-          {isMyRole && <circle cx={0} cy={0} r={22} fill="rgba(251,191,36,.4)" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4,2">
-            <animate attributeName="r" values="22;28;22" dur="1.5s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
-          </circle>}
-          <circle cx={0} cy={0} r={16} fill={t.color || '#e74c3c'} stroke={isMyRole ? '#fbbf24' : 'white'} strokeWidth={isMyRole ? '3' : '2.5'} />
-          <text x={0} y={0} textAnchor="middle" dy="4" fontSize="12" fontWeight="800" fill="white">{t.label}</text>
+        <g key={t.id} {...ev} onClick={(e) => { e.stopPropagation(); onSelectToken?.(t.id); }}>
+          <defs>
+            <filter id={`f-shadow-${t.id}`}>
+              <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" floodOpacity="0.3" />
+            </filter>
+            <clipPath id={`f-clip-${t.id}`}>
+              <circle r={17} />
+            </clipPath>
+          </defs>
+
+          <g filter={`url(#f-shadow-${t.id})`}>
+            {isMyRole && <circle cx={0} cy={0} r={22} fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeDasharray="5,3" />}
+            <circle cx={0} cy={0} r={18} fill={tokenColor} stroke="white" strokeWidth="2" />
+            {hasPhoto ? (
+              <image href={t.photo_url} x={-17} y={-17} width={34} height={34} clipPath={`url(#f-clip-${t.id})`} preserveAspectRatio="xMidYMid slice" />
+            ) : (
+              <text x={0} y={0} textAnchor="middle" dy="5" fontSize="13" fontWeight="900" fill="white" style={{ pointerEvents: 'none' }}>{t.label}</text>
+            )}
+            <circle cx={0} cy={0} r={18} fill="none" stroke="white" strokeWidth="2" />
+          </g>
+
           {t.name && (
-            <text x={0} y={27} textAnchor="middle" fontSize="8" fontWeight="700" fill="rgba(255,255,255,.95)">
-              {t.name.split(' ')[0]}
-            </text>
+            <g transform="translate(0, 32)">
+              <rect x={-32} y={-8} width={64} height={16} rx={8} fill="rgba(0,0,0,0.6)" backdrop-blur="md" />
+              <text textAnchor="middle" dy="4" fontSize="8.5" fontWeight="800" fill="white" className="uppercase tracking-widest">
+                {t.name.split(' ')[0]}
+              </text>
+            </g>
           )}
         </g>
       );

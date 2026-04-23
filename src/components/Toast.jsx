@@ -7,13 +7,15 @@ const Toast = () => {
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
+    let timeout;
     if (toast) {
       setVisible(true);
       setClosing(false);
     } else {
       setClosing(true);
-      setTimeout(() => setVisible(false), 300);
+      timeout = setTimeout(() => setVisible(false), 300);
     }
+    return () => clearTimeout(timeout);
   }, [toast]);
 
   if (!visible && !closing) return null;

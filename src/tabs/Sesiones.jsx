@@ -23,7 +23,11 @@ const Sesiones = () => {
   };
 
   useEffect(() => {
-    fetchSessions();
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) fetchSessions();
+    });
+    return () => { active = false; };
   }, []);
 
   const handleTouchStart = (e) => {

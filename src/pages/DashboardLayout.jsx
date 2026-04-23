@@ -1,15 +1,19 @@
-import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, Eye } from 'lucide-react';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { LogOut, Menu, Eye, User, ShieldCheck, Home as HomeIcon, PenTool, Dumbbell, Users, X, ChevronRight } from 'lucide-react';
 
 export default function DashboardLayout() {
   const { profile, isRealAdmin, viewAsPlayer, setViewAsPlayer, logout } = useAuth();
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on navigation (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   const switchToPlayer = () => {
     setViewAsPlayer(true);
@@ -21,115 +25,143 @@ export default function DashboardLayout() {
     navigate('/');
   };
 
+  const bottomNav = [
+    { to: '/', icon: <HomeIcon size={20} />, label: 'Inicio' },
+    { to: '/entrenamientos', icon: <Dumbbell size={20} />, label: 'Entrenos' },
+    { to: '/tactica', icon: <PenTool size={20} />, label: 'Táctica' },
+    { to: '/plantilla', icon: <Users size={20} />, label: 'Plantilla' },
+  ];
+
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      {isMobile && sidebarOpen && (
-        <div onClick={() => setSidebarOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 40 }} />
+    <div className="flex h-screen bg-bg overflow-hidden font-main select-none text-text">
+      
+      {/* SIDEBAR - Hidden on mobile, fixed on desktop */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-[100] w-[280px] bg-bg border-r border-white/5 
+        transform transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <Sidebar onClose={() => setSidebarOpen(false)} isMobile={true} />
+      </aside>
+
+      {/* MOBILE OVERLAY */}
+      {sidebarOpen && (
+        <div 
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] md:hidden animate-in fade-in duration-300"
+        />
       )}
 
-      <div style={isMobile ? {
-        position: 'fixed', left: 0, top: 0, height: '100vh', zIndex: 50,
-        transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-        transition: 'transform 0.25s cubic-bezier(.4,0,.2,1)',
-      } : {}}>
-        <Sidebar onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
-      </div>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-
-        {/* ── Top header ── */}
-        <header style={{ height: 50, flexShrink: 0, background: 'white', borderBottom: '1px solid #e2e6ed', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {isMobile && (
-              <button onClick={() => setSidebarOpen(true)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' }}>
-                <Menu size={22} color="#334155" />
-              </button>
-            )}
-            <span style={{ fontWeight: 800, fontSize: 15 }}>
-              {isMobile ? 'Cabrerizos FC' : 'Cabrerizos F.C. Panel'}
-            </span>
+      {/* MAIN CONTAINER */}
+      <div className="flex-1 flex flex-col min-w-0 relative h-full">
+        
+        {/* HEADER */}
+        <header className="h-[60px] md:h-[70px] flex-shrink-0 glass border-b border-white/5 flex items-center justify-between px-4 md:px-8 z-40">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden w-10 h-10 flex items-center justify-center bg-surface-2 rounded-xl active:scale-90 transition-transform border border-white/5"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-accent uppercase tracking-widest leading-none mb-1">CFC · Juvenil B</span>
+              <h1 className="text-sm font-bold text-white/90">
+                {isRealAdmin ? 'Panel Técnico' : 'Portal Jugador'}
+              </h1>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* ── Mode toggle (admin only) ── */}
+          <div className="flex items-center gap-3">
+            {/* Desktop Mode Switcher */}
             {isRealAdmin && (
-              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 22, padding: 3, gap: 2 }}>
+              <div className="hidden md:flex bg-surface-2/50 p-1 rounded-full border border-white/5 mr-2">
                 <button
                   onClick={switchToAdmin}
-                  style={{
-                    padding: isMobile ? '5px 10px' : '5px 13px',
-                    borderRadius: 18, border: 'none', cursor: 'pointer',
-                    background: !viewAsPlayer ? '#111827' : 'transparent',
-                    color: !viewAsPlayer ? 'white' : '#64748b',
-                    fontSize: 11, fontWeight: 700,
-                    transition: 'all .15s',
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
-                  🔑 {!isMobile && 'Entrenador'}
+                  className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${
+                    !viewAsPlayer ? 'bg-accent text-white shadow-lg' : 'text-muted hover:text-white'
+                  }`}
+                >
+                  ADMIN
                 </button>
                 <button
                   onClick={switchToPlayer}
-                  style={{
-                    padding: isMobile ? '5px 10px' : '5px 13px',
-                    borderRadius: 18, border: 'none', cursor: 'pointer',
-                    background: viewAsPlayer ? '#f59e0b' : 'transparent',
-                    color: viewAsPlayer ? 'white' : '#64748b',
-                    fontSize: 11, fontWeight: 700,
-                    transition: 'all .15s',
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
-                  <Eye size={12} /> {!isMobile && 'Ver como Jugador'}
+                  className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${
+                    viewAsPlayer ? 'bg-amber-500 text-white shadow-lg' : 'text-muted hover:text-white'
+                  }`}
+                >
+                  JUGADOR
                 </button>
               </div>
             )}
 
-            {/* Role badge (for non-admin users) */}
-            {!isRealAdmin && (
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: '3px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                background: '#ecfdf5', color: '#059669'
-              }}>
-                ⚽ Jugador
-              </span>
-            )}
-
-            {!isMobile && (
-              <div style={{ fontWeight: 600, fontSize: 12, color: '#334155' }}>
-                {profile?.name} {profile?.surname}
+            <div className="flex items-center gap-2 md:gap-3 pl-3 border-l border-white/10">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
+                <User size={18} />
               </div>
-            )}
-
-            <button onClick={logout} className="btn btn-outline btn-sm" title="Cerrar sesión">
-              <LogOut size={14} />
-            </button>
+              <button 
+                onClick={logout}
+                className="hidden md:flex w-10 h-10 items-center justify-center hover:bg-red-500/10 rounded-xl text-muted hover:text-red-500 transition-colors"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* ── Vista Jugador banner ── */}
+        {/* ADMIN WARNING BANNER */}
         {isRealAdmin && viewAsPlayer && (
-          <div style={{
-            background: 'linear-gradient(90deg,#fffbeb,#fef3c7)',
-            borderBottom: '1.5px solid #fde68a',
-            padding: '6px 16px',
-            display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
-          }}>
-            <Eye size={13} color="#d97706" />
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#92400e', flex: 1 }}>
-              Vista Jugador activa — Estás viendo la app exactamente como la ve un jugador
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 flex items-center justify-between">
+            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+              <Eye size={12} /> MODO VISTA JUGADOR
             </span>
-            <button onClick={switchToAdmin}
-              style={{ fontSize: 10, fontWeight: 700, color: '#d97706', background: 'white', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 10px', cursor: 'pointer' }}>
-              Volver a Entrenador
+            <button onClick={switchToAdmin} className="text-[8px] font-black bg-amber-500 text-black px-3 py-1 rounded-full">
+              VOLVER
             </button>
           </div>
         )}
 
-        <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? 12 : 18 }}>
-          <Outlet />
+        {/* SCROLLABLE CONTENT */}
+        <main className="flex-1 overflow-y-auto no-scrollbar scroll-smooth relative">
+          <div className="p-4 md:p-10 max-w-7xl mx-auto pb-[100px] md:pb-10 animate-fade-in">
+            <Outlet />
+          </div>
         </main>
+
+        {/* BOTTOM NAV (Mobile Only) */}
+        <nav className="md:hidden fixed bottom-6 left-6 right-6 h-[68px] glass rounded-[28px] border border-white/10 flex items-center justify-around px-2 z-[80] shadow-2xl">
+          {bottomNav.map(item => {
+            const isActive = location.pathname === item.to;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={`
+                  flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-2xl transition-all
+                  ${isActive ? 'text-accent' : 'text-muted/60'}
+                `}
+              >
+                <div className={`transition-transform duration-300 ${isActive ? 'scale-110 -translate-y-1' : ''}`}>
+                  {item.icon}
+                </div>
+                <span className={`text-[8px] font-black uppercase tracking-tighter ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <div className="w-1 h-1 bg-accent rounded-full absolute bottom-2 animate-pulse" />
+                )}
+              </NavLink>
+            );
+          })}
+          <button 
+            onClick={logout}
+            className="flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-2xl text-red-500/60"
+          >
+            <LogOut size={20} />
+            <span className="text-[8px] font-black uppercase tracking-tighter opacity-40">Salir</span>
+          </button>
+        </nav>
       </div>
     </div>
   );

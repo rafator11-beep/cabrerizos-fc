@@ -5,137 +5,93 @@ import FieldCanvas from '../components/FieldCanvas';
 import Heatmap from '../components/Heatmap';
 import { useRealtimePizarra } from '../hooks/useRealtimePizarra';
 import { useOfflineSync } from '../hooks/useOfflineSync';
-import { Plus, Move, ArrowRight, Trash2, Undo2, Save, FolderOpen, Play, Monitor, Spline, X, Layers, Minus, Wifi, WifiOff, Thermometer, Download, Activity, Target } from 'lucide-react';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { Plus, Move, ArrowRight, Trash2, Undo2, Save, FolderOpen, Play, Monitor, Spline, X, Layers, Minus, Wifi, WifiOff, Thermometer, Download, Activity, Target, ChevronRight, Layers as LayersIcon, Users, Smartphone, Maximize2, MousePointer2 } from 'lucide-react';
 
 const CATEGORIES = [
-  { id: 'corners', label: '⛳ Córners', color: '#f59e0b' },
-  { id: 'free_kicks_for', label: '🎯 Faltas a favor', color: '#10b981' },
-  { id: 'free_kicks_against', label: '🛡️ Faltas en contra', color: '#ef4444' },
-  { id: 'build_up', label: '⚡ Salida de balón', color: '#3b82f6' },
-  { id: 'set_pieces', label: '📐 Jugadas ensayadas', color: '#8b5cf6' },
-  { id: 'pressing', label: '💪 Presión', color: '#f97316' },
-  { id: 'general', label: '📋 General', color: '#6b7280' },
+  { id: 'corners', label: 'Córners', icon: '⛳', color: '#f59e0b' },
+  { id: 'free_kicks_for', label: 'Faltas (+)', icon: '🎯', color: '#10b981' },
+  { id: 'free_kicks_against', label: 'Faltas (-)', icon: '🛡️', color: '#ef4444' },
+  { id: 'build_up', label: 'Salida', icon: '⚡', color: '#3b82f6' },
+  { id: 'set_pieces', label: 'Estrategia', icon: '📐', color: '#8b5cf6' },
+  { id: 'pressing', label: 'Presión', icon: '💪', color: '#f97316' },
+  { id: 'general', label: 'General', icon: '📋', color: '#6b7280' },
 ];
 
-const ELEM_BTNS = [
-  { id: "ball", label: "Balón", icon: "⚽" },
-  { id: "cone", label: "Cono", icon: "🔺" },
-  { id: "cone_blue", label: "Cono Azul", icon: "🔷" },
-  { id: "goal", label: "Portería", icon: "🥅" },
-  { id: "mannequin", label: "Maniquí", icon: "🧍" },
-  { id: "pole", label: "Poste", icon: "🚩" },
-  { id: "ladder", label: "Escalera", icon: "🪜" },
-  { id: "hurdle", label: "Valla", icon: "🚧" },
-  { id: "zone", label: "Zona", icon: "⬜" },
-  { id: "player", label: "Jugador X", icon: "❌" }
-];
+const FORMATIONS = {
+  "4-3-3": [
+    { x: 275, y: 330, l: "1" }, { x: 100, y: 260, l: "4" }, { x: 210, y: 280, l: "5" }, { x: 340, y: 280, l: "2" }, { x: 450, y: 260, l: "3" },
+    { x: 275, y: 200, l: "6" }, { x: 180, y: 150, l: "8" }, { x: 370, y: 150, l: "10" }, { x: 120, y: 70, l: "7" }, { x: 275, y: 40, l: "9" }, { x: 430, y: 70, l: "11" }
+  ],
+  "4-4-2": [
+    { x: 275, y: 330, l: "1" }, { x: 100, y: 260, l: "4" }, { x: 210, y: 280, l: "5" }, { x: 340, y: 280, l: "2" }, { x: 450, y: 260, l: "3" },
+    { x: 100, y: 160, l: "11" }, { x: 220, y: 180, l: "6" }, { x: 330, y: 180, l: "8" }, { x: 450, y: 160, l: "7" }, { x: 220, y: 60, l: "9" }, { x: 330, y: 60, l: "10" }
+  ],
+  "4-5-1": [
+    { x: 275, y: 330, l: "1" }, { x: 100, y: 260, l: "4" }, { x: 210, y: 280, l: "5" }, { x: 340, y: 280, l: "2" }, { x: 450, y: 260, l: "3" },
+    { x: 100, y: 170, l: "11" }, { x: 200, y: 190, l: "6" }, { x: 275, y: 200, l: "8" }, { x: 350, y: 190, l: "10" }, { x: 450, y: 170, l: "7" }, { x: 275, y: 60, l: "9" }
+  ],
+  "4-2-3-1": [
+    { x: 275, y: 330, l: "1" }, { x: 100, y: 260, l: "4" }, { x: 210, y: 280, l: "5" }, { x: 340, y: 280, l: "2" }, { x: 450, y: 260, l: "3" },
+    { x: 200, y: 190, l: "6" }, { x: 350, y: 190, l: "8" }, { x: 100, y: 120, l: "7" }, { x: 275, y: 130, l: "10" }, { x: 450, y: 120, l: "11" }, { x: 275, y: 50, l: "9" }
+  ],
+  "5-3-2": [
+    { x: 275, y: 330, l: "1" }, { x: 80, y: 240, l: "3" }, { x: 180, y: 270, l: "4" }, { x: 275, y: 280, l: "5" }, { x: 370, y: 270, l: "2" }, { x: 470, y: 240, l: "6" },
+    { x: 180, y: 170, l: "8" }, { x: 275, y: 190, l: "10" }, { x: 370, y: 170, l: "11" }, { x: 220, y: 60, l: "9" }, { x: 330, y: 60, l: "7" }
+  ],
+  "3-5-2": [
+    { x: 275, y: 330, l: "1" }, { x: 150, y: 280, l: "4" }, { x: 275, y: 290, l: "5" }, { x: 400, y: 280, l: "2" },
+    { x: 60, y: 180, l: "3" }, { x: 180, y: 200, l: "6" }, { x: 275, y: 180, l: "8" }, { x: 370, y: 200, l: "10" }, { x: 490, y: 180, l: "7" },
+    { x: 220, y: 70, l: "9" }, { x: 330, y: 70, l: "11" }
+  ]
+};
 
-const VECTOR_COLORS = [
-  { id: '#3b82f6', label: 'Ofensivo', hex: '#3b82f6' },
-  { id: '#ef4444', label: 'Defensa', hex: '#ef4444' },
-  { id: '#fbbf24', label: 'Pase Clave', hex: '#fbbf24' },
-];
-
-const VECTOR_STYLES = [
-  { id: 'solid',   label: 'Pase corto',    icon: <Minus size={14} /> },
-  { id: 'curved',  label: 'Centro/Largo',  icon: <Spline size={14} /> },
-  { id: 'zigzag',  label: 'Conducción',    icon: <Activity size={14} /> },
-  { id: 'dashed',  label: 'Desmarque',     icon: <div style={{width:14, borderBottom:'2px dashed currentColor'}} /> },
-  { id: 'shoot',   label: 'Tiro/Remate',   icon: <Target size={14} /> },
+const LEGEND = [
+  { id: 'pass', label: 'Pase Raso', icon: '⎯', color: '#4ade80', style: 'solid' },
+  { id: 'run', label: 'Desmarque', icon: '╌', color: '#fbbf24', style: 'dashed' },
+  { id: 'shoot', label: 'Tiro/Largo', icon: '⟶', color: '#ef4444', style: 'solid' },
+  { id: 'curved', label: 'Bombeado', icon: '⤿', color: '#c084fc', style: 'curved' },
+  { id: 'zigzag', label: 'Conducción', icon: '〰', color: '#3b82f6', style: 'zigzag' },
 ];
 
 export default function Tactica() {
   const { isAdmin, profile } = useAuth();
-  const isMobile = useIsMobile();
   const [plays, setPlays] = useState([]);
   const [activePlay, setActivePlay] = useState(null);
   const [activeCategory, setActiveCategory] = useState('corners');
+  const [loading, setLoading] = useState(true);
+  const [mobileTab, setMobileTab] = useState('jugadas'); // 'jugadas' | 'campo' | 'plantilla'
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: '' });
   
   // Canvas Tools
   const [tool, setTool] = useState("move");
-  const [arrowColor, setArrowColor] = useState("#3b82f6");
+  const [arrowType, setArrowType] = useState("pass");
+  const [arrowColor, setArrowColor] = useState("#4ade80");
   const [arrowStyle, setArrowStyle] = useState("solid");
   const [drawPt, setDrawPt] = useState(null);
-  const [zoneColor, setZoneColor] = useState("red");
   
-  // Sequences & Playback
+  // Steps & Animation
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [isVertical, setIsVertical] = useState(false);
+  const [showPlayerModal, setShowPlayerModal] = useState(null); // id of token being edited
   
-  // Selection & View
-  const [selectedTokenId, setSelectedTokenId] = useState(null);
-  const [presentationMode, setPresentationMode] = useState(false);
-  
-  const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState([]);
-  const [fieldView, setFieldView] = useState('full');
-  const [mobileTab, setMobileTab] = useState('jugadas'); // 'jugadas' | 'campo'
-
-  // Pilar 1 — Live indicator for realtime updates
-  const [liveFlash, setLiveFlash] = useState(false);
-  // Pilar 2 — Online state tracked reactively
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  // Pilar 3 — Heatmap toggle
   const [showHeatmap, setShowHeatmap] = useState(false);
-  const [allPlays, setAllPlays] = useState([]); // full-category plays for heatmap
-  // Pilar 4 — Export state
-  const [exporting, setExporting] = useState(false);
-  const fieldSvgRef = useRef(null); // forwarded into FieldCanvas → SVG DOM element
-
+  const [showTools, setShowTools] = useState(false);
+  const fieldSvgRef = useRef(null);
   const { queueUpdate } = useOfflineSync();
 
-  const VIEWS = [
-    { id: 'full',     label: '⬛ Campo completo',   ratio: '550/366' },
-    { id: 'left',     label: '◧ Mitad izquierda',  ratio: '308/366' },
-    { id: 'right',    label: '◨ Mitad derecha',    ratio: '308/366' },
-    { id: 'corner_r', label: '↘️ Área Derecha',    ratio: '247/293' },
-    { id: 'corner_l', label: '↙️ Área Izquierda',  ratio: '247/293' },
-  ];
-
-  // Aspect ratio of the current view so the container never distorts the field
-  const fieldRatio = VIEWS.find(v => v.id === fieldView)?.ratio ?? '550/366';
-  
-  const myRosterId = players.find(p => p.auth_profile_id === profile?.id)?.id;
-
-  const cycleView = () => {
-    const idx = VIEWS.findIndex(v => v.id === fieldView);
-    setFieldView(VIEWS[(idx + 1) % VIEWS.length].id);
-  };
-
-  // Pilar 1 — receive live updates when admin saves a play from another device
-  useRealtimePizarra(activePlay?.id ?? null, useCallback((updated) => {
-    const isMigrated = updated.tokens?.[0]?.step !== undefined;
-    const safe = isMigrated
-      ? updated
-      : { ...updated, tokens: [{ step: 1, tokens: updated.tokens || [], arrows: updated.arrows || [], zones: updated.zones || [] }] };
-    sync(safe);
-    setLiveFlash(true);
-    setTimeout(() => setLiveFlash(false), 1800);
-  }, [])); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Pilar 2 — track connectivity for the offline badge
   useEffect(() => {
+    fetchPlays();
+    fetchPlayers();
     const up = () => setIsOnline(true);
     const dn = () => setIsOnline(false);
     window.addEventListener('online', up);
     window.addEventListener('offline', dn);
     return () => { window.removeEventListener('online', up); window.removeEventListener('offline', dn); };
-  }, []);
-
-  useEffect(() => {
-    fetchPlays();
-    fetchPlayers();
-
-    // Auto-adjust field view based on category for optimal tactical design
-    if (activeCategory === 'corners' || activeCategory === 'free_kicks_for') {
-      setFieldView('corner_r');
-    } else if (activeCategory === 'build_up' || activeCategory === 'free_kicks_against') {
-      setFieldView('corner_l');
-    } else {
-      setFieldView('full');
-    }
   }, [activeCategory]);
 
   const fetchPlayers = async () => {
@@ -145,659 +101,366 @@ export default function Tactica() {
 
   const fetchPlays = async () => {
     setLoading(true);
-    try {
-      const { data } = await supabase
-        .from('plays')
-        .select('*')
-        .eq('category', activeCategory)
-        .order('created_at', { ascending: false });
-
-      if (data && data.length > 0) {
-        // Migrate legacy data (tokens/arrows on root) to steps array on the fly
-        const safePlays = data.map(p => {
-          const isMigrated = p.tokens && Array.isArray(p.tokens) && p.tokens.length > 0 && p.tokens[0].step !== undefined;
-          if (!isMigrated) {
-            return { ...p, tokens: [{ step: 1, tokens: p.tokens || [], arrows: p.arrows || [], zones: p.zones || [] }] };
-          }
-          return p;
-        });
-        setPlays(safePlays);
-        setAllPlays(safePlays); // Pilar 3 — feed all plays to heatmap
-        setActivePlay(safePlays[0]);
-      } else {
-        setPlays([]);
-        setAllPlays([]);
-        setActivePlay(null);
-      }
-    } catch (err) {
-      console.error('Error fetching plays:', err);
-      setPlays([]);
-      setActivePlay(null);
+    const { data } = await supabase.from('plays').select('*').eq('category', activeCategory).order('created_at', { ascending: false });
+    if (data) {
+      const safe = data.map(p => {
+        const isMigrated = p.tokens && Array.isArray(p.tokens) && p.tokens.length > 0 && p.tokens[0].step !== undefined;
+        return isMigrated ? p : { ...p, tokens: [{ step: 1, tokens: p.tokens || [], arrows: p.arrows || [], zones: p.zones || [] }] };
+      });
+      setPlays(safe);
+      if (safe.length > 0) setActivePlay(safe[0]);
     }
     setLoading(false);
-    setActiveStepIndex(0);
   };
 
-  // Steps handling
-  const steps = activePlay?.tokens?.[0]?.step !== undefined 
-    ? activePlay.tokens 
-    : [{ step: 1, tokens: [], arrows: [], zones: [] }];
-    
-  const currentStep = steps[activeStepIndex] || { tokens: [], arrows: [], zones: [] };
+  const createPlay = async () => {
+    if (!form.name) return;
+    const { data } = await supabase.from('plays').insert([{
+      name: form.name,
+      category: activeCategory,
+      tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }],
+      created_by: profile?.id
+    }]).select().single();
+    if (data) {
+      setPlays([data, ...plays]);
+      setActivePlay(data);
+      setShowForm(false);
+      setForm({ name: '' });
+      setMobileTab('campo');
+    }
+  };
+
+  const deletePlay = async (e, id) => {
+    e.stopPropagation();
+    if (!confirm('¿Eliminar?')) return;
+    await supabase.from('plays').delete().eq('id', id);
+    const rem = plays.filter(p => p.id !== id);
+    setPlays(rem);
+    if (activePlay?.id === id) setActivePlay(rem[0] || null);
+  };
+
+  const steps = activePlay?.tokens || [{ step: 1, tokens: [], arrows: [], zones: [] }];
+  const currentStep = steps[activeStepIndex] || steps[0];
 
   const updateCurrentStep = (updates) => {
     if (!activePlay) return;
     const newSteps = [...steps];
     newSteps[activeStepIndex] = { ...currentStep, ...updates };
-    sync({ ...activePlay, tokens: newSteps });
-  };
-
-  const sync = (upd) => {
+    const upd = { ...activePlay, tokens: newSteps };
     setActivePlay(upd);
     setPlays(ps => ps.map(p => p.id === upd.id ? upd : p));
   };
 
-  const addStep = () => {
-    const newSteps = [...steps, { 
-      step: steps.length + 1, 
-      tokens: JSON.parse(JSON.stringify(currentStep.tokens || [])), 
-      arrows: [], 
-      zones: JSON.parse(JSON.stringify(currentStep.zones || []))
-    }];
-    sync({ ...activePlay, tokens: newSteps });
-    setActiveStepIndex(newSteps.length - 1);
-    setSelectedTokenId(null);
-  };
-
-  const deleteCurrentStep = () => {
-    if (steps.length <= 1) return;
-    const newSteps = steps.filter((_, i) => i !== activeStepIndex);
-    sync({ ...activePlay, tokens: newSteps });
-    setActiveStepIndex(Math.max(0, activeStepIndex - 1));
-  };
-
-  // Playback
-  useEffect(() => {
-    let interval;
-    if (isPlaying) {
-      setAnimating(true);
-      interval = setInterval(() => {
-        setActiveStepIndex(prev => {
-          if (prev >= steps.length - 1) {
-            setIsPlaying(false);
-            setTimeout(() => setAnimating(false), 500);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 1500);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, steps.length]);
-
-  // Canvas Handlers
-  const onMove = (id, x, y) => {
-    updateCurrentStep({ tokens: (currentStep.tokens || []).map(t => t.id === id ? { ...t, x, y } : t) });
-  };
-
-  const onArrow = (a) => {
-    updateCurrentStep({ arrows: [...(currentStep.arrows || []), { ...a, color: arrowColor, lineStyle: arrowStyle, dash: arrowStyle === 'dashed' ? '6,4' : '' }] });
-  };
-  const clearArrows = () => updateCurrentStep({ arrows: [] });
-  const undoArrow = () => updateCurrentStep({ arrows: (currentStep.arrows || []).slice(0, -1) });
-  
-  const onPlace = (kind, x, y) => {
-    let t = { id: kind + Date.now(), kind, x, y };
-    if (kind === 'player') {
-      t = { ...t, label: 'X', color: '#333' };
-    }
-    updateCurrentStep({ tokens: [...(currentStep.tokens || []), t] });
-  };
-
-  const onDeleteToken = (id) => {
-    updateCurrentStep({ tokens: (currentStep.tokens || []).filter(t => t.id !== id) });
-    if (selectedTokenId === id) setSelectedTokenId(null);
-  };
-
-  const onZoneAdd = (z) => updateCurrentStep({ zones: [...(currentStep.zones || []), z] });
-  const onZoneDelete = (zid) => updateCurrentStep({ zones: (currentStep.zones || []).filter(z => z.id !== zid) });
-
-  const updateSelectedToken = (updates) => {
-    if (!selectedTokenId) return;
-    updateCurrentStep({
-      tokens: (currentStep.tokens || []).map(t => t.id === selectedTokenId ? { ...t, ...updates } : t)
-    });
+  const applyFormation = (name) => {
+    const formation = FORMATIONS[name];
+    if (!formation) return;
+    const newTokens = formation.map((pos, i) => ({
+      id: `pl-${name}-${i}-${Date.now()}`,
+      kind: "player",
+      x: pos.x,
+      y: pos.y,
+      color: "#0057ff",
+      label: pos.l,
+      isRival: false
+    }));
+    updateCurrentStep({ tokens: [...(currentStep.tokens || []).filter(t => t.kind !== 'player' || t.isRival), ...newTokens] });
+    setShowTools(false);
   };
 
   const togglePlayer = (p, isRival = false) => {
-    if (!activePlay) return;
     const label = String(p.number || '?');
-    const has = (currentStep.tokens || []).find(t => t.kind === "player" && t.label === label && !!t.isRival === isRival);
-    if (has) {
-      updateCurrentStep({ tokens: (currentStep.tokens || []).filter(t => t.id !== has.id) });
+    const existing = (currentStep.tokens || []).find(t => t.kind === 'player' && t.label === label && !!t.isRival === isRival);
+    if (existing) {
+      updateCurrentStep({ tokens: (currentStep.tokens || []).filter(t => t.id !== existing.id) });
     } else {
+      const offsetX = (Date.now() % 100) - 50;
+      const offsetY = (Date.now() % 80) - 40;
       updateCurrentStep({
         tokens: [...(currentStep.tokens || []), {
-          id: `pl${label}${isRival ? 'R' : ''}t${Date.now()}`,
+          id: `pl-${label}-${isRival ? 'R' : ''}-${Date.now()}`,
           kind: "player",
-          x: 80 + Math.random() * 390,
-          y: 40 + Math.random() * 280,
+          x: 275 + offsetX,
+          y: 183 + offsetY,
           color: isRival ? '#ef4444' : '#0057ff',
           label,
-          name: isRival ? null : p.name,
+          name: p.name,
+          photo_url: p.photo_url,
           isRival
         }]
       });
     }
   };
 
-  const createNewPlay = async () => {
-    const name = prompt("Nombre de la nueva jugada:");
-    if (!name) return;
-    const np = { name, category: activeCategory, type: "Táctica", tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }], arrows: [] };
-    
-    try {
-      const { data } = await supabase.from('plays').insert([
-        { ...np, created_by: profile?.id }
-      ]).select().single();
-
-      if (data) {
-        setPlays([data, ...plays]);
-        setActivePlay(data);
-      } else {
-        const mockNp = { ...np, id: Date.now().toString() };
-        setPlays([mockNp, ...plays]);
-        setActivePlay(mockNp);
-      }
-    } catch {
-      const mockNp = { ...np, id: Date.now().toString() };
-      setPlays([mockNp, ...plays]);
-      setActivePlay(mockNp);
-    }
-    setActiveStepIndex(0);
+  const selectPlayerForToken = (p) => {
+    if (!showPlayerModal) return;
+    const tokens = currentStep.tokens.map(t => t.id === showPlayerModal ? { ...t, label: String(p.number), name: p.name, photo_url: p.photo_url } : t);
+    updateCurrentStep({ tokens });
+    setShowPlayerModal(null);
   };
 
-  const deletePlay = async () => {
-    if (!activePlay) return;
-    if (!confirm('¿Eliminar esta jugada?')) return;
-    
-    try {
-      await supabase.from('plays').delete().eq('id', activePlay.id);
-    } catch {}
-    
-    const remaining = plays.filter(p => p.id !== activePlay.id);
-    setPlays(remaining);
-    setActivePlay(remaining[0] || null);
-    setActiveStepIndex(0);
-  };
-
-  // Pilar 2 — offline-aware save (queues to IndexedDB when no connection)
   const savePlay = async () => {
-    if (!activePlay || activePlay.id.length < 10) return;
-    const { error } = await queueUpdate('plays', activePlay.id, {
-      tokens: activePlay.tokens,
-      arrows: [],
-    });
-    if (error) {
-      alert('⚠️ Sin conexión. La jugada se guardará cuando vuelva la red.');
-    } else if (navigator.onLine) {
-      alert('✅ Jugada guardada.');
-    } else {
-      alert('📴 Guardado localmente. Se sincronizará al recuperar la conexión.');
-    }
+    if (!activePlay) return;
+    await queueUpdate('plays', activePlay.id, { tokens: activePlay.tokens });
+    alert('Jugada guardada 🔥');
   };
 
-  // Pilar 4 — export active play steps as a WebM video using SVG → canvas → MediaRecorder
-  const exportPlay = useCallback(async () => {
-    if (!activePlay || exporting) return;
-    const svgEl = fieldSvgRef.current;
-    if (!svgEl) return;
+  const onMove = (id, x, y) => {
+    updateCurrentStep({ tokens: (currentStep.tokens || []).map(t => t.id === id ? { ...t, x, y } : t) });
+  };
 
-    setExporting(true);
+  const onArrow = (a) => {
+    updateCurrentStep({ arrows: [...(currentStep.arrows || []), { ...a, color: arrowColor, lineStyle: arrowStyle }] });
+  };
 
-    const W_OUT = 1080;
-    const H_OUT = Math.round(W_OUT * (366 / 550));
+  const selectLegend = (l) => {
+    setArrowType(l.id);
+    setArrowColor(l.color);
+    setArrowStyle(l.style);
+    setTool('arrow');
+    setShowTools(false);
+  };
 
-    const offCanvas = document.createElement('canvas');
-    offCanvas.width = W_OUT;
-    offCanvas.height = H_OUT;
-    const ctx = offCanvas.getContext('2d');
-
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-      ? 'video/webm;codecs=vp9'
-      : 'video/webm';
-    const stream = offCanvas.captureStream(30);
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4_000_000 });
-    const chunks = [];
-    recorder.ondataavailable = e => e.data.size > 0 && chunks.push(e.data);
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${activePlay.name || 'jugada'}-CFC.webm`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setExporting(false);
-    };
-
-    const captureSvgToCanvas = () => new Promise(resolve => {
-      const clone = svgEl.cloneNode(true);
-      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-      clone.setAttribute('width', W_OUT);
-      clone.setAttribute('height', H_OUT);
-      const svgStr = new XMLSerializer().serializeToString(clone);
-      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        ctx.fillStyle = '#2a6118';
-        ctx.fillRect(0, 0, W_OUT, H_OUT);
-        ctx.drawImage(img, 0, 0, W_OUT, H_OUT);
-        URL.revokeObjectURL(url);
-        resolve();
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-      img.src = url;
-    });
-
-    recorder.start();
-
-    for (let i = 0; i < steps.length; i++) {
-      setActiveStepIndex(i);
-      await new Promise(r => setTimeout(r, 120)); // let React re-render the SVG
-      await captureSvgToCanvas();
-      await new Promise(r => setTimeout(r, 1500)); // hold each step 1.5 s
-    }
-
-    recorder.stop();
-  }, [activePlay, exporting, steps]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const catInfo = CATEGORIES.find(c => c.id === activeCategory) || CATEGORIES[6];
-
-  // ── Sidebar content (shared between mobile and desktop) ─────────────────
-  const SidebarContent = () => (
-    <>
-      {/* Category Tabs */}
-      <div className="card" style={{ padding: 8 }}>
-        <div className="label" style={{ marginBottom: 6 }}>
-          <FolderOpen size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
-          Categorías
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {CATEGORIES.map(cat => (
-            <button key={cat.id}
-              onClick={() => { setActiveCategory(cat.id); setActivePlay(null); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 8px', borderRadius: 7, border: 'none', background: activeCategory === cat.id ? `${cat.color}18` : 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: activeCategory === cat.id ? 700 : 500, color: activeCategory === cat.id ? cat.color : '#64748b', transition: 'all .12s' }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: cat.color, opacity: activeCategory === cat.id ? 1 : 0.3 }} />
-              {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Plays List */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 800, fontSize: 12, color: catInfo.color }}>{catInfo.label}</span>
-        {isAdmin && <button className="btn btn-outline btn-sm" onClick={createNewPlay}><Plus size={14}/></button>}
-      </div>
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 20, color: '#96a0b5', fontSize: 11 }}>Cargando...</div>
-      ) : plays.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 20, color: '#96a0b5', fontSize: 11 }}>
-          No hay jugadas en esta categoría.
-          {isAdmin && <div style={{ marginTop: 6 }}>Pulsa <strong>+</strong> para crear una.</div>}
-        </div>
-      ) : (
-        plays.map(p => (
-          <div key={p.id}
-            onClick={() => { setActivePlay(p); setActiveStepIndex(0); if (isMobile) setMobileTab('campo'); }}
-            style={{ padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${activePlay?.id === p.id ? catInfo.color : "#e0e4ed"}`, background: activePlay?.id === p.id ? `${catInfo.color}0d` : "white", cursor: "pointer" }}>
-            <div style={{ fontWeight: 700, fontSize: 12 }}>{p.name}</div>
-            <div style={{ fontSize: 10, color: "#96a0b5", marginTop: 1 }}>{p.tokens?.length || 1} pasos</div>
-          </div>
-        ))
-      )}
-
-      {/* Admin tools */}
-      {isAdmin && activePlay && (
-        <>
-          <div className="card" style={{ padding: 10 }}>
-            <div className="label">Cabrerizos FC</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {players.map(p => {
-                const label = String(p.number || '?');
-                const on = (currentStep.tokens || []).some(t => t.kind === "player" && t.label === label && !t.isRival);
-                return (
-                  <div key={p.id} onClick={() => togglePlayer(p, false)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 8, border: `1.5px solid ${on ? "#0057ff" : "#e0e4ed"}`, background: on ? "#eef3ff" : "white", cursor: "pointer", transition: 'all .1s' }}>
-                    <div style={{ width: 20, height: 20, borderRadius: "50%", background: '#0057ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: 'white', flexShrink: 0 }}>
-                      {p.number || '?'}
-                    </div>
-                    <span style={{ fontSize: 10, fontWeight: on ? 700 : 500, flex: 1 }}>{p.name || 'Jugador'}</span>
-                    {on && <span style={{ fontSize: 9, color: '#0057ff', fontWeight: 700 }}>✓</span>}
-                  </div>
-                );
-              })}
+  return (
+    <div className="flex flex-col gap-4 h-full animate-fade-in relative no-scrollbar">
+      
+      {/* PLAYER SELECTION MODAL */}
+      {showPlayerModal && (
+        <div className="absolute inset-0 z-[100] bg-bg/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-sm space-y-4 animate-slide-up border border-white/10 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black text-white uppercase tracking-widest">Asignar Identidad</h3>
+              <button onClick={() => setShowPlayerModal(null)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-muted"><X size={16}/></button>
             </div>
-            <div className="label" style={{ marginTop: 10 }}>Equipo Rival</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-              {Array.from({ length: 11 }).map((_, i) => {
-                const num = String(i + 1);
-                const on = (currentStep.tokens || []).some(t => t.kind === "player" && t.label === num && t.isRival);
-                return (
-                  <div key={`rival-${i}`} onClick={() => togglePlayer({ number: i + 1 }, true)}
-                    style={{ width: 30, height: 30, borderRadius: "50%", border: `2px solid ${on ? "#ef4444" : "#fca5a5"}`, background: on ? "#ef4444" : "#fee2e2", display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, cursor: "pointer", color: on ? 'white' : '#ef4444' }}>
-                    {num}
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ fontSize: 9, color: '#96a0b5', marginTop: 6, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6 }}>
-              💡 Doble clic o clic derecho sobre una ficha para eliminarla
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: 10 }}>
-            <div className="label">Fichas</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-              {ELEM_BTNS.map(e => (
-                <button key={e.id} onClick={() => setTool(t => t === e.id ? "move" : e.id)}
-                  title={e.label}
-                  style={{ height: 32, borderRadius: 7, border: `1.5px solid ${tool === e.id ? "#0057ff" : "#e0e4ed"}`, background: tool === e.id ? "#eef3ff" : "#f5f6f9", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                  <span>{e.icon}</span>
-                  <span style={{ fontSize: 9 }}>{e.label.split(' ')[0]}</span>
+            <div className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto no-scrollbar">
+              {players.map(p => (
+                <button key={p.id} onClick={() => selectPlayerForToken(p)} className="flex items-center gap-4 p-3.5 bg-white/5 rounded-2xl hover:bg-accent group transition-all text-left border border-white/5">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 group-hover:bg-bg/20 flex items-center justify-center text-xs font-black">{p.number}</div>
+                  <div className="text-xs font-bold group-hover:text-bg">{p.name}</div>
                 </button>
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* MOBILE TABS */}
+      <div className="md:hidden segmented-control mx-auto w-full max-w-sm">
+        <button onClick={() => setMobileTab('jugadas')} className={`segmented-item ${mobileTab === 'jugadas' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>LISTA</button>
+        <button onClick={() => setMobileTab('campo')} className={`segmented-item ${mobileTab === 'campo' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>PIZARRA</button>
+        <button onClick={() => setMobileTab('plantilla')} className={`segmented-item ${mobileTab === 'plantilla' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>PLANTILLA</button>
+      </div>
+
+      <div className="flex flex-1 gap-4 min-h-0">
+        
+        {/* LIST PANEL */}
+        <div className={`
+          flex-col gap-4 w-full md:w-[240px] flex-shrink-0 
+          ${mobileTab === 'jugadas' ? 'flex' : 'hidden md:flex'}
+        `}>
+          <div className="grid grid-cols-2 gap-2">
+            {CATEGORIES.map(cat => (
+              <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`p-3 rounded-2xl border transition-all text-[9px] font-black uppercase tracking-widest flex flex-col items-center gap-1 ${activeCategory === cat.id ? 'bg-accent/10 border-accent text-accent' : 'bg-surface-2/20 border-white/5 text-muted'}`}>
+                <span className="text-lg">{cat.icon}</span>{cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">JUGADAS</span>
+              <button onClick={() => setShowForm(!showForm)} className="w-8 h-8 bg-accent text-bg rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all">{showForm ? <X size={16}/> : <Plus size={16}/>}</button>
+            </div>
+            {showForm && (
+              <div className="glass-card !p-3 space-y-3 animate-slide-up mb-4 border border-accent/20">
+                <input className="w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-accent/30" placeholder="Nombre de la jugada" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                <button className="w-full py-3 bg-accent text-bg rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all" onClick={createPlay}>CREAR JUGADA</button>
+              </div>
+            )}
+            {plays.map(p => (
+              <div key={p.id} className="relative group">
+                <button onClick={() => { setActivePlay(p); setMobileTab('campo'); }} className={`w-full text-left p-4 rounded-2xl border transition-all active:scale-98 ${activePlay?.id === p.id ? 'bg-accent/10 border-accent text-white' : 'bg-surface-2/10 border-white/5 text-muted hover:border-white/10'}`}>
+                  <div className="text-xs font-bold truncate pr-8 uppercase tracking-wide">{p.name}</div>
+                  <div className="text-[9px] font-black opacity-30 mt-1.5 uppercase tracking-tighter">{p.tokens?.length || 1} fases tácticas</div>
+                </button>
+                {isAdmin && <button onClick={(e) => deletePlay(e, p.id)} className="absolute right-4 top-1/2 -translate-y-1/2 text-rose-500/30 hover:text-rose-500 transition-colors"><Trash2 size={14}/></button>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* FIELD PANEL */}
+        <div className={`
+          flex-1 flex flex-col gap-4 min-h-0
+          ${mobileTab === 'campo' ? 'flex' : 'hidden md:flex'}
+        `}>
           
-          {/* Panel de Balón si está seleccionado */}
-          {selectedTokenId && (currentStep.tokens || []).find(t => t.id === selectedTokenId)?.kind === 'ball' && (
-            <div className="card" style={{ padding: 10, background: '#fffbeb', borderColor: '#fcd34d' }}>
-              <div className="label">Efecto / Rotación</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-                {['top', 'bottom', 'left', 'right', 'curve-l', 'curve-r'].map(eff => (
-                  <button key={eff} onClick={() => updateSelectedToken({ ballEffect: eff })}
-                    style={{ fontSize: 9, padding: '4px 0', borderRadius: 4, border: '1px solid #fcd34d', background: '#fff', fontWeight: 600, cursor: 'pointer' }}>
-                    {eff.toUpperCase()}
+          {/* MOBILE & DESKTOP TOOLBAR */}
+          <div className="glass p-2 rounded-2xl border border-white/5 flex items-center justify-between gap-2 shadow-xl">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button onClick={() => setTool('move')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${tool === 'move' ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'bg-white/5 text-muted'}`}><MousePointer2 size={18} /></button>
+              
+              <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
+              
+              <button 
+                onClick={() => setShowTools(!showTools)}
+                className={`md:hidden h-10 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${showTools ? 'bg-accent text-bg' : 'bg-white/5 text-muted'}`}
+              >
+                <LayersIcon size={16} /> TOOLS
+              </button>
+
+              {/* DESKTOP ONLY TOOLS */}
+              <div className="hidden md:flex gap-1">
+                {LEGEND.map(l => (
+                  <button key={l.id} onClick={() => selectLegend(l)} className={`px-3 h-10 border rounded-xl flex flex-col items-center justify-center transition-all ${arrowType === l.id && tool === 'arrow' ? 'bg-accent/10 border-accent text-accent' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
+                    <span className="text-sm font-black">{l.icon}</span>
+                    <span className="text-[7px] font-black uppercase tracking-tighter">{l.label.split(' ')[0]}</span>
                   </button>
                 ))}
-                <button onClick={() => updateSelectedToken({ ballEffect: null })}
-                  style={{ fontSize: 9, padding: 4, borderRadius: 4, border: '1px solid #fca5a5', background: '#fee2e2', gridColumn: 'span 2', fontWeight: 700, cursor: 'pointer' }}>
-                  Limpiar
-                </button>
+              </div>
+
+              <div className="hidden md:block w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
+
+              <div className="hidden md:flex gap-1">
+                {Object.keys(FORMATIONS).map(f => (
+                  <button key={f} onClick={() => applyFormation(f)} className="px-3 h-10 bg-white/5 border border-white/5 rounded-xl text-[9px] font-black text-white/40 hover:text-white hover:border-white/10 transition-all">{f}</button>
+                ))}
               </div>
             </div>
-          )}
 
-          {/* Panel de Jugador si está seleccionado */}
-          {selectedTokenId && (currentStep.tokens || []).find(t => t.id === selectedTokenId)?.kind === 'player' && !(currentStep.tokens || []).find(t => t.id === selectedTokenId)?.isRival && (
-            <div className="card" style={{ padding: 10, background: '#f0f9ff', borderColor: '#bae6fd' }}>
-              <div className="label">Instrucciones Tácticas</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <select 
-                  className="input-field" 
-                  style={{ padding: '6px 8px', fontSize: 11 }}
-                  value={(currentStep.tokens || []).find(t => t.id === selectedTokenId)?.assigned_player_id || ''}
-                  onChange={e => updateSelectedToken({ assigned_player_id: e.target.value })}
-                >
-                  <option value="">-- Vincular Jugador --</option>
-                  {players.map(p => <option key={p.id} value={p.id}>{p.name} {p.surname}</option>)}
-                </select>
-                <input 
-                  className="input-field" 
-                  placeholder="Rol (Ej: Bloqueo ciego)" 
-                  style={{ fontSize: 11, padding: '6px 8px' }}
-                  value={(currentStep.tokens || []).find(t => t.id === selectedTokenId)?.tactical_role || ''}
-                  onChange={e => updateSelectedToken({ tactical_role: e.target.value })}
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="card" style={{ padding: 10 }}>
-            <div className="label">Trazos (Flechas)</div>
-            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-              {VECTOR_STYLES.map(s => (
-                <button key={s.id} onClick={() => { setArrowStyle(s.id); setTool('arrow'); }} title={s.label}
-                  style={{ flex: 1, padding: 4, borderRadius: 6, border: `1.5px solid ${arrowStyle === s.id ? '#0057ff' : '#e0e4ed'}`, background: arrowStyle === s.id ? '#eef3ff' : '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'center' }}>
-                  {s.icon}
-                </button>
-              ))}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {VECTOR_COLORS.map(c => (
-                <div key={c.id} onClick={() => { setArrowColor(c.id); setTool('arrow'); }}
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", borderRadius: 6, cursor: "pointer", background: arrowColor === c.id ? "#f5f6f9" : "transparent" }}>
-                  <div style={{ width: 14, height: 14, background: c.hex, borderRadius: '50%' }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: arrowColor === c.id ? "#111" : "#4a5568" }}>{c.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </>
-  );
-
-  // ── Canvas toolbar (shared) ───────────────────────────────────────────
-  const Toolbar = () => (
-    isAdmin && activePlay ? (
-      <div style={{ display: "flex", alignItems: "center", gap: 5, background: "white", border: "1px solid #e0e4ed", borderRadius: 9, padding: "6px 8px", flexWrap: 'wrap' }}>
-        {/* Live indicator */}
-        <div title={isOnline ? 'En línea — cambios en tiempo real' : 'Sin conexión — guardado local'}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', borderRadius: 20, background: isOnline ? (liveFlash ? '#d1fae5' : '#f0fdf4') : '#fff7ed', border: `1px solid ${isOnline ? '#6ee7b7' : '#fed7aa'}`, transition: 'background .4s' }}>
-          {isOnline
-            ? <Wifi size={11} color="#059669" />
-            : <WifiOff size={11} color="#f97316" />}
-          <span style={{ fontSize: 9, fontWeight: 700, color: isOnline ? '#059669' : '#f97316' }}>
-            {liveFlash ? '¡LIVE!' : isOnline ? 'Online' : 'Offline'}
-          </span>
-        </div>
-
-        <div style={{ width: 1, height: 20, background: "#e0e4ed", margin: "0 2px" }} />
-
-        <button onClick={() => setTool('move')} title="Mover"
-          style={{ width: 32, height: 32, borderRadius: 6, border: `1.5px solid ${tool === "move" ? "#0057ff" : "#e0e4ed"}`, background: tool === "move" ? "#eef3ff" : "#f5f6f9", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', color: tool === "move" ? "#0057ff" : "#4a5568" }}>
-          <Move size={16} />
-        </button>
-        <button onClick={() => setTool('arrow')} title="Flecha"
-          style={{ width: 32, height: 32, borderRadius: 6, border: `1.5px solid ${tool === "arrow" ? "#0057ff" : "#e0e4ed"}`, background: tool === "arrow" ? "#eef3ff" : "#f5f6f9", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', color: tool === "arrow" ? "#0057ff" : "#4a5568" }}>
-          <ArrowRight size={16} />
-        </button>
-        <button onClick={() => { setTool('zone'); setZoneColor('red'); }} title="Zona Peligro"
-          style={{ width: 32, height: 32, borderRadius: 6, border: `1.5px solid ${tool === "zone" && zoneColor === 'red' ? "#0057ff" : "#e0e4ed"}`, background: tool === "zone" && zoneColor === 'red' ? "#eef3ff" : "#f5f6f9", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', color: tool === "zone" && zoneColor === 'red' ? "#0057ff" : "#ef4444" }}>
-          <Layers size={16} />
-        </button>
-        <div style={{ width: 1, height: 20, background: "#e0e4ed", margin: "0 2px" }} />
-        <button onClick={undoArrow} className="btn btn-outline btn-sm"><Undo2 size={12}/></button>
-        <button onClick={clearArrows} className="btn btn-outline btn-sm"><Trash2 size={12}/></button>
-        <button onClick={deletePlay} className="btn btn-outline btn-sm" style={{ color: '#ef4444' }}><Trash2 size={12}/></button>
-        <button onClick={cycleView}
-          style={{ padding: '0 8px', height: 32, borderRadius: 6, border: '1.5px solid #e0e4ed', background: fieldView !== 'full' ? '#eef3ff' : '#f5f6f9', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: fieldView !== 'full' ? '#0057ff' : '#4a5568', whiteSpace: 'nowrap' }}>
-          {VIEWS.find(v => v.id === fieldView)?.label}
-        </button>
-
-        {/* Pilar 3 — Heatmap toggle */}
-        <button onClick={() => setShowHeatmap(h => !h)} title="Mapa de Calor"
-          style={{ width: 32, height: 32, borderRadius: 6, border: `1.5px solid ${showHeatmap ? '#f97316' : '#e0e4ed'}`, background: showHeatmap ? '#fff7ed' : '#f5f6f9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showHeatmap ? '#f97316' : '#4a5568' }}>
-          <Thermometer size={16} />
-        </button>
-
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-          {/* Pilar 4 — Export video */}
-          <button onClick={exportPlay} disabled={exporting || steps.length < 2} className="btn btn-outline btn-sm" title="Exportar jugada como video">
-            <Download size={12}/> {exporting ? 'Grabando…' : 'Exportar'}
-          </button>
-          <button onClick={() => setPresentationMode(true)} className="btn btn-outline btn-sm">
-            <Monitor size={14}/> TV Mode
-          </button>
-          <button onClick={savePlay} className="btn btn-primary btn-sm"><Save size={12}/> Guardar</button>
-        </div>
-      </div>
-    ) : null
-  );
-
-  const Timeline = () => (
-    activePlay ? (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "white", border: "1px solid #e0e4ed", borderRadius: 9, padding: "8px 12px" }}>
-        <button onClick={() => { setIsPlaying(true); setActiveStepIndex(0); }} className="btn btn-primary btn-sm" disabled={steps.length < 2 || isPlaying}>
-          <Play size={14} /> Reproducir
-        </button>
-        <div style={{ width: 1, height: 20, background: "#e0e4ed", margin: "0 4px" }} />
-        
-        <div style={{ display: 'flex', gap: 6, flex: 1, overflowX: 'auto', paddingBottom: 2 }}>
-          {steps.map((s, i) => (
-            <button key={i} onClick={() => { setActiveStepIndex(i); setIsPlaying(false); }}
-              style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1.5px solid ${activeStepIndex === i ? '#0057ff' : '#e0e4ed'}`, background: activeStepIndex === i ? '#eef3ff' : 'white', color: activeStepIndex === i ? '#0057ff' : '#4a5568', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              Paso {i + 1}
-            </button>
-          ))}
-        </div>
-
-        {isAdmin && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            {steps.length > 1 && (
-              <button onClick={deleteCurrentStep} className="btn btn-outline btn-sm" title="Borrar Paso" style={{ color: '#ef4444' }}>
-                <Trash2 size={14} />
+            <div className="flex items-center gap-2">
+              <button onClick={() => setAnimating(!animating)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${animating ? 'bg-amber-500 text-bg shadow-lg' : 'bg-white/5 text-muted'}`}>
+                <Monitor size={18} />
               </button>
-            )}
-            <button onClick={addStep} className="btn btn-outline btn-sm">
-              <Plus size={14} /> Añadir Paso
-            </button>
-          </div>
-        )}
-      </div>
-    ) : null
-  );
-
-  if (presentationMode) {
-    return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <button onClick={() => setPresentationMode(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,.2)', color: 'white', border: 'none', borderRadius: '50%', padding: 10, cursor: 'pointer' }}>
-          <X size={24} />
-        </button>
-        <div style={{ width: '100%', maxWidth: 800, aspectRatio: '550/366', background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 10px 40px rgba(0,0,0,.5)" }}>
-          <FieldCanvas 
-            tokens={currentStep.tokens} arrows={currentStep.arrows} zones={currentStep.zones}
-            animating={animating} presentationMode={true} viewMode={fieldView}
-          />
-        </div>
-        <div style={{ position: 'absolute', bottom: 30, display: 'flex', gap: 10 }}>
-          <button onClick={() => { setIsPlaying(true); setActiveStepIndex(0); }} className="btn btn-primary"><Play size={16}/> Reproducir</button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Mobile layout ─────────────────────────────────────────────────────
-  if (isMobile) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 4, background: '#f0f2f5', borderRadius: 10, padding: 4 }}>
-          <button onClick={() => setMobileTab('jugadas')}
-            style={{ flex: 1, padding: '8px 4px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: mobileTab === 'jugadas' ? 'white' : 'transparent', color: mobileTab === 'jugadas' ? '#0057ff' : '#64748b', boxShadow: mobileTab === 'jugadas' ? '0 1px 4px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>
-            📋 Jugadas
-          </button>
-          <button onClick={() => setMobileTab('campo')}
-            style={{ flex: 1, padding: '8px 4px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: mobileTab === 'campo' ? 'white' : 'transparent', color: mobileTab === 'campo' ? '#0057ff' : '#64748b', boxShadow: mobileTab === 'campo' ? '0 1px 4px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>
-            ⚽ Campo
-          </button>
-        </div>
-
-        {mobileTab === 'jugadas' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <SidebarContent />
-          </div>
-        )}
-
-        {mobileTab === 'campo' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Toolbar />
-            <div style={{ aspectRatio: fieldRatio, width: '100%', background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)", position: 'relative' }}>
-              {showHeatmap ? (
-                <Heatmap plays={allPlays} includeArrows />
-              ) : activePlay ? (
-                <FieldCanvas
-                  ref={fieldSvgRef}
-                  tokens={currentStep.tokens || []}
-                  arrows={currentStep.arrows || []}
-                  zones={currentStep.zones || []}
-                  onMove={isAdmin ? onMove : undefined}
-                  tool={isAdmin ? tool : 'move'}
-                  arrowType="pass"
-                  onArrow={isAdmin ? onArrow : undefined}
-                  drawPt={drawPt}
-                  setDrawPt={setDrawPt}
-                  onPlace={isAdmin ? onPlace : undefined}
-                  onDelete={isAdmin ? onDeleteToken : undefined}
-                  onZoneAdd={isAdmin ? onZoneAdd : undefined}
-                  onZoneDelete={isAdmin ? onZoneDelete : undefined} zoneColor={zoneColor}
-                  viewMode={fieldView}
-                  animating={animating}
-                  selectedTokenId={selectedTokenId} onSelectToken={setSelectedTokenId}
-                  myRosterId={myRosterId}
-                />
-              ) : (
-                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)', padding: '40px 20px' }}>
-                  <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Selecciona una jugada en la pestaña "Jugadas"</div>
-                </div>
-              )}
+              <button onClick={() => setIsVertical(!isVertical)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isVertical ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'bg-white/5 text-muted'}`}>
+                <Smartphone size={18} className={isVertical ? '' : 'rotate-90'} />
+              </button>
+              <button onClick={savePlay} className="px-5 h-10 bg-emerald-500 text-bg rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">OK</button>
             </div>
-            <Timeline />
           </div>
-        )}
-      </div>
-    );
-  }
 
-  // ── Desktop layout ────────────────────────────────────────────────────
-  return (
-    <div style={{ display: 'flex', gap: 12, height: 'calc(100vh - 100px)' }}>
-      <div style={{ width: 230, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 5 }}>
-        <SidebarContent />
-      </div>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Toolbar />
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ aspectRatio: fieldRatio, height: '100%', width: 'auto', maxWidth: '100%', background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)", position: 'relative' }}>
-            {showHeatmap ? (
-              <Heatmap plays={allPlays} includeArrows />
-            ) : activePlay ? (
-              <FieldCanvas
+          <div className={`
+            flex-1 relative glass rounded-[32px] overflow-hidden border border-white/5 shadow-2xl transition-all duration-500
+            ${isVertical ? 'aspect-[2/3] max-h-[60vh] mx-auto scale-95' : 'aspect-[3/2]'}
+          `}>
+            <div className={`w-full h-full transform transition-transform duration-500 ${isVertical ? 'rotate-90 scale-[1.4]' : 'scale-100'}`}>
+              <FieldCanvas 
                 ref={fieldSvgRef}
                 tokens={currentStep.tokens || []}
                 arrows={currentStep.arrows || []}
                 zones={currentStep.zones || []}
                 onMove={isAdmin ? onMove : undefined}
-                tool={isAdmin ? tool : 'move'}
-                arrowType="pass"
                 onArrow={isAdmin ? onArrow : undefined}
-                drawPt={drawPt}
-                setDrawPt={setDrawPt}
-                onPlace={isAdmin ? onPlace : undefined}
-                onDelete={isAdmin ? onDeleteToken : undefined}
-                onZoneAdd={isAdmin ? onZoneAdd : undefined}
-                onZoneDelete={isAdmin ? onZoneDelete : undefined} zoneColor={zoneColor}
+                tool={isAdmin ? tool : 'move'}
+                onSelectToken={setShowPlayerModal}
                 viewMode={fieldView}
                 animating={animating}
-                selectedTokenId={selectedTokenId} onSelectToken={setSelectedTokenId}
+                presentationMode={true}
               />
-            ) : (
-              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)', padding: 20 }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>Selecciona una categoría y una jugada</div>
-                <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>
-                  {isAdmin ? 'O crea una nueva con el botón +' : 'El entrenador irá subiendo jugadas'}
+            </div>
+            
+            {/* TOOL SHEET (Mobile Only) */}
+            {showTools && (
+              <div className="absolute inset-0 z-50 md:hidden bg-bg/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setShowTools(false)}>
+                <div className="absolute bottom-0 left-0 right-0 bg-surface rounded-t-[32px] p-6 border-t border-white/10 animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+                  <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <h4 className="text-[10px] font-black text-muted uppercase tracking-widest px-1">TRAZOS</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {LEGEND.map(l => (
+                          <button key={l.id} onClick={() => selectLegend(l)} className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all ${arrowType === l.id && tool === 'arrow' ? 'bg-accent/20 border-accent text-accent' : 'bg-white/5 border-white/5 text-muted'}`}>
+                            <span className="text-xl">{l.icon}</span>
+                            <span className="text-[8px] font-black uppercase">{l.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <h4 className="text-[10px] font-black text-muted uppercase tracking-widest px-1">SISTEMAS</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.keys(FORMATIONS).map(f => (
+                          <button key={f} onClick={() => applyFormation(f)} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black text-white hover:bg-accent hover:text-bg transition-all">{f}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* STEPS INDICATOR */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 p-2 bg-black/40 backdrop-blur-2xl rounded-full border border-white/10 shadow-2xl">
+              {steps.map((_, i) => (
+                <button key={i} onClick={() => setActiveStepIndex(i)} className={`w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${activeStepIndex === i ? 'bg-accent text-bg shadow-lg shadow-accent/20 scale-110' : 'text-muted hover:text-white'}`}>{i + 1}</button>
+              ))}
+              {isAdmin && (
+                <button 
+                  onClick={() => {
+                    const newStep = { step: steps.length + 1, tokens: [...currentStep.tokens], arrows: [], zones: [] };
+                    updateCurrentStep({}); // ensure current is saved
+                    const upd = { ...activePlay, tokens: [...steps, newStep] };
+                    setActivePlay(upd);
+                    setActiveStepIndex(steps.length);
+                  }} 
+                  className="w-9 h-9 rounded-full bg-white/5 text-white flex items-center justify-center hover:bg-accent hover:text-bg transition-all"
+                >
+                  <Plus size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* BOTTOM CONTROLS */}
+          <div className="glass p-3 rounded-[24px] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+            <button onClick={() => { setIsPlaying(true); setActiveStepIndex(0); }} className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-3.5 bg-accent text-bg rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-accent/20 active:scale-95 transition-all"><Play size={16} /> REPRODUCIR ANIMACIÓN</button>
+            <div className="hidden md:flex gap-6 overflow-x-auto no-scrollbar px-4">
+              {LEGEND.map(l => (
+                <div key={l.id} className="flex items-center gap-2 text-[9px] font-black text-muted uppercase tracking-[0.2em] whitespace-nowrap">
+                  <span style={{ color: l.color }} className="text-base">{l.icon}</span> {l.label}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-        <Timeline />
+
+        {/* PLANTILLA PANEL */}
+        <div className={`
+          flex-col gap-4 w-full md:w-[220px] flex-shrink-0 
+          ${mobileTab === 'plantilla' ? 'flex' : 'hidden md:flex'}
+        `}>
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Cabrerizos FC</h3>
+            <span className="text-[10px] font-black text-accent">{(currentStep.tokens || []).filter(t => t.kind === 'player' && !t.isRival).length}</span>
+          </div>
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+            {players.map(p => {
+              const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === String(p.number) && !t.isRival);
+              return (
+                <button key={p.id} onClick={() => togglePlayer(p)} className={`w-full flex items-center gap-3 p-3 rounded-2xl border transition-all ${on ? 'bg-accent/10 border-accent/30 text-white' : 'bg-surface-2/10 border-white/5 text-muted hover:border-white/10'}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black transition-all ${on ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'bg-white/5 text-muted'}`}>{p.number || '?'}</div>
+                  <div className="flex flex-col items-start overflow-hidden">
+                    <span className="text-[11px] font-bold truncate w-full uppercase leading-none mb-1">{p.name}</span>
+                    <span className="text-[8px] font-black opacity-30 uppercase tracking-tighter">JUGADOR</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
+            <h3 className="text-[10px] font-black text-red-500/60 uppercase tracking-[0.2em] px-1">Escuadra Rival</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 11 }).map((_, i) => {
+                const num = String(i + 1);
+                const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === num && t.isRival);
+                return (
+                  <button key={i} onClick={() => togglePlayer({ number: i + 1 }, true)} className={`aspect-square rounded-xl border flex items-center justify-center text-[11px] font-black transition-all ${on ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>{num}</button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
