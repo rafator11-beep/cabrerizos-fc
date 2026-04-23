@@ -6,6 +6,7 @@ import EXERCISES_DATA from '../exercises_data.json';
 import { useIsMobile } from '../hooks/useIsMobile';
 import SessionDistributor from '../components/SessionDistributor';
 import FieldCanvas from '../components/FieldCanvas';
+import { resolveExerciseImageSrc } from '../utils/exerciseImages';
 
 const EXERCISE_CATS = [
   { id: 'all',          label: 'Todos' },
@@ -37,22 +38,6 @@ const QUICK_EXERCISES = [
 ];
 
 export default function Entrenamientos() {
-  // Image resolver for GitHub Pages (BASE_URL) + absolute URLs + resilient fallback
-  const baseUrl = import.meta.env.BASE_URL || '/';
-  const resolveExerciseImageSrc = (image) => {
-    if (!image || typeof image !== 'string') return null;
-    const trimmed = image.trim();
-    if (!trimmed) return null;
-
-    if (/^(https?:)?\/\//i.test(trimmed)) return trimmed;
-    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
-    if (trimmed.startsWith(baseUrl)) return trimmed;
-
-    const noLeadingSlash = trimmed.replace(/^\/+/, '');
-    if (noLeadingSlash.includes('/')) return baseUrl + noLeadingSlash;
-    return baseUrl + 'exercises/' + noLeadingSlash;
-  };
-
   const { isAdmin, profile, user } = useAuth();
   const isMobile = useIsMobile();
   const [trainings, setTrainings] = useState([]);

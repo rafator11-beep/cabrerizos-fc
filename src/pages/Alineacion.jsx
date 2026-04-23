@@ -46,7 +46,7 @@ export default function Alineacion() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', formation: '4-3-3', match_date: '' });
- const [mobileTab, setMobileTab] = useState('field');
+ const [mobileTab, setMobileTab] = useState('list');
   const svgRef = useRef(null);
 const drag = useRef(null);
 const autosaveRef = useRef(null);
@@ -408,7 +408,7 @@ const toggleSubstitute = (playerId) => {
               <div key={l.id} onClick={() => { setActiveLineup(l); setMobileTab('field'); }}
                 style={{ padding: '12px 14px', borderRadius: 10, cursor: 'pointer', border: `1.5px solid ${activeLineup?.id === l.id ? '#0057ff' : '#e0e4ed'}`, background: activeLineup?.id === l.id ? '#eef3ff' : 'white' }}>
                 <div style={{ fontWeight: 700, fontSize: 13 }}>{l.name}</div>
-                <div style={{ fontSize: 10, color: '#96a0b5' }}>{l.formation} {l.match_date && `· ${l.match_date}`}</div>
+                <div style={{ fontSize: 10, color: '#64748b' }}>{l.formation} {l.match_date && `· ${l.match_date}`}</div>
               </div>
             ))}
           </div>
@@ -441,9 +441,9 @@ const toggleSubstitute = (playerId) => {
 
   // ── Desktop layout ─────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 100px)' }}>
-      {/* Left: Lineups list */}
-      <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) minmax(0, 1fr)', gap: 16, height: 'calc(100vh - 100px)' }}>
+      {/* Left: Lineups list + assignment */}
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 800, fontSize: 15 }}>📋 Alineaciones</span>
           {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={14} /></button>}
@@ -462,13 +462,23 @@ const toggleSubstitute = (playerId) => {
           <div key={l.id} onClick={() => setActiveLineup(l)}
             style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', border: `1.5px solid ${activeLineup?.id === l.id ? '#0057ff' : '#e0e4ed'}`, background: activeLineup?.id === l.id ? '#eef3ff' : 'white' }}>
             <div style={{ fontWeight: 700, fontSize: 12 }}>{l.name}</div>
-            <div style={{ fontSize: 10, color: '#96a0b5' }}>{l.formation} {l.match_date && `· ${l.match_date}`}</div>
+            <div style={{ fontSize: 10, color: '#64748b' }}>{l.formation} {l.match_date && `· ${l.match_date}`}</div>
           </div>
         ))}
+
+        {activeLineup && isAdmin && (
+          <div className="card" style={{ padding: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <div style={{ fontWeight: 800, fontSize: 12, color: '#1e293b' }}>👥 Jugadores</div>
+              <div style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#64748b' }}>{activeLineup.formation}</div>
+            </div>
+            <PlayersPanel />
+          </div>
+        )}
       </div>
 
-      {/* Center: Field */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Right: Field */}
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {activeLineup && isAdmin && (
           <div style={{ display: 'flex', gap: 6 }}>
             <button className="btn btn-primary btn-sm" onClick={saveLineup}><Save size={12} /> Guardar</button>
@@ -476,18 +486,12 @@ const toggleSubstitute = (playerId) => {
             <div style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#64748b' }}>{activeLineup.formation}</div>
           </div>
         )}
-        <div style={{ flex: 1, background: '#2a6118', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,.2)' }}>
-          <FieldSVG />
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+          <div style={{ width: 'min(980px, 100%)' }}>
+            <FieldSVG />
+          </div>
         </div>
       </div>
-
-      {/* Right: Player assignment */}
-      {activeLineup && isAdmin && (
-        <div style={{ width: 200, flexShrink: 0, overflowY: 'auto' }}>
-          <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Asignar jugadores</div>
-          <PlayersPanel />
-        </div>
-      )}
     </div>
   );
 }

@@ -68,11 +68,11 @@ export default function Home() {
       {/* Hero */}
       <div style={{ background: "linear-gradient(130deg,#0a1628,#0d2248 55%,#0a1628)", borderRadius: 13, padding: isMobile ? "16px 16px" : "22px 24px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -20, right: -20, width: 130, height: 130, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,87,255,.18),transparent 70%)" }}/>
-        <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", textTransform: "uppercase", letterSpacing: .7, marginBottom: 3 }}>📅 {today}</div>
+        <div style={{ fontSize: 10, color: "rgba(255,255,255,.55)", textTransform: "uppercase", letterSpacing: .7, marginBottom: 3 }}>📅 {today}</div>
         <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: "white", marginBottom: 2 }}>
           {isAdmin ? "Panel Entrenador" : `¡Hola, ${profile?.name || 'Jugador'}!`}
         </div>
-        <div style={{ color: "rgba(255,255,255,.4)", fontSize: 12 }}>Temporada 2024/25 · Juveniles División Honor</div>
+        <div style={{ color: "rgba(255,255,255,.58)", fontSize: 12 }}>Temporada 2024/25 · Juveniles División Honor</div>
       </div>
 
       {/* Stats cards — 2 cols on mobile, 4 on desktop */}
@@ -83,7 +83,7 @@ export default function Home() {
               <div style={{ color: x.c }}>{x.icon}</div>
               <div style={{ fontWeight: 800, fontSize: isMobile ? 18 : 22, color: x.c }}>{x.v}</div>
             </div>
-            <div style={{ fontSize: 10, color: "#4a5568", fontWeight: 600 }}>{x.l}</div>
+            <div style={{ fontSize: 10, color: "#334155", fontWeight: 650 }}>{x.l}</div>
           </div>
         ))}
       </div>
@@ -103,19 +103,19 @@ export default function Home() {
               {recentTraining ? (
                 <>
                   <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{recentTraining.title}</div>
-                  <div style={{ fontSize: 11, color: "#4a5568", marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 11, color: "#334155", marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span><Calendar size={11} /> {recentTraining.date}</span>
                     <span><Clock size={11} /> {recentTraining.duration} min</span>
                   </div>
                   {recentTraining.objective && (
-                    <div style={{ fontSize: 11, color: "#64748b" }}>🎯 {recentTraining.objective}</div>
+                    <div style={{ fontSize: 11, color: "#334155" }}>🎯 {recentTraining.objective}</div>
                   )}
                   <Link to="/entrenamientos" style={{ display: 'inline-block', marginTop: 8, fontSize: 11, fontWeight: 600, color: '#0057ff', textDecoration: 'none' }}>
                     Ver todos →
                   </Link>
                 </>
               ) : (
-                <div style={{ color: '#96a0b5', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
                   No hay entrenamientos aún.
                 </div>
               )}
@@ -140,13 +140,13 @@ export default function Home() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, fontWeight: 600 }}>{s.trainings?.title || 'Entrenamiento'}</div>
-                      <div style={{ fontSize: 10, color: '#96a0b5' }}>{s.trainings?.date}</div>
+                      <div style={{ fontSize: 10, color: '#64748b' }}>{s.trainings?.date}</div>
                     </div>
                     {s.comment && <div style={{ fontSize: 10, color: '#64748b', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>💬 {s.comment}</div>}
                   </div>
                 ))
               ) : (
-                <div style={{ color: '#96a0b5', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
                   Aún no tienes puntuaciones.
                 </div>
               )}
@@ -163,7 +163,7 @@ export default function Home() {
               </span>
             </div>
             <div style={{ padding: 14 }}>
-              <div style={{ color: "#96a0b5", fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ color: "#64748b", fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
                 Todo al día. Sin notificaciones nuevas.
               </div>
             </div>
@@ -172,7 +172,7 @@ export default function Home() {
       </div>
 
       {/* Quick links — 3 cols on mobile, 5 on desktop */}
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#96a0b5', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Acceso rápido</div>
+      <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Acceso rápido</div>
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 3 : 5}, 1fr)`, gap: 8 }}>
         {quickLinks.map(link => (
           <Link key={link.to} to={link.to} style={{ textDecoration: 'none' }}>
@@ -181,7 +181,7 @@ export default function Home() {
               onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
               <div style={{ color: link.color, marginBottom: 6 }}>{link.icon}</div>
               <div style={{ fontWeight: 700, fontSize: isMobile ? 11 : 12, color: '#1e293b' }}>{link.label}</div>
-              {!isMobile && <div style={{ fontSize: 9, color: '#96a0b5', marginTop: 2 }}>{link.desc}</div>}
+              {!isMobile && <div style={{ fontSize: 9, color: '#64748b', marginTop: 2 }}>{link.desc}</div>}
             </div>
           </Link>
         ))}
