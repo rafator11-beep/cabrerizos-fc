@@ -54,44 +54,31 @@ const LEGEND = [
 ];
 
 export default function Tactica() {
-  const { isAdmin, profile } = useAuth();
+  const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
+  const isPlayerMode = !isRealAdmin || viewAsPlayer;
+  
   const [plays, setPlays] = useState([]);
   const [activePlay, setActivePlay] = useState(null);
   const [activeCategory, setActiveCategory] = useState('corners');
   const [loading, setLoading] = useState(true);
-  const [mobileTab, setMobileTab] = useState('jugadas'); // 'jugadas' | 'campo' | 'plantilla'
+  const [mobileTab, setMobileTab] = useState('jugadas');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '' });
-  
-  // Canvas Tools
   const [tool, setTool] = useState("move");
   const [arrowType, setArrowType] = useState("pass");
-  const [arrowColor, setArrowColor] = useState("#4ade80");
-  const [arrowStyle, setArrowStyle] = useState("solid");
   const [drawPt, setDrawPt] = useState(null);
-  
-  // Steps & Animation
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [animating, setAnimating] = useState(false);
-  const [isVertical, setIsVertical] = useState(false);
-  const [showPlayerModal, setShowPlayerModal] = useState(null); // id of token being edited
-  
   const [players, setPlayers] = useState([]);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showHeatmap, setShowHeatmap] = useState(false);
   const [showTools, setShowTools] = useState(false);
+  
   const fieldSvgRef = useRef(null);
   const { queueUpdate } = useOfflineSync();
 
   useEffect(() => {
     fetchPlays();
     fetchPlayers();
-    const up = () => setIsOnline(true);
-    const dn = () => setIsOnline(false);
-    window.addEventListener('online', up);
-    window.addEventListener('offline', dn);
-    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', dn); };
   }, [activeCategory]);
 
   const fetchPlayers = async () => {
@@ -113,37 +100,11 @@ export default function Tactica() {
     setLoading(false);
   };
 
-  const createPlay = async () => {
-    if (!form.name) return;
-    const { data } = await supabase.from('plays').insert([{
-      name: form.name,
-      category: activeCategory,
-      tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }],
-      created_by: profile?.id
-    }]).select().single();
-    if (data) {
-      setPlays([data, ...plays]);
-      setActivePlay(data);
-      setShowForm(false);
-      setForm({ name: '' });
-      setMobileTab('campo');
-    }
-  };
-
-  const deletePlay = async (e, id) => {
-    e.stopPropagation();
-    if (!confirm('¿Eliminar?')) return;
-    await supabase.from('plays').delete().eq('id', id);
-    const rem = plays.filter(p => p.id !== id);
-    setPlays(rem);
-    if (activePlay?.id === id) setActivePlay(rem[0] || null);
-  };
-
   const steps = activePlay?.tokens || [{ step: 1, tokens: [], arrows: [], zones: [] }];
   const currentStep = steps[activeStepIndex] || steps[0];
 
   const updateCurrentStep = (updates) => {
-    if (!activePlay) return;
+    if (isPlayerMode || !activePlay) return;
     const newSteps = [...steps];
     newSteps[activeStepIndex] = { ...currentStep, ...updates };
     const upd = { ...activePlay, tokens: newSteps };
@@ -151,23 +112,13 @@ export default function Tactica() {
     setPlays(ps => ps.map(p => p.id === upd.id ? upd : p));
   };
 
-  const applyFormation = (name) => {
-    const formation = FORMATIONS[name];
-    if (!formation) return;
-    const newTokens = formation.map((pos, i) => ({
-      id: `pl-${name}-${i}-${Date.now()}`,
-      kind: "player",
-      x: pos.x,
-      y: pos.y,
-      color: "#0057ff",
-      label: pos.l,
-      isRival: false
-    }));
-    updateCurrentStep({ tokens: [...(currentStep.tokens || []).filter(t => t.kind !== 'player' || t.isRival), ...newTokens] });
-    setShowTools(false);
+  const savePlay = async () => {
+    if (isPlayerMode || !activePlay) return;
+    await queueUpdate('plays', activePlay.id, { tokens: activePlay.tokens });
   };
 
   const togglePlayer = (p, isRival = false) => {
+    if (isPlayerMode) return;
     const label = String(p.number || '?');
     const existing = (currentStep.tokens || []).find(t => t.kind === 'player' && t.label === label && !!t.isRival === isRival);
     if (existing) {
@@ -191,276 +142,185 @@ export default function Tactica() {
     }
   };
 
-  const selectPlayerForToken = (p) => {
-    if (!showPlayerModal) return;
-    const tokens = currentStep.tokens.map(t => t.id === showPlayerModal ? { ...t, label: String(p.number), name: p.name, photo_url: p.photo_url } : t);
-    updateCurrentStep({ tokens });
-    setShowPlayerModal(null);
-  };
-
-  const savePlay = async () => {
-    if (!activePlay) return;
-    await queueUpdate('plays', activePlay.id, { tokens: activePlay.tokens });
-    alert('Jugada guardada 🔥');
-  };
-
-  const onMove = (id, x, y) => {
-    updateCurrentStep({ tokens: (currentStep.tokens || []).map(t => t.id === id ? { ...t, x, y } : t) });
-  };
-
-  const onArrow = (a) => {
-    updateCurrentStep({ arrows: [...(currentStep.arrows || []), { ...a, color: arrowColor, lineStyle: arrowStyle }] });
-  };
-
-  const selectLegend = (l) => {
-    setArrowType(l.id);
-    setArrowColor(l.color);
-    setArrowStyle(l.style);
-    setTool('arrow');
-    setShowTools(false);
-  };
-
   return (
-    <div className="flex flex-col gap-4 h-full animate-fade-in relative no-scrollbar">
-      
-      {/* PLAYER SELECTION MODAL */}
-      {showPlayerModal && (
-        <div className="absolute inset-0 z-[100] bg-bg/80 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-sm space-y-4 animate-slide-up border border-white/10 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black text-white uppercase tracking-widest">Asignar Identidad</h3>
-              <button onClick={() => setShowPlayerModal(null)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-muted"><X size={16}/></button>
-            </div>
-            <div className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto no-scrollbar">
-              {players.map(p => (
-                <button key={p.id} onClick={() => selectPlayerForToken(p)} className="flex items-center gap-4 p-3.5 bg-white/5 rounded-2xl hover:bg-accent group transition-all text-left border border-white/5">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 group-hover:bg-bg/20 flex items-center justify-center text-xs font-black">{p.number}</div>
-                  <div className="text-xs font-bold group-hover:text-bg">{p.name}</div>
-                </button>
-              ))}
-            </div>
+    <div className="flex flex-col h-full bg-bg overflow-hidden md:flex-row">
+      {/* Mobile Header / Desktop Sidebar Navigation */}
+      <div className="md:w-72 bg-surface/50 border-b md:border-b-0 md:border-r border-white/10 flex flex-col">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          <div>
+            <h1 className="text-xs font-black text-white uppercase tracking-[0.3em]">Jugadas</h1>
+            <p className="text-[10px] text-muted font-bold mt-0.5">{CATEGORIES.find(c => c.id === activeCategory)?.label}</p>
           </div>
+          {!isPlayerMode && (
+            <button onClick={() => setShowForm(true)} className="w-8 h-8 rounded-lg bg-accent/20 text-accent flex items-center justify-center hover:bg-accent hover:text-bg transition-all">
+              <Plus size={18} />
+            </button>
+          )}
         </div>
-      )}
+        
+        {/* Category Icons */}
+        <div className="flex overflow-x-auto no-scrollbar p-2 gap-2 bg-black/20">
+          {CATEGORIES.map(cat => (
+            <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
+              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all ${activeCategory === cat.id ? 'bg-accent/20 border-accent/40 scale-110' : 'bg-white/5 opacity-40 hover:opacity-100'}`}>
+              {cat.icon}
+            </button>
+          ))}
+        </div>
 
-      {/* MOBILE TABS */}
-      <div className="md:hidden segmented-control mx-auto w-full max-w-sm">
-        <button onClick={() => setMobileTab('jugadas')} className={`segmented-item ${mobileTab === 'jugadas' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>LISTA</button>
-        <button onClick={() => setMobileTab('campo')} className={`segmented-item ${mobileTab === 'campo' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>PIZARRA</button>
-        <button onClick={() => setMobileTab('plantilla')} className={`segmented-item ${mobileTab === 'plantilla' ? 'segmented-item-active' : 'segmented-item-inactive'}`}>PLANTILLA</button>
+        {/* Plays List */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2">
+          {loading ? (
+            <div className="animate-pulse space-y-2">
+              {[1,2,3,4].map(i => <div key={i} className="h-16 bg-white/5 rounded-2xl" />)}
+            </div>
+          ) : plays.map(p => (
+            <button key={p.id} onClick={() => { setActivePlay(p); setMobileTab('campo'); }}
+              className={`w-full p-4 rounded-2xl text-left border transition-all ${activePlay?.id === p.id ? 'bg-accent/10 border-accent/40 text-white' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-widest">{p.name}</span>
+                {activePlay?.id === p.id && <ChevronRight size={14} className="text-accent" />}
+              </div>
+              <div className="flex gap-2 mt-2 opacity-40">
+                <div className="w-4 h-4 rounded-full bg-white/20" />
+                <div className="w-4 h-4 rounded-full bg-white/20" />
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="flex flex-1 gap-4 min-h-0">
+      {/* Main Field View */}
+      <div className="flex-1 relative flex flex-col bg-bg overflow-hidden animate-in fade-in duration-500">
         
-        {/* LIST PANEL */}
-        <div className={`
-          flex-col gap-4 w-full md:w-[240px] flex-shrink-0 
-          ${mobileTab === 'jugadas' ? 'flex' : 'hidden md:flex'}
-        `}>
-          <div className="grid grid-cols-2 gap-2">
-            {CATEGORIES.map(cat => (
-              <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`p-3 rounded-2xl border transition-all text-[9px] font-black uppercase tracking-widest flex flex-col items-center gap-1 ${activeCategory === cat.id ? 'bg-accent/10 border-accent text-accent' : 'bg-surface-2/20 border-white/5 text-muted'}`}>
-                <span className="text-lg">{cat.icon}</span>{cat.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">JUGADAS</span>
-              <button onClick={() => setShowForm(!showForm)} className="w-8 h-8 bg-accent text-bg rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all">{showForm ? <X size={16}/> : <Plus size={16}/>}</button>
-            </div>
-            {showForm && (
-              <div className="glass-card !p-3 space-y-3 animate-slide-up mb-4 border border-accent/20">
-                <input className="w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-accent/30" placeholder="Nombre de la jugada" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                <button className="w-full py-3 bg-accent text-bg rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all" onClick={createPlay}>CREAR JUGADA</button>
-              </div>
-            )}
-            {plays.map(p => (
-              <div key={p.id} className="relative group">
-                <button onClick={() => { setActivePlay(p); setMobileTab('campo'); }} className={`w-full text-left p-4 rounded-2xl border transition-all active:scale-98 ${activePlay?.id === p.id ? 'bg-accent/10 border-accent text-white' : 'bg-surface-2/10 border-white/5 text-muted hover:border-white/10'}`}>
-                  <div className="text-xs font-bold truncate pr-8 uppercase tracking-wide">{p.name}</div>
-                  <div className="text-[9px] font-black opacity-30 mt-1.5 uppercase tracking-tighter">{p.tokens?.length || 1} fases tácticas</div>
+        {/* Field Header Actions */}
+        <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
+          <div className="flex gap-2 pointer-events-auto">
+            {!isPlayerMode && (
+              <>
+                <button onClick={() => setTool('move')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-xl ${tool === 'move' ? 'bg-accent text-bg scale-110' : 'bg-black/40 backdrop-blur-md text-white border border-white/10'}`}>
+                  <Move size={18} />
                 </button>
-                {isAdmin && <button onClick={(e) => deletePlay(e, p.id)} className="absolute right-4 top-1/2 -translate-y-1/2 text-rose-500/30 hover:text-rose-500 transition-colors"><Trash2 size={14}/></button>}
-              </div>
-            ))}
+                <button onClick={() => setTool('arrow')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-xl ${tool === 'arrow' ? 'bg-accent text-bg scale-110' : 'bg-black/40 backdrop-blur-md text-white border border-white/10'}`}>
+                  <Spline size={18} />
+                </button>
+              </>
+            )}
+            <button onClick={() => setAnimating(prev => !prev)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-xl ${animating ? 'bg-amber-500 text-bg' : 'bg-black/40 backdrop-blur-md text-white border border-white/10'}`}>
+              <Monitor size={18} />
+            </button>
           </div>
-        </div>
-
-        {/* FIELD PANEL */}
-        <div className={`
-          flex-1 flex flex-col gap-4 min-h-0
-          ${mobileTab === 'campo' ? 'flex' : 'hidden md:flex'}
-        `}>
           
-          {/* MOBILE & DESKTOP TOOLBAR */}
-          <div className="glass p-2 rounded-2xl border border-white/5 flex items-center justify-between gap-2 shadow-xl">
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <button onClick={() => setTool('move')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${tool === 'move' ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'bg-white/5 text-muted'}`}><MousePointer2 size={18} /></button>
-              
-              <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
-              
-              <button 
-                onClick={() => setShowTools(!showTools)}
-                className={`md:hidden h-10 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${showTools ? 'bg-accent text-bg' : 'bg-white/5 text-muted'}`}
-              >
-                <LayersIcon size={16} /> TOOLS
+          <div className="flex gap-2 pointer-events-auto">
+            {!isPlayerMode && (
+              <button onClick={savePlay} className="h-10 px-4 bg-accent text-bg font-black rounded-xl shadow-xl flex items-center gap-2 active:scale-95 transition-all">
+                <Save size={18} />
+                <span className="text-[10px] uppercase tracking-widest">Guardar</span>
               </button>
-
-              {/* DESKTOP ONLY TOOLS */}
-              <div className="hidden md:flex gap-1">
-                {LEGEND.map(l => (
-                  <button key={l.id} onClick={() => selectLegend(l)} className={`px-3 h-10 border rounded-xl flex flex-col items-center justify-center transition-all ${arrowType === l.id && tool === 'arrow' ? 'bg-accent/10 border-accent text-accent' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
-                    <span className="text-sm font-black">{l.icon}</span>
-                    <span className="text-[7px] font-black uppercase tracking-tighter">{l.label.split(' ')[0]}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="hidden md:block w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
-
-              <div className="hidden md:flex gap-1">
-                {Object.keys(FORMATIONS).map(f => (
-                  <button key={f} onClick={() => applyFormation(f)} className="px-3 h-10 bg-white/5 border border-white/5 rounded-xl text-[9px] font-black text-white/40 hover:text-white hover:border-white/10 transition-all">{f}</button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button onClick={() => setAnimating(!animating)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${animating ? 'bg-amber-500 text-bg shadow-lg' : 'bg-white/5 text-muted'}`}>
-                <Monitor size={18} />
-              </button>
-              <button onClick={() => setIsVertical(!isVertical)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isVertical ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'bg-white/5 text-muted'}`}>
-                <Smartphone size={18} className={isVertical ? '' : 'rotate-90'} />
-              </button>
-              <button onClick={savePlay} className="px-5 h-10 bg-emerald-500 text-bg rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">OK</button>
-            </div>
-          </div>
-
-          <div className={`
-            flex-1 relative glass rounded-[32px] overflow-hidden border border-white/5 shadow-2xl transition-all duration-500
-            ${isVertical ? 'aspect-[2/3] max-h-[60vh] mx-auto scale-95' : 'aspect-[3/2]'}
-          `}>
-            <div className={`w-full h-full transform transition-transform duration-500 ${isVertical ? 'rotate-90 scale-[1.4]' : 'scale-100'}`}>
-              <FieldCanvas 
-                ref={fieldSvgRef}
-                tokens={currentStep.tokens || []}
-                arrows={currentStep.arrows || []}
-                zones={currentStep.zones || []}
-                onMove={isAdmin ? onMove : undefined}
-                onArrow={isAdmin ? onArrow : undefined}
-                tool={isAdmin ? tool : 'move'}
-                onSelectToken={setShowPlayerModal}
-                viewMode={fieldView}
-                animating={animating}
-                presentationMode={true}
-              />
-            </div>
-            
-            {/* TOOL SHEET (Mobile Only) */}
-            {showTools && (
-              <div className="absolute inset-0 z-50 md:hidden bg-bg/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setShowTools(false)}>
-                <div className="absolute bottom-0 left-0 right-0 bg-surface rounded-t-[32px] p-6 border-t border-white/10 animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
-                  <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <h4 className="text-[10px] font-black text-muted uppercase tracking-widest px-1">TRAZOS</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {LEGEND.map(l => (
-                          <button key={l.id} onClick={() => selectLegend(l)} className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all ${arrowType === l.id && tool === 'arrow' ? 'bg-accent/20 border-accent text-accent' : 'bg-white/5 border-white/5 text-muted'}`}>
-                            <span className="text-xl">{l.icon}</span>
-                            <span className="text-[8px] font-black uppercase">{l.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <h4 className="text-[10px] font-black text-muted uppercase tracking-widest px-1">SISTEMAS</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.keys(FORMATIONS).map(f => (
-                          <button key={f} onClick={() => applyFormation(f)} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black text-white hover:bg-accent hover:text-bg transition-all">{f}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             )}
-
-            {/* STEPS INDICATOR */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 p-2 bg-black/40 backdrop-blur-2xl rounded-full border border-white/10 shadow-2xl">
-              {steps.map((_, i) => (
-                <button key={i} onClick={() => setActiveStepIndex(i)} className={`w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${activeStepIndex === i ? 'bg-accent text-bg shadow-lg shadow-accent/20 scale-110' : 'text-muted hover:text-white'}`}>{i + 1}</button>
-              ))}
-              {isAdmin && (
-                <button 
-                  onClick={() => {
-                    const newStep = { step: steps.length + 1, tokens: [...currentStep.tokens], arrows: [], zones: [] };
-                    updateCurrentStep({}); // ensure current is saved
-                    const upd = { ...activePlay, tokens: [...steps, newStep] };
-                    setActivePlay(upd);
-                    setActiveStepIndex(steps.length);
-                  }} 
-                  className="w-9 h-9 rounded-full bg-white/5 text-white flex items-center justify-center hover:bg-accent hover:text-bg transition-all"
-                >
-                  <Plus size={16} />
-                </button>
-              )}
-            </div>
           </div>
+        </div>
 
-          {/* BOTTOM CONTROLS */}
-          <div className="glass p-3 rounded-[24px] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-            <button onClick={() => { setIsPlaying(true); setActiveStepIndex(0); }} className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-3.5 bg-accent text-bg rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-accent/20 active:scale-95 transition-all"><Play size={16} /> REPRODUCIR ANIMACIÓN</button>
-            <div className="hidden md:flex gap-6 overflow-x-auto no-scrollbar px-4">
-              {LEGEND.map(l => (
-                <div key={l.id} className="flex items-center gap-2 text-[9px] font-black text-muted uppercase tracking-[0.2em] whitespace-nowrap">
-                  <span style={{ color: l.color }} className="text-base">{l.icon}</span> {l.label}
+        {/* The Field */}
+        <div className="flex-1 relative mt-16 md:mt-0">
+          <FieldCanvas
+            ref={fieldSvgRef}
+            tokens={currentStep.tokens || []}
+            arrows={currentStep.arrows || []}
+            zones={currentStep.zones || []}
+            tool={tool}
+            arrowType={arrowType}
+            animating={animating}
+            onMove={(id, x, y) => {
+              if (isPlayerMode) return;
+              const nextTs = (currentStep.tokens || []).map(t => t.id === id ? { ...t, x, y } : t);
+              updateCurrentStep({ tokens: nextTs });
+            }}
+            onArrow={a => {
+              if (isPlayerMode) return;
+              updateCurrentStep({ arrows: [...(currentStep.arrows || []), a] });
+            }}
+            drawPt={drawPt}
+            setDrawPt={setDrawPt}
+            onPlace={(kind, x, y) => {
+              if (isPlayerMode) return;
+              updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: Date.now(), kind, x, y }] });
+            }}
+            onDelete={id => {
+              if (isPlayerMode) return;
+              updateCurrentStep({
+                tokens: (currentStep.tokens || []).filter(t => t.id !== id),
+                arrows: (currentStep.arrows || []).filter(a => a.id !== id)
+              });
+            }}
+          />
+        </div>
+
+        {/* BOTTOM TOOL SHEET / PALETTE */}
+        {!isPlayerMode && (
+          <div className={`absolute bottom-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-2xl border-t border-white/10 transition-all duration-500 ${showTools ? 'h-[320px]' : 'h-16'}`}>
+            <button onClick={() => setShowTools(!showTools)} className="w-full h-16 flex items-center justify-center gap-2 group">
+              <div className="w-8 h-1 bg-white/20 rounded-full group-hover:bg-accent transition-colors" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted group-hover:text-white">Herramientas & Plantilla</span>
+            </button>
+            
+            <div className="px-6 pb-6 overflow-y-auto h-[256px] space-y-6 no-scrollbar">
+              {/* Arrows & Elements Palette */}
+              <div className="space-y-3">
+                <h4 className="text-[9px] font-black text-accent uppercase tracking-widest">Trazado y Elementos</h4>
+                <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+                  {LEGEND.map(l => (
+                    <button key={l.id} onClick={() => { setArrowType(l.id); setTool('arrow'); }}
+                      className={`flex-shrink-0 flex flex-col items-center gap-1 group`}>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-all ${arrowType === l.id && tool === 'arrow' ? 'bg-accent text-bg scale-110 shadow-lg shadow-accent/20' : 'bg-white/5 text-white/40'}`}>
+                        {l.icon}
+                      </div>
+                      <span className="text-[8px] font-black uppercase text-muted truncate w-12 text-center">{l.label}</span>
+                    </button>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Player Palette */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <h4 className="text-[9px] font-black text-muted uppercase tracking-widest">Jugadores Cabrerizos</h4>
+                  <span className="text-[10px] font-black text-accent">{(currentStep.tokens || []).filter(t => t.kind === 'player' && !t.isRival).length}</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {players.map(p => {
+                    const label = String(p.number || '?');
+                    const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === label && !t.isRival);
+                    return (
+                      <button key={p.id} onClick={() => togglePlayer(p, false)}
+                        className={`aspect-square rounded-2xl flex flex-col items-center justify-center border transition-all ${on ? 'bg-accent/20 border-accent/40 text-accent scale-95 shadow-inner' : 'bg-white/5 border-white/5 text-white/40 active:scale-90'}`}>
+                        <span className="text-sm font-black">{p.number}</span>
+                        <span className="text-[8px] font-bold truncate w-full px-1 text-center">{p.name.split(' ')[0]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Rivals */}
+              <div className="space-y-3">
+                <h4 className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Rival</h4>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                  {Array.from({ length: 11 }).map((_, i) => {
+                    const num = String(i + 1);
+                    const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === num && t.isRival);
+                    return (
+                      <button key={i} onClick={() => togglePlayer({ number: i + 1 }, true)}
+                        className={`flex-shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black transition-all ${on ? 'bg-rose-500 border-rose-500 text-white shadow-lg' : 'bg-white/5 border-white/5 text-white/40'}`}>
+                        {num}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* PLANTILLA PANEL */}
-        <div className={`
-          flex-col gap-4 w-full md:w-[220px] flex-shrink-0 
-          ${mobileTab === 'plantilla' ? 'flex' : 'hidden md:flex'}
-        `}>
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Cabrerizos FC</h3>
-            <span className="text-[10px] font-black text-accent">{(currentStep.tokens || []).filter(t => t.kind === 'player' && !t.isRival).length}</span>
-          </div>
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
-            {players.map(p => {
-              const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === String(p.number) && !t.isRival);
-              return (
-                <button key={p.id} onClick={() => togglePlayer(p)} className={`w-full flex items-center gap-3 p-3 rounded-2xl border transition-all ${on ? 'bg-accent/10 border-accent/30 text-white' : 'bg-surface-2/10 border-white/5 text-muted hover:border-white/10'}`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black transition-all ${on ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'bg-white/5 text-muted'}`}>{p.number || '?'}</div>
-                  <div className="flex flex-col items-start overflow-hidden">
-                    <span className="text-[11px] font-bold truncate w-full uppercase leading-none mb-1">{p.name}</span>
-                    <span className="text-[8px] font-black opacity-30 uppercase tracking-tighter">JUGADOR</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
-            <h3 className="text-[10px] font-black text-red-500/60 uppercase tracking-[0.2em] px-1">Escuadra Rival</h3>
-            <div className="grid grid-cols-4 gap-2">
-              {Array.from({ length: 11 }).map((_, i) => {
-                const num = String(i + 1);
-                const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === num && t.isRival);
-                return (
-                  <button key={i} onClick={() => togglePlayer({ number: i + 1 }, true)} className={`aspect-square rounded-xl border flex items-center justify-center text-[11px] font-black transition-all ${on ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>{num}</button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
+        )}
       </div>
     </div>
   );

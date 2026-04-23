@@ -189,9 +189,10 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       onMouseDown: e => onTokenMD(e, t),
       onTouchStart: e => onTokenTS(e, t),
       onClick: e => {
-        e.stopPropagation();
-        if (isBall && onSelectToken) onSelectToken(isSelected ? null : t.id);
-      },
+  e.stopPropagation();
+  if (presentationMode) return;
+  if (onSelectToken) onSelectToken(isSelected ? null : t.id);
+},
       onContextMenu: e => onTokenRC(e, t.id),
       onDoubleClick: e => onTokenDC(e, t.id),
     };
@@ -219,23 +220,27 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       );
       case 'cone': return (
         <g key={t.id} {...ev}>
+          {selRing}
           <polygon points="0,-13 -8,6 8,6" fill="#ff9500" stroke="white" strokeWidth="1" />
           <ellipse cx={0} cy={6} rx={8} ry={3} fill="#cc7700" />
         </g>
       );
       case 'cone_blue': return (
         <g key={t.id} {...ev}>
+          {selRing}
           <polygon points="0,-13 -8,6 8,6" fill="#0057ff" stroke="white" strokeWidth="1" />
           <ellipse cx={0} cy={6} rx={8} ry={3} fill="#003bb3" />
         </g>
       );
       case 'goal': return (
         <g key={t.id} {...ev}>
+          {selRing}
           <rect x={-22} y={-12} width={44} height={24} fill="rgba(255,255,255,.12)" stroke="white" strokeWidth="2.5" rx="1" />
         </g>
       );
       case 'mannequin': return (
         <g key={t.id} {...ev}>
+          {selRing}
           <circle cx={0} cy={-14} r={6} fill="#ffd580" stroke="white" strokeWidth="1" />
           <rect x={-5} y={-8} width={10} height={14} rx={2} fill="#ffd580" stroke="white" strokeWidth="1" />
           <line x1={-9} y1={-2} x2={9} y2={-2} stroke="white" strokeWidth="1.5" />
@@ -245,12 +250,14 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       );
       case 'pole': return (
         <g key={t.id} {...ev}>
+          {selRing}
           <line x1={0} y1={16} x2={0} y2={-16} stroke="#ffd700" strokeWidth="2.5" />
           <polygon points="0,-16 12,-10 0,-4" fill="#ff4444" />
         </g>
       );
       case 'ladder': return (
         <g key={t.id} {...ev}>
+          {selRing}
           <rect x={-22} y={-10} width={44} height={20} fill="none" stroke="#ffe066" strokeWidth="2" />
           <line x1={-11} y1={-10} x2={-11} y2={10} stroke="#ffe066" strokeWidth="2" />
           <line x1={0} y1={-10} x2={0} y2={10} stroke="#ffe066" strokeWidth="2" />
@@ -259,6 +266,7 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       );
       case 'hurdle': return (
         <g key={t.id} {...ev}>
+          {selRing}
           <line x1={-12} y1={0} x2={12} y2={0} stroke="#ff6b6b" strokeWidth="3" />
           <line x1={-10} y1={0} x2={-10} y2={10} stroke="#444" strokeWidth="2" />
           <line x1={10} y1={0} x2={10} y2={10} stroke="#444" strokeWidth="2" />
@@ -266,16 +274,18 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       );
       case 'zone': return (
         <g key={t.id} {...ev}>
+          {selRing}
           <rect x={-25} y={-16} width={50} height={32} fill="rgba(255,255,100,.12)" stroke="rgba(255,255,100,.6)" strokeWidth="1.5" strokeDasharray="4,2" rx="2" />
         </g>
       );
-      case 'player': 
+      case 'player': {
         const isMyRole = myRosterId && t.assigned_player_id === myRosterId;
         const hasPhoto = !!t.photo_url;
         const isRival = t.isRival;
         const tokenColor = isRival ? '#ef4444' : (t.color || '#0057ff');
         
         return (
+<<<<<<< HEAD
         <g key={t.id} {...ev} onClick={(e) => { e.stopPropagation(); onSelectToken?.(t.id); }}>
           <defs>
             <filter id={`f-shadow-${t.id}`}>
@@ -297,6 +307,16 @@ const FieldCanvas = forwardRef(function FieldCanvas({
             <circle cx={0} cy={0} r={18} fill="none" stroke="white" strokeWidth="2" />
           </g>
 
+=======
+        <g key={t.id} {...ev}>
+          {selRing}
+          {isMyRole && <circle cx={0} cy={0} r={22} fill="rgba(251,191,36,.4)" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4,2">
+            <animate attributeName="r" values="22;28;22" dur="1.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
+          </circle>}
+          <circle cx={0} cy={0} r={16} fill={t.color || '#e74c3c'} stroke={isMyRole ? '#fbbf24' : 'white'} strokeWidth={isMyRole ? '3' : '2.5'} />
+          <text x={0} y={0} textAnchor="middle" dy="4" fontSize="12" fontWeight="800" fill="white">{t.label}</text>
+>>>>>>> origin/main
           {t.name && (
             <g transform="translate(0, 32)">
               <rect x={-32} y={-8} width={64} height={16} rx={8} fill="rgba(0,0,0,0.6)" backdrop-blur="md" />
@@ -307,6 +327,7 @@ const FieldCanvas = forwardRef(function FieldCanvas({
           )}
         </g>
       );
+      }
       default: return null;
     }
   };

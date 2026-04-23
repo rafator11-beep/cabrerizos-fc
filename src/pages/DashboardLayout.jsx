@@ -3,12 +3,15 @@ import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Menu, Eye, User, ShieldCheck, Home as HomeIcon, PenTool, Dumbbell, Users, X, ChevronRight } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function DashboardLayout() {
   const { profile, isRealAdmin, viewAsPlayer, setViewAsPlayer, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const isPlayerMode = !isRealAdmin || viewAsPlayer;
 
   // Close sidebar on navigation (mobile)
   useEffect(() => {
@@ -17,7 +20,7 @@ export default function DashboardLayout() {
 
   const switchToPlayer = () => {
     setViewAsPlayer(true);
-    navigate('/mi-sesion');
+    navigate('/');
   };
 
   const switchToAdmin = () => {
@@ -68,7 +71,7 @@ export default function DashboardLayout() {
             <div className="flex flex-col">
               <span className="text-[10px] font-black text-accent uppercase tracking-widest leading-none mb-1">CFC · Juvenil B</span>
               <h1 className="text-sm font-bold text-white/90">
-                {isRealAdmin ? 'Panel Técnico' : 'Portal Jugador'}
+                {isPlayerMode ? 'Portal Jugador' : 'Panel Técnico'}
               </h1>
             </div>
           </div>
@@ -80,7 +83,7 @@ export default function DashboardLayout() {
                 <button
                   onClick={switchToAdmin}
                   className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${
-                    !viewAsPlayer ? 'bg-accent text-white shadow-lg' : 'text-muted hover:text-white'
+                    !viewAsPlayer ? 'bg-accent text-bg shadow-lg' : 'text-muted hover:text-white'
                   }`}
                 >
                   ADMIN
@@ -88,79 +91,56 @@ export default function DashboardLayout() {
                 <button
                   onClick={switchToPlayer}
                   className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${
-                    viewAsPlayer ? 'bg-amber-500 text-white shadow-lg' : 'text-muted hover:text-white'
+                    viewAsPlayer ? 'bg-accent text-bg shadow-lg' : 'text-muted hover:text-white'
                   }`}
                 >
-                  JUGADOR
+                  VISTA JUGADOR
                 </button>
               </div>
             )}
-
-            <div className="flex items-center gap-2 md:gap-3 pl-3 border-l border-white/10">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
-                <User size={18} />
-              </div>
-              <button 
-                onClick={logout}
-                className="hidden md:flex w-10 h-10 items-center justify-center hover:bg-red-500/10 rounded-xl text-muted hover:text-red-500 transition-colors"
-              >
-                <LogOut size={20} />
-              </button>
+            
+            <div className="hidden md:flex flex-col items-end mr-2">
+              <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">{profile?.name || 'Usuario'}</span>
+              <span className="text-[8px] font-bold text-muted uppercase tracking-tighter">{profile?.role || 'Visitante'}</span>
             </div>
+            
+            <button onClick={logout} className="w-10 h-10 flex items-center justify-center bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 
-        {/* ADMIN WARNING BANNER */}
-        {isRealAdmin && viewAsPlayer && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 flex items-center justify-between">
-            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-              <Eye size={12} /> MODO VISTA JUGADOR
-            </span>
-            <button onClick={switchToAdmin} className="text-[8px] font-black bg-amber-500 text-black px-3 py-1 rounded-full">
-              VOLVER
-            </button>
-          </div>
-        )}
-
-        {/* SCROLLABLE CONTENT */}
-        <main className="flex-1 overflow-y-auto no-scrollbar scroll-smooth relative">
-          <div className="p-4 md:p-10 max-w-7xl mx-auto pb-[100px] md:pb-10 animate-fade-in">
-            <Outlet />
-          </div>
+        {/* CONTENT AREA */}
+        <main className="flex-1 overflow-y-auto no-scrollbar pb-[70px] md:pb-0 bg-bg">
+          <Outlet />
         </main>
 
-        {/* BOTTOM NAV (Mobile Only) */}
-        <nav className="md:hidden fixed bottom-6 left-6 right-6 h-[68px] glass rounded-[28px] border border-white/10 flex items-center justify-around px-2 z-[80] shadow-2xl">
-          {bottomNav.map(item => {
-            const isActive = location.pathname === item.to;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={`
-                  flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-2xl transition-all
-                  ${isActive ? 'text-accent' : 'text-muted/60'}
-                `}
-              >
-                <div className={`transition-transform duration-300 ${isActive ? 'scale-110 -translate-y-1' : ''}`}>
-                  {item.icon}
-                </div>
-                <span className={`text-[8px] font-black uppercase tracking-tighter ${isActive ? 'opacity-100' : 'opacity-40'}`}>
-                  {item.label}
-                </span>
-                {isActive && (
-                  <div className="w-1 h-1 bg-accent rounded-full absolute bottom-2 animate-pulse" />
-                )}
-              </NavLink>
-            );
-          })}
-          <button 
-            onClick={logout}
-            className="flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-2xl text-red-500/60"
-          >
-            <LogOut size={20} />
-            <span className="text-[8px] font-black uppercase tracking-tighter opacity-40">Salir</span>
-          </button>
+        {/* MOBILE BOTTOM NAV */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[70px] bg-bg/80 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-2 z-50">
+          {bottomNav.map(item => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => `
+                flex flex-col items-center justify-center gap-1.5 w-16 transition-all duration-300
+                ${isActive ? 'text-accent' : 'text-muted opacity-60'}
+              `}
+            >
+              {({ isActive }) => (
+                <>
+                  <div className={`
+                    p-2 rounded-2xl transition-all duration-300
+                    ${isActive ? 'bg-accent/15 scale-110 shadow-[0_0_20px_rgba(0,255,135,0.1)]' : 'bg-transparent'}
+                  `}>
+                    {item.icon}
+                  </div>
+                  <span className={`text-[8px] font-black uppercase tracking-tighter ${isActive ? 'opacity-100' : 'opacity-80'}`}>
+                    {item.label}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          ))}
         </nav>
       </div>
     </div>

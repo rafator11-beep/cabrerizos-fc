@@ -40,7 +40,7 @@ export default defineConfig({
         background_color: '#0a0a0a',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/cabrerizos-fc/',
+        start_url: '/cabrerizos-fc/#/',
         scope: '/cabrerizos-fc/',
         icons: [
           { src: '/cabrerizos-fc/escudo.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },

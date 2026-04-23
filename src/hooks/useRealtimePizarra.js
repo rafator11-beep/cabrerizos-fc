@@ -59,13 +59,14 @@ export function useRealtimePizarra(playId, onUpdate) {
  * @param {string} playId
  * @returns {{ broadcast: (event: string, payload: object) => void }}
  */
-export function useRealtimeBroadcast(playId) {
+export function useRealtimeBroadcast(playId, opts = {}) {
   const channelRef = useRef(null)
+  const prefix = opts?.prefix || 'broadcast'
 
   useEffect(() => {
     if (!playId) return
 
-    const channel = supabase.channel(`broadcast:${playId}`, {
+    const channel = supabase.channel(`${prefix}:${playId}`, {
       config: { broadcast: { self: false } },
     })
     channel.subscribe()
@@ -82,4 +83,39 @@ export function useRealtimeBroadcast(playId) {
   }, [])
 
   return { broadcast }
+}
+
+/**
+ * Receives "draft" updates broadcasted by the admin while editing.
+ * This provides near real-time viewing without writing to the DB on every move.
+ *
+ * @param {string|null} playId
+ * @param {(payload: any) => void} onDraft
+ */
+export function useRealtimeDraft(playId, onDraft) {
+  const channelRef = useRef(null)
+  const onDraftRef = useRef(onDraft)
+
+  useEffect(() => { onDraftRef.current = onDraft }, [onDraft])
+
+  useEffect(() => {
+    if (!playId) return
+
+    const channel = supabase.channel(`draft:${playId}`, {
+      config: { broadcast: { self: false } },
+    })
+
+    channel
+      .on('broadcast', { event: 'draft' }, (payload) => {
+        onDraftRef.current?.(payload?.payload)
+      })
+      .subscribe()
+
+    channelRef.current = channel
+
+    return () => {
+      supabase.removeChannel(channel)
+      channelRef.current = null
+    }
+  }, [playId])
 }

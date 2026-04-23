@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Save, X, UserCheck, Map, Image as ImageIcon, ChevronRight } from 'lucide-react';
 import FieldCanvas from './FieldCanvas';
+import { resolveExerciseImageSrc } from '../utils/exerciseImages';
 
 const GRUPOS = [
   { id: 'red',    label: 'Equipo A',  peto: 'Peto Rojo',     bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', dot: '#ef4444' },
@@ -123,7 +124,7 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
 
   // ── Canvas mode ───────────────────────────────────────────────────────────
   if (canvasMode && ex) {
-    const bgImage = ex.image ? `${import.meta.env.BASE_URL}exercises/${ex.image}` : null;
+    const bgImage = resolveExerciseImageSrc(ex.image);
     const canvasTokens = buildCanvasTokens(ex);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '80vh', gap: 10 }}>
@@ -229,10 +230,10 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
           </div>
 
           {/* Image preview */}
-          {previewImage && ex.image && (
+          {previewImage && resolveExerciseImageSrc(ex.image) && (
             <div style={{ padding: 12, background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
               <img
-                src={`${import.meta.env.BASE_URL}exercises/${ex.image}`}
+                src={resolveExerciseImageSrc(ex.image)}
                 alt={ex.name}
                 style={{ width: '100%', maxHeight: 220, objectFit: 'contain', borderRadius: 8, background: '#fff' }}
                 onError={e => { e.target.style.display = 'none'; }}
