@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import FieldCanvas from '../components/FieldCanvas';
 import Heatmap from '../components/Heatmap';
-import { useRealtimePizarra } from '../hooks/useRealtimePizarra';
+import { useRealtimePizarra, useRealtimeBroadcast, useRealtimeDraft } from '../hooks/useRealtimePizarra';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { Plus, Move, ArrowRight, Trash2, Undo2, Save, FolderOpen, Play, Monitor, Spline, X, Layers, Minus, Wifi, WifiOff, Thermometer, Download, Activity, Target } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -61,6 +61,10 @@ export default function Tactica() {
   const [plays, setPlays] = useState([]);
   const [activePlay, setActivePlay] = useState(null);
   const [activeCategory, setActiveCategory] = useState('corners');
+
+  const isPersistedId = (id) =>
+    typeof id === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
   
   // Canvas Tools
   const [tool, setTool] = useState("move");
@@ -81,7 +85,7 @@ export default function Tactica() {
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState([]);
   const [fieldView, setFieldView] = useState('full');
- const [mobileTab, setMobileTab] = useState('campo');// 'jugadas' | 'campo'
+ const [mobileTab, setMobileTab] = useState('jugadas');// 'jugadas' | 'campo'
 
   // Pilar 1 — Live indicator for realtime updates
   const [liveFlash, setLiveFlash] = useState(false);
@@ -115,8 +119,10 @@ const lastAutosavedRef = useRef('');
     setFieldView(VIEWS[(idx + 1) % VIEWS.length].id);
   };
 
+  const persistedPlayId = isPersistedId(activePlay?.id) ? activePlay.id : null;
+
   // Pilar 1 — receive live updates when admin saves a play from another device
-  useRealtimePizarra(activePlay?.id ?? null, useCallback((updated) => {
+  useRealtimePizarra(persistedPlayId, useCallback((updated) => {
     const isMigrated = updated.tokens?.[0]?.step !== undefined;
     const safe = isMigrated
       ? updated
@@ -125,6 +131,41 @@ const lastAutosavedRef = useRef('');
     setLiveFlash(true);
     setTimeout(() => setLiveFlash(false), 1800);
   }, [])); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Near real-time "draft" updates while editing (broadcast; no DB writes)
+  const { broadcast: broadcastDraft } = useRealtimeBroadcast(persistedPlayId, { prefix: 'draft' });
+  const lastDraftTsRef = useRef(0);
+  const lastDraftSentRef = useRef('');
+  const draftTimerRef = useRef(null);
+
+  useRealtimeDraft(persistedPlayId, useCallback((draft) => {
+    if (isAdmin) return;
+    if (!draft || !draft.tokens) return;
+    if (!activePlay?.id || activePlay.id !== persistedPlayId) return;
+
+    const ts = typeof draft.ts === 'number' ? draft.ts : Date.now();
+    if (ts <= lastDraftTsRef.current) return;
+    lastDraftTsRef.current = ts;
+
+    sync({ ...activePlay, tokens: draft.tokens });
+    setLiveFlash(true);
+    setTimeout(() => setLiveFlash(false), 800);
+  }, [isAdmin, activePlay, persistedPlayId])); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!isAdmin || !persistedPlayId) return;
+
+    const snapshot = JSON.stringify(activePlay?.tokens || []);
+    if (snapshot === lastDraftSentRef.current) return;
+
+    clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      lastDraftSentRef.current = snapshot;
+      broadcastDraft('draft', { ts: Date.now(), tokens: activePlay?.tokens || [] });
+    }, 120);
+
+    return () => clearTimeout(draftTimerRef.current);
+  }, [isAdmin, persistedPlayId, activePlay?.tokens, broadcastDraft]);
 
   // Pilar 2 — track connectivity for the offline badge
   useEffect(() => {
@@ -195,6 +236,7 @@ const lastAutosavedRef = useRef('');
     : [{ step: 1, tokens: [], arrows: [], zones: [] }];
     
   const currentStep = steps[activeStepIndex] || { tokens: [], arrows: [], zones: [] };
+  const effectiveArrowType = arrowStyle === 'shoot' ? '_shoot' : 'pass';
 
   const updateCurrentStep = (updates) => {
     if (!activePlay) return;
@@ -207,49 +249,31 @@ const lastAutosavedRef = useRef('');
     setActivePlay(upd);
     setPlays(ps => ps.map(p => p.id === upd.id ? upd : p));
   };
+
+  // Autosave (single debounced effect, no duplicate timers)
   useEffect(() => {
-  if (!activePlay?.id) return;
-  lastAutosavedRef.current = JSON.stringify(activePlay.tokens || []);
-}, [activePlay?.id]);
+    if (!activePlay?.id) return;
+    lastAutosavedRef.current = JSON.stringify({ tokens: activePlay.tokens || [] });
+  }, [activePlay?.id]);
 
-useEffect(() => {
-  if (!isAdmin || !activePlay?.id) return;
-  if (String(activePlay.id).length < 10) return;
-
-  const snapshot = JSON.stringify(activePlay.tokens || []);
-  if (snapshot === lastAutosavedRef.current) return;
-
-  clearTimeout(autosaveRef.current);
-
-  autosaveRef.current = setTimeout(async () => {
-    const { error } = await queueUpdate('plays', activePlay.id, {
-      tokens: activePlay.tokens || [],
-      arrows: [],
-    });
-
-    if (!error) {
-      lastAutosavedRef.current = snapshot;
-    }
-  }, 450);
-
-  return () => clearTimeout(autosaveRef.current);
-}, [activePlay?.id, activePlay?.tokens, isAdmin, queueUpdate]);
   useEffect(() => {
-  if (!isAdmin || !activePlay?.id) return;
-  if (String(activePlay.id).length < 10) return;
-  if (!Array.isArray(activePlay.tokens)) return;
+    if (!isAdmin || !isPersistedId(activePlay?.id)) return;
 
-  clearTimeout(autosaveRef.current);
+    const snapshot = JSON.stringify({ tokens: activePlay.tokens || [] });
+    if (snapshot === lastAutosavedRef.current) return;
 
-  autosaveRef.current = setTimeout(async () => {
-    await queueUpdate('plays', activePlay.id, {
-      tokens: activePlay.tokens || [],
-      arrows: [],
-    });
-  }, 350);
+    clearTimeout(autosaveRef.current);
+    autosaveRef.current = setTimeout(async () => {
+      const { error } = await queueUpdate('plays', activePlay.id, {
+        tokens: activePlay.tokens || [],
+        arrows: [],
+      });
 
-  return () => clearTimeout(autosaveRef.current);
-}, [activePlay, isAdmin, queueUpdate]);
+      if (!error) lastAutosavedRef.current = snapshot;
+    }, 450);
+
+    return () => clearTimeout(autosaveRef.current);
+  }, [activePlay?.id, activePlay?.tokens, isAdmin, queueUpdate]);
 
   const addStep = () => {
     const newSteps = [...steps, { 
@@ -351,22 +375,19 @@ useEffect(() => {
     const np = { name, category: activeCategory, type: "Táctica", tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }], arrows: [] };
     
     try {
-      const { data } = await supabase.from('plays').insert([
+      const { data, error } = await supabase.from('plays').insert([
         { ...np, created_by: profile?.id }
       ]).select().single();
 
+      if (error) throw error;
       if (data) {
         setPlays([data, ...plays]);
         setActivePlay(data);
-      } else {
-        const mockNp = { ...np, id: Date.now().toString() };
-        setPlays([mockNp, ...plays]);
-        setActivePlay(mockNp);
       }
-    } catch {
-      const mockNp = { ...np, id: Date.now().toString() };
-      setPlays([mockNp, ...plays]);
-      setActivePlay(mockNp);
+    } catch (err) {
+      console.error('Error creating play:', err);
+      alert('Error al crear la jugada. Revisa tu conexion o permisos.');
+      return;
     }
     setActiveStepIndex(0);
   };
@@ -387,7 +408,11 @@ useEffect(() => {
 
   // Pilar 2 — offline-aware save (queues to IndexedDB when no connection)
   const savePlay = async () => {
-    if (!activePlay || activePlay.id.length < 10) return;
+    if (!activePlay) return;
+    if (!isPersistedId(activePlay.id)) {
+      alert('Esta jugada aun no esta guardada en Supabase.');
+      return;
+    }
     const { error } = await queueUpdate('plays', activePlay.id, {
       tokens: activePlay.tokens,
       arrows: [],
@@ -548,7 +573,7 @@ useEffect(() => {
               })}
             </div>
             <div style={{ fontSize: 9, color: '#96a0b5', marginTop: 6, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6 }}>
-              💡 Doble clic o clic derecho sobre una ficha para eliminarla
+              💡 Selecciona una ficha y usa la papelera (o doble clic / clic derecho) para eliminarla
             </div>
           </div>
 
@@ -637,29 +662,6 @@ useEffect(() => {
 
   // ── Canvas toolbar (shared) ───────────────────────────────────────────
   const Toolbar = () => (
-    {QUICK_TOOL_BTNS.map(btn => (
-  <button
-    key={btn.id}
-    onClick={() => setTool(btn.id)}
-    title={btn.title}
-    style={{
-      width: 32,
-      height: 32,
-      borderRadius: 6,
-      border: `1.5px solid ${tool === btn.id ? "#0057ff" : "#e0e4ed"}`,
-      background: tool === btn.id ? "#eef3ff" : "#f5f6f9",
-      cursor: "pointer",
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: tool === btn.id ? "#0057ff" : "#4a5568",
-      fontSize: 14,
-      fontWeight: 700
-    }}
-  >
-    {btn.label}
-  </button>
-))}
     isAdmin && activePlay ? (
       <div style={{ display: "flex", alignItems: "center", gap: 5, background: "white", border: "1px solid #e0e4ed", borderRadius: 9, padding: "6px 8px", flexWrap: 'wrap' }}>
         {/* Live indicator */}
@@ -687,6 +689,43 @@ useEffect(() => {
           style={{ width: 32, height: 32, borderRadius: 6, border: `1.5px solid ${tool === "zone" && zoneColor === 'red' ? "#0057ff" : "#e0e4ed"}`, background: tool === "zone" && zoneColor === 'red' ? "#eef3ff" : "#f5f6f9", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', color: tool === "zone" && zoneColor === 'red' ? "#0057ff" : "#ef4444" }}>
           <Layers size={16} />
         </button>
+
+        <div style={{ display: 'flex', gap: 4, paddingLeft: 2 }}>
+          {QUICK_TOOL_BTNS.map(btn => (
+            <button
+              key={btn.id}
+              onClick={() => setTool(btn.id)}
+              title={btn.title}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                border: `1.5px solid ${tool === btn.id ? "#0057ff" : "#e0e4ed"}`,
+                background: tool === btn.id ? "#eef3ff" : "#f5f6f9",
+                cursor: "pointer",
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: tool === btn.id ? "#0057ff" : "#4a5568",
+                fontSize: 14,
+                fontWeight: 700
+              }}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => { if (selectedTokenId) onDeleteToken(selectedTokenId); }}
+          disabled={!selectedTokenId}
+          title={selectedTokenId ? 'Borrar ficha seleccionada' : 'Selecciona una ficha para borrar'}
+          className="btn btn-outline btn-sm"
+          style={{ color: selectedTokenId ? '#ef4444' : '#94a3b8' }}
+        >
+          <Trash2 size={12} />
+        </button>
+
         <div style={{ width: 1, height: 20, background: "#e0e4ed", margin: "0 2px" }} />
         <button onClick={undoArrow} className="btn btn-outline btn-sm"><Undo2 size={12}/></button>
         <button onClick={clearArrows} className="btn btn-outline btn-sm"><Trash2 size={12}/></button>
@@ -705,7 +744,7 @@ useEffect(() => {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           {/* Pilar 4 — Export video */}
           <button onClick={exportPlay} disabled={exporting || steps.length < 2} className="btn btn-outline btn-sm" title="Exportar jugada como video">
-            <Download size={12}/> {exporting ? 'Grabando…' : 'Exportar'}
+            <Download size={12}/> {exporting ? 'Grabando...' : 'Exportar'}
           </button>
           <button onClick={() => setPresentationMode(true)} className="btn btn-outline btn-sm">
             <Monitor size={14}/> TV Mode
@@ -803,7 +842,7 @@ useEffect(() => {
                   zones={currentStep.zones || []}
                   onMove={isAdmin ? onMove : undefined}
                   tool={isAdmin ? tool : 'move'}
-                  arrowType="pass"
+                  arrowType={effectiveArrowType}
                   onArrow={isAdmin ? onArrow : undefined}
                   drawPt={drawPt}
                   setDrawPt={setDrawPt}
@@ -851,7 +890,7 @@ useEffect(() => {
                 zones={currentStep.zones || []}
                 onMove={isAdmin ? onMove : undefined}
                 tool={isAdmin ? tool : 'move'}
-                arrowType="pass"
+                arrowType={effectiveArrowType}
                 onArrow={isAdmin ? onArrow : undefined}
                 drawPt={drawPt}
                 setDrawPt={setDrawPt}

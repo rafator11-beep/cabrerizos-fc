@@ -37,6 +37,22 @@ const QUICK_EXERCISES = [
 ];
 
 export default function Entrenamientos() {
+  // Image resolver for GitHub Pages (BASE_URL) + absolute URLs + resilient fallback
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const resolveExerciseImageSrc = (image) => {
+    if (!image || typeof image !== 'string') return null;
+    const trimmed = image.trim();
+    if (!trimmed) return null;
+
+    if (/^(https?:)?\/\//i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
+    if (trimmed.startsWith(baseUrl)) return trimmed;
+
+    const noLeadingSlash = trimmed.replace(/^\/+/, '');
+    if (noLeadingSlash.includes('/')) return baseUrl + noLeadingSlash;
+    return baseUrl + 'exercises/' + noLeadingSlash;
+  };
+
   const { isAdmin, profile, user } = useAuth();
   const isMobile = useIsMobile();
   const [trainings, setTrainings] = useState([]);
@@ -388,29 +404,17 @@ function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, 
                   </div>
                   <div style={{ fontSize: 12, color: '#0057ff', fontWeight: 700, padding: '4px 10px', background: '#eef3ff', borderRadius: 8 }}>{ex.duration} min</div>
                 </div>
-                {ex.image && (
+                {resolveExerciseImageSrc(ex.image) && (
                   <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e6ed', background: '#f8f9fb' }}>
-<img
-  src={
-    String(ex.image || '').startsWith('http')
-      ? ex.image
-      : `${import.meta.env.BASE_URL}exercises/${String(ex.image || '').replace(/^\/+/, '')}`
-  }
-  alt={ex.name || 'ejercicio'}
-  style={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block' }}
-  onError={(e) => {
-    const raw = String(ex.image || '');
-    const fallback = raw.startsWith('http')
-      ? ''
-      : `${import.meta.env.BASE_URL}${raw.replace(/^\/+/, '')}`;
-
-    if (fallback && e.currentTarget.src !== fallback) {
-      e.currentTarget.src = fallback;
-    } else {
-      e.currentTarget.style.display = 'none';
-    }
-  }}
-/>
+                    <img
+                      src={resolveExerciseImageSrc(ex.image)}
+                      alt={ex.name || 'ejercicio'}
+                      style={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block' }}
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  </div>
+                )}
                 {ex.canvas_drawing && (
                   <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #c7d8ff', background: '#111827', aspectRatio: '550/366', width: '100%' }}>
                     <FieldCanvas
@@ -624,7 +628,15 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
       <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#4a5568' }}>📝 Ejercicios del día:</div>
       {form.exercises.map(ex => (
         <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, marginBottom: 3, fontSize: 11 }}>
-          {ex.image && <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
+          {resolveExerciseImageSrc(ex.image) && (
+            <img
+              src={resolveExerciseImageSrc(ex.image)}
+              alt="ej"
+              style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              loading="lazy"
+            />
+          )}
           {ex.canvas_drawing && <span style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, background: '#eef3ff', color: '#0057ff', fontWeight: 700, flexShrink: 0 }}>🎨 Pizarra</span>}
           <span style={{ flex: 1, fontSize: 10 }}>{ex.name} <span style={{ color: '#0057ff', fontWeight: 700 }}>({ex.duration}min)</span></span>
           <button onClick={() => removeExercise(ex.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><X size={12} /></button>
@@ -633,8 +645,14 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
 
       <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 3, marginTop: 4 }}>O añade uno personalizado:</div>
       <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
-        {exerciseInput.image && (
-          <img src={import.meta.env.BASE_URL + 'exercises/' + exerciseInput.image} alt="selected" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+        {resolveExerciseImageSrc(exerciseInput.image) && (
+          <img
+            src={resolveExerciseImageSrc(exerciseInput.image)}
+            alt="selected"
+            style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            loading="lazy"
+          />
         )}
         <button className="btn btn-outline btn-sm" onClick={() => setShowGallery(!showGallery)} style={{ padding: '0 8px' }} title="Galería">
           <ImageIcon size={14} />
@@ -676,8 +694,13 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
                 setExerciseInput(ei => ({ ...ei, image: exData.image, name: exData.name, description: exData.description || '', duration: exData.duration || 15 }));
                 setShowGallery(false);
               }}>
-                <img src={import.meta.env.BASE_URL + 'exercises/' + exData.image} alt={exData.name}
-                  style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: exerciseInput.image === exData.image ? '2.5px solid #0057ff' : '1.5px solid transparent' }} />
+                <img
+                  src={resolveExerciseImageSrc(exData.image) || ''}
+                  alt={exData.name}
+                  style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: exerciseInput.image === exData.image ? '2.5px solid #0057ff' : '1.5px solid transparent' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  loading="lazy"
+                />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 8, padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderBottomLeftRadius: 6, borderBottomRightRadius: 6 }}>
                   {exData.name}
                 </div>

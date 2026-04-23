@@ -52,7 +52,19 @@ const drag = useRef(null);
 const autosaveRef = useRef(null);
 const lastAutosavedRef = useRef('');
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+  const toSVG = useCallback((cx, cy) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const ctm = svg.getScreenCTM?.();
+    if (!ctm) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = cx;
+    pt.y = cy;
+    const p = pt.matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  }, []);
 
 const applyLineupUpdate = (patch) => {
   if (!activeLineup) return;
@@ -193,20 +205,6 @@ const clearSlot = (slotIndex) => {
 
   applyLineupUpdate({ starters });
 };
-
-  const toggleSubstitute = (playerId) => {
-    if (!activeLineup) return;
-    const subs = activeLineup.substitutes || [];
-    const exists = subs.find(s => s.player_id === playerId);
-    let newSubs;
-    if (exists) {
-      newSubs = subs.filter(s => s.player_id !== playerId);
-    } else {
-      const p = players.find(pl => pl.id === playerId);
-      newSubs = [...subs, { player_id: playerId, number: p?.number }];
-    }
-    setActiveLineup({ ...activeLineup, substitutes: newSubs });
-  };
 
 const toggleSubstitute = (playerId) => {
   if (!activeLineup) return;
