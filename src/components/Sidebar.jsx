@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, PenTool, Dumbbell, Target, Users, LayoutGrid, MessageSquare, X } from 'lucide-react';
+import { Home, PenTool, Dumbbell, Target, Users, LayoutGrid, MessageSquare, X, CalendarCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ onClose, isMobile }) {
@@ -7,6 +7,7 @@ export default function Sidebar({ onClose, isMobile }) {
 
   const NAV = [
     { id: '', icon: <Home size={16} />, label: 'Inicio', show: true },
+    { id: 'mi-sesion', icon: <CalendarCheck size={16} />, label: 'Mi Sesión', show: !isAdmin },
     { id: 'entrenamientos', icon: <Dumbbell size={16} />, label: 'Entrenamientos', show: true },
     { id: 'tactica', icon: <PenTool size={16} />, label: 'Táctica', show: true },
     { id: 'tecnica', icon: <Target size={16} />, label: 'Técnica', show: true },

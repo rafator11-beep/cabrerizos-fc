@@ -53,7 +53,10 @@
     "description": "20 - Acciones técnicas - Conducción 4 E o Buscar por código [a] E T =] Sistemas de entrenamiento",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904648536_7.png"
+    "image": "ejercicio_1776904648536_7.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904649291_8",
@@ -77,7 +80,10 @@
     "description": ": Sistemas de entrenamiento E : - Técnica y habilidad",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904649546_10.png"
+    "image": "ejercicio_1776904649546_10.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904650055_11",
@@ -117,7 +123,10 @@
     "description": "Sistemas de entrenamiento - Técnica y habilidad E E",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904650659_15.png"
+    "image": "ejercicio_1776904650659_15.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904651233_16",
@@ -341,7 +350,10 @@
     "description": "= o Buscar por código [a] - Sistemas de entrenamiento E",
     "duration": 15,
     "category": "fisico",
-    "image": "ejercicio_1776904659453_43.png"
+    "image": "ejercicio_1776904659453_43.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904660200_44",
@@ -525,7 +537,13 @@
     "description": "Acciones fisico-técnicas Partiendo de 'A', pasamos a 'B' por alto, quien controla y realiza una pared con 'C. A partir de '81', conducción hasta 'B2', donde entregamos a 'A' y realizamos un eslalon",
     "duration": 15,
     "category": "fisico",
-    "image": "ejercicio_1776904666164_66.png"
+    "image": "ejercicio_1776904666164_66.png",
+    "required_positions": [
+      "A",
+      "B",
+      "B2",
+      "C"
+    ]
   },
   {
     "id": "ex_1776904666564_67",
@@ -549,7 +567,14 @@
     "description": "A' pasa a 'B' quien realiza un cambio de orientación hasta 'C. En la posición 'C1'. pas en profundidad a 'AT', donde ha llegado después de doblar por la espalda de 'C'. 'entro para que 'B1' asista a 'C1' para el remate a puerta. Hay que insistir en la",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904666753_69.png"
+    "image": "ejercicio_1776904666753_69.png",
+    "required_positions": [
+      "A",
+      "B",
+      "B1",
+      "C",
+      "C1"
+    ]
   },
   {
     "id": "ex_1776904667074_70",
@@ -557,7 +582,12 @@
     "description": "'A' pasa por alto a 'B', que controla y hace eslalon conduciendo el balón entre los conos. Mientras, 'A' salta las vallas y llega al remate del balón a centro de 'B1'. Se puede modificar el trazado cambiando los ejercicios, por ejemplo quitando las vallas y",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904666933_70.png"
+    "image": "ejercicio_1776904666933_70.png",
+    "required_positions": [
+      "A",
+      "B",
+      "B1"
+    ]
   },
   {
     "id": "ex_1776904667255_71",
@@ -597,7 +627,11 @@
     "description": "medio campo formamos un grupo tras la línea de fondo y otro en el centro del mpo con balón. Desde 'A' enviamos por alto el balón a 'B' y recorremos las picas ista llegar a la frontal del área, donde recibimos el balón de 'B' tras conducir entre lo:",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904667629_75.png"
+    "image": "ejercicio_1776904667629_75.png",
+    "required_positions": [
+      "A",
+      "B"
+    ]
   },
   {
     "id": "ex_1776904668018_76",
@@ -613,7 +647,11 @@
     "description": "Resistencia con balón. Hay que adaptar las repeticiones, intensidad y distancias a las capacidades físicas y edad de los jugadores Grupo A: Los jugadores conducen el balón cada vez a un cono situado a mayor distancia, volviendo siempre al principio. Grupo B",
     "duration": 15,
     "category": "fisico",
-    "image": "ejercicio_1776904668018_77.png"
+    "image": "ejercicio_1776904668018_77.png",
+    "required_positions": [
+      "A",
+      "B"
+    ]
   },
   {
     "id": "ex_1776904668316_78",
@@ -621,7 +659,11 @@
     "description": "'A' realiza un pase en largo por alto a 'B', que controla y realiza un eslalon conduciendo entre los conos. A continuación hace una pared con 'A', que a su vez ha hecho un eslalon entre las picas sin balón. 'B'. antes de recibir la devolución de la pared, salta las",
     "duration": 15,
     "category": "fisico",
-    "image": "ejercicio_1776904668188_78.png"
+    "image": "ejercicio_1776904668188_78.png",
+    "required_positions": [
+      "A",
+      "B"
+    ]
   },
   {
     "id": "ex_1776904668516_79",
@@ -637,7 +679,11 @@
     "description": "e. ds El jugador en la posición (A) realiza un pase en largo a (B), quien controla y conduce entre los conos según el gráfico. Ejercicio analítico técnico para la mejora de la",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904668516_80.png"
+    "image": "ejercicio_1776904668516_80.png",
+    "required_positions": [
+      "A",
+      "B"
+    ]
   },
   {
     "id": "ex_1776904668847_81",
@@ -669,7 +715,13 @@
     "description": "Parte el jugador 'A' conduciendo entre los conos hasta entregar a 'B'. Este realiza un pase largo a 'C y corre entre las picas. 'C' realiza una doble pared con 'D' y este último conduce hasta el cono y tira a puerta.",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904669151_84.png"
+    "image": "ejercicio_1776904669151_84.png",
+    "required_positions": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
   },
   {
     "id": "ex_1776904669382_85",
@@ -677,7 +729,11 @@
     "description": "Hacemos entre 'A' y 'B' una doble entrega/devolución a 1 toque, finalizando con remate a puerta desde la posición 'B'. El cambio lo hacemos a la fila contraria e insistimos en el golpéo con los dos piés.",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904669270_85.png"
+    "image": "ejercicio_1776904669270_85.png",
+    "required_positions": [
+      "A",
+      "B"
+    ]
   },
   {
     "id": "ex_1776904669524_86",
@@ -701,7 +757,13 @@
     "description": "Empezamos el ejercicio con un pase del juagador 'A' hacia 'B, que controla, conduce hasta la posición 'B1' y pasa a 'A1', quien recibe después de llegar al cono. Repetimos la jugada saliendo ahora desde '8, en sentido contrario.",
     "duration": 15,
     "category": "fisico",
-    "image": "ejercicio_1776904669641_88.png"
+    "image": "ejercicio_1776904669641_88.png",
+    "required_positions": [
+      "A",
+      "A1",
+      "B",
+      "B1"
+    ]
   },
   {
     "id": "ex_1776904669854_89",
@@ -733,7 +795,12 @@
     "description": "Empezamos el ejercicio con un pase del juagador 'A' hacia '8', que controla, conduce hasta la posición 'B1' y pasa a 'A1', quien recibe después de llegar al cono. Repetimos la jugada saliendo ahora desde '8', en sentido contrario.",
     "duration": 15,
     "category": "fisico",
-    "image": "ejercicio_1776904670057_92.png"
+    "image": "ejercicio_1776904670057_92.png",
+    "required_positions": [
+      "A",
+      "A1",
+      "B1"
+    ]
   },
   {
     "id": "ex_1776904670264_93",
@@ -773,7 +840,10 @@
     "description": "o E : Sistemas de entrenamiento",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904671133_97.png"
+    "image": "ejercicio_1776904671133_97.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904671615_98",
@@ -909,7 +979,10 @@
     "description": "o Buscar por código [a] 5 5 D Sistemas de entrenamiento S \" Materiales empleados",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904675897_114.png"
+    "image": "ejercicio_1776904675897_114.png",
+    "required_positions": [
+      "D"
+    ]
   },
   {
     "id": "ex_1776904676435_115",
@@ -1189,7 +1262,10 @@
     "description": "E Buscar por código [a] : Sistemas de entrenamiento",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904686073_149.png"
+    "image": "ejercicio_1776904686073_149.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904686828_150",
@@ -1237,7 +1313,10 @@
     "description": ", \" Sistemas de entrenamiento E - Acc. combinativas con finalización",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904688163_155.png"
+    "image": "ejercicio_1776904688163_155.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904688784_156",
@@ -1285,7 +1364,10 @@
     "description": "o Buscar por código [a] Sistemas de entrenamiento E : : - Cuadros y ruedas de pase",
     "duration": 15,
     "category": "fisico",
-    "image": "ejercicio_1776904690006_161.png"
+    "image": "ejercicio_1776904690006_161.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904690715_162",
@@ -1445,7 +1527,10 @@
     "description": "E Y Buscar por código [a] , \" 5 5 Sistemas de entrenamiento",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904696525_181.png"
+    "image": "ejercicio_1776904696525_181.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904697196_182",
@@ -1533,7 +1618,10 @@
     "description": "o E : Sistemas de entrenamiento",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904700151_192.png"
+    "image": "ejercicio_1776904700151_192.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904700666_193",
@@ -1765,7 +1853,11 @@
     "description": "imajróciosdlubolcon A Buscar por código C , Sistemas de entrenamiento",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904709650_221.png"
+    "image": "ejercicio_1776904709650_221.png",
+    "required_positions": [
+      "A",
+      "C"
+    ]
   },
   {
     "id": "ex_1776904710306_222",
@@ -1813,7 +1905,11 @@
     "description": "A 9 Buscar por código [a] Sistemas de entrenamiento E + Circuito técnico",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904711463_227.png"
+    "image": "ejercicio_1776904711463_227.png",
+    "required_positions": [
+      "A",
+      "E"
+    ]
   },
   {
     "id": "ex_1776904712262_228",
@@ -2189,7 +2285,10 @@
     "description": "le Buscar por código C . Sistemas de entrenamiento",
     "duration": 15,
     "category": "fisico",
-    "image": "ejercicio_1776904727593_274.png"
+    "image": "ejercicio_1776904727593_274.png",
+    "required_positions": [
+      "C"
+    ]
   },
   {
     "id": "ex_1776904728327_275",
@@ -2261,7 +2360,10 @@
     "description": "le Buscar por código C . Sistemas de entrenamiento",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904730905_283.png"
+    "image": "ejercicio_1776904730905_283.png",
+    "required_positions": [
+      "C"
+    ]
   },
   {
     "id": "ex_1776904731572_284",
@@ -2389,7 +2491,10 @@
     "description": "E o Buscar por código [a] E , ; + Sistemas de entrenamiento",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904736225_299.png"
+    "image": "ejercicio_1776904736225_299.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904736937_300",
@@ -2421,7 +2526,10 @@
     "description": "S o Buscar por código [a] Sistemas de entrenamiento E - Estrategia / ABP",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904737551_303.png"
+    "image": "ejercicio_1776904737551_303.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904738143_304",
@@ -2453,7 +2561,10 @@
     "description": "o E Sistemas de entrenamiento - Acc. combinativas con finalización",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904738869_307.png"
+    "image": "ejercicio_1776904738869_307.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904739528_308",
@@ -2485,7 +2596,10 @@
     "description": "o E Sistemas de entrenamiento - Técnica y habilidad",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904740298_311.png"
+    "image": "ejercicio_1776904740298_311.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904740807_312",
@@ -2501,7 +2615,10 @@
     "description": "e o Buscar por código a E - - Sistemas de entrenamiento",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904740807_313.png"
+    "image": "ejercicio_1776904740807_313.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904741388_314",
@@ -2581,7 +2698,10 @@
     "description": "le Buscar por código C : Sistemas de entrenamiento",
     "duration": 15,
     "category": "tecnica",
-    "image": "ejercicio_1776904744089_323.png"
+    "image": "ejercicio_1776904744089_323.png",
+    "required_positions": [
+      "C"
+    ]
   },
   {
     "id": "ex_1776904744745_324",
@@ -2693,7 +2813,10 @@
     "description": "o Buscar por código [a] E, E Sistemas de entrenamiento + Coordinación/Psicomotricidad",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904748764_337.png"
+    "image": "ejercicio_1776904748764_337.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904749535_338",
@@ -2749,7 +2872,10 @@
     "description": "E 9 Buscar por código por códig , \"",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904751326_344.png"
+    "image": "ejercicio_1776904751326_344.png",
+    "required_positions": [
+      "E"
+    ]
   },
   {
     "id": "ex_1776904751988_345",
@@ -2997,7 +3123,10 @@
     "description": "le Buscar por código C , \" Sistemas de entrenamiento",
     "duration": 15,
     "category": "tactica",
-    "image": "ejercicio_1776904762913_375.png"
+    "image": "ejercicio_1776904762913_375.png",
+    "required_positions": [
+      "C"
+    ]
   },
   {
     "id": "ex_1776904763665_376",

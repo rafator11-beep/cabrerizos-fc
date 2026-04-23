@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 
 const W = 550;
 const H = 366;
@@ -12,13 +12,35 @@ const ARROW_CONFIGS = {
   free:    { color: "#c084fc", dash: "",    w: 2.5, lineStyle: "curved" }, // backward compat
   press:   { color: "#f97316", dash: "4,3", w: 2,   lineStyle: "dashed" },
   key:     { color: "#fbbf24", dash: "",    w: 3,   lineStyle: "solid"  },
+  // inline shoot style (used when lineStyle === 'shoot' from Tactica VECTOR_STYLES)
+  _shoot:  { color: "#ef4444", dash: "",    w: 4,   lineStyle: "shoot"  },
 };
 
 const VIEW_BOXES = {
   full:  `0 0 ${W} ${H}`,
   left:  `0 0 ${Math.round(W * 0.56)} ${H}`,
   right: `${Math.round(W * 0.44)} 0 ${Math.round(W * 0.56)} ${H}`,
+  corner_r: `${Math.round(W * 0.55)} ${Math.round(H * 0.1)} ${Math.round(W * 0.45)} ${Math.round(H * 0.8)}`,
+  corner_l: `0 ${Math.round(H * 0.1)} ${Math.round(W * 0.45)} ${Math.round(H * 0.8)}`,
 };
+
+// Sawtooth path between two points — used for "Conducción" arrows
+function zigzagPath(x1, y1, x2, y2, amplitude = 7, segs = 8) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 1) return `M${x1},${y1}`;
+  const ux = dx / len, uy = dy / len;
+  const px = -uy, py = ux; // perpendicular unit
+  const endFrac = 0.88;    // stop zigzag before endpoint so arrowhead is clean
+  const pts = [`${x1},${y1}`];
+  for (let i = 1; i <= segs; i++) {
+    const t = (i / segs) * endFrac;
+    const side = i % 2 === 0 ? amplitude : -amplitude;
+    pts.push(`${x1 + dx * t + px * side},${y1 + dy * t + py * side}`);
+  }
+  pts.push(`${x2},${y2}`);
+  return `M${pts.join(' L')}`;
+}
 
 // Quadratic Bézier control point (perpendicular offset from midpoint)
 function bezierCtrl(x1, y1, x2, y2, factor = 0.28) {
@@ -28,7 +50,7 @@ function bezierCtrl(x1, y1, x2, y2, factor = 0.28) {
   };
 }
 
-export default function FieldCanvas({
+const FieldCanvas = forwardRef(function FieldCanvas({
   tokens, arrows, zones = [],
   onMove, tool, arrowType, onArrow, drawPt, setDrawPt, onPlace, onDelete,
   viewMode = 'full',
@@ -40,8 +62,11 @@ export default function FieldCanvas({
   zoneColor = 'red',
   myRosterId,
   backgroundImage,
-}) {
+}, fwdRef) {
   const ref = useRef(null);
+
+  // Expose the raw SVG DOM element so parents can serialise it for video export
+  useImperativeHandle(fwdRef, () => ref.current, []);
   const drag = useRef(null);
   const [zoneStart, setZoneStart] = useState(null);
   const [zoneCurrent, setZoneCurrent] = useState(null);
@@ -294,6 +319,37 @@ export default function FieldCanvas({
       );
     }
 
+    if (lineStyle === 'zigzag') {
+      return (
+        <g key={a.id || i} style={{ pointerEvents: 'none' }}>
+          {marker}
+          <path d={zigzagPath(a.x1, a.y1, a.x2, a.y2)}
+            fill="none" stroke={color} strokeWidth={w}
+            markerEnd={`url(#${mid})`} strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      );
+    }
+
+    if (lineStyle === 'shoot') {
+      // Bold solid line + oversized arrowhead for shots on goal
+      const shootMid = `mks${i}`;
+      return (
+        <g key={a.id || i} style={{ pointerEvents: 'none' }}>
+          <defs>
+            <marker id={shootMid} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0,10 3.5,0 7" fill={color} />
+            </marker>
+          </defs>
+          {/* Shadow line for emphasis */}
+          <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2}
+            stroke={color} strokeWidth={w + 3} strokeOpacity="0.18" strokeLinecap="round" />
+          <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2}
+            stroke={color} strokeWidth={w}
+            markerEnd={`url(#${shootMid})`} strokeLinecap="round" />
+        </g>
+      );
+    }
+
     return (
       <g key={a.id || i} style={{ pointerEvents: 'none' }}>
         {marker}
@@ -384,4 +440,6 @@ export default function FieldCanvas({
       {tokens?.map(t => renderElem(t))}
     </svg>
   );
-}
+});
+
+export default FieldCanvas;

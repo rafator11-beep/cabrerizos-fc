@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Calendar, Clock, Star, Trash2, Save, X, Image as ImageIcon, ChevronLeft, Users } from 'lucide-react';
+import { Plus, Calendar, Clock, Star, Trash2, Save, X, Image as ImageIcon, ChevronLeft, Users, PenTool } from 'lucide-react';
 import EXERCISES_DATA from '../exercises_data.json';
 import { useIsMobile } from '../hooks/useIsMobile';
 import SessionDistributor from '../components/SessionDistributor';
+import FieldCanvas from '../components/FieldCanvas';
+
+const EXERCISE_CATS = [
+  { id: 'all',          label: 'Todos' },
+  { id: 'tecnica',      label: 'Técnica' },
+  { id: 'tactica',      label: 'Táctica' },
+  { id: 'fisico',       label: 'Físico' },
+  { id: 'calentamiento',label: 'Calentamiento' },
+];
 
 const INTENSITIES = [
   { id: 'baja', label: 'Baja', color: '#10b981', icon: '🟢' },
@@ -384,6 +393,18 @@ function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, 
                     <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block' }} />
                   </div>
                 )}
+                {ex.canvas_drawing && (
+                  <div style={{ marginTop: 4, borderRadius: 10, overflow: 'hidden', border: '1px solid #c7d8ff', background: '#111827', aspectRatio: '550/366', width: '100%' }}>
+                    <FieldCanvas
+                      tokens={ex.canvas_drawing.tokens || []}
+                      arrows={ex.canvas_drawing.arrows || []}
+                      zones={ex.canvas_drawing.zones || []}
+                      tool="move"
+                      viewMode="full"
+                      presentationMode={true}
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -445,8 +466,116 @@ function TrainingDetail({ activeTraining, isAdmin, showScoring, setShowScoring, 
 }
 
 function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGallery, setShowGallery, addExercise, removeExercise, createTraining, setShowForm, isSuggestion }) {
+  const [galleryCategory, setGalleryCategory] = useState('all');
+  const [showPizarra, setShowPizarra] = useState(false);
+  const [pzTokens, setPzTokens] = useState([]);
+  const [pzArrows, setPzArrows] = useState([]);
+  const [pzZones, setPzZones] = useState([]);
+  const [pzTool, setPzTool] = useState('move');
+  const [pzArrowType, setPzArrowType] = useState('pass');
+  const [pzDrawPt, setPzDrawPt] = useState(null);
+
+  const filteredExercises = galleryCategory === 'all'
+    ? EXERCISES_DATA
+    : EXERCISES_DATA.filter(e => e.category === galleryCategory);
+
+  const savePizarra = () => {
+    setExerciseInput(ei => ({ ...ei, canvas_drawing: { tokens: pzTokens, arrows: pzArrows, zones: pzZones } }));
+    setShowPizarra(false);
+  };
+
+  const clearPizarra = () => {
+    setExerciseInput(ei => ({ ...ei, canvas_drawing: null }));
+    setPzTokens([]); setPzArrows([]); setPzZones([]);
+  };
+
+  const PZ_TOOLS = [
+    { id: 'move', label: '✋', title: 'Mover' },
+    { id: 'player', label: '⬤', title: 'Jugador' },
+    { id: 'ball', label: '⚽', title: 'Balón' },
+    { id: 'cone', label: '🔺', title: 'Cono' },
+    { id: 'arrow', label: '→', title: 'Flecha' },
+  ];
+  const PZ_ARROW_TYPES = [
+    { id: 'pass', label: 'Pase', color: '#4ade80' },
+    { id: 'run', label: 'Carrera', color: '#ffe066' },
+    { id: 'shoot', label: 'Tiro', color: '#ff6b6b' },
+    { id: 'curved', label: 'Curvo', color: '#c084fc' },
+  ];
+
+  const playerColors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c'];
+
   return (
     <div className="card" style={{ padding: 12 }}>
+      {/* ── Pizarra modal ─────────────────────────────────────────── */}
+      {showPizarra && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
+          <div style={{ background: '#111827', borderRadius: 14, width: '100%', maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
+            {/* header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#1e293b' }}>
+              <PenTool size={15} color="#60a5fa" />
+              <span style={{ color: 'white', fontWeight: 700, fontSize: 13, flex: 1 }}>Pizarra del ejercicio</span>
+              <button onClick={() => setShowPizarra(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,.5)', display: 'flex' }}><X size={16} /></button>
+            </div>
+
+            {/* toolbar */}
+            <div style={{ display: 'flex', gap: 6, padding: '8px 12px', background: '#1a2332', flexWrap: 'wrap', alignItems: 'center' }}>
+              {PZ_TOOLS.map(t => (
+                <button key={t.id} title={t.title} onClick={() => setPzTool(t.id)}
+                  style={{ padding: '5px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13,
+                    background: pzTool === t.id ? '#0057ff' : 'rgba(255,255,255,.1)',
+                    color: 'white', fontWeight: 700 }}>
+                  {t.label}
+                </button>
+              ))}
+              {pzTool === 'arrow' && (
+                <div style={{ display: 'flex', gap: 4, marginLeft: 6 }}>
+                  {PZ_ARROW_TYPES.map(at => (
+                    <button key={at.id} onClick={() => setPzArrowType(at.id)}
+                      style={{ padding: '4px 8px', borderRadius: 6, border: `2px solid ${pzArrowType === at.id ? at.color : 'transparent'}`,
+                        background: 'rgba(255,255,255,.08)', color: at.color, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                      {at.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button onClick={() => { setPzTokens([]); setPzArrows([]); setPzZones([]); }}
+                style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,.2)', background: 'transparent', color: 'rgba(255,255,255,.5)', fontSize: 10, cursor: 'pointer' }}>
+                Limpiar
+              </button>
+            </div>
+
+            {/* canvas */}
+            <div style={{ width: '100%', aspectRatio: '550/366', position: 'relative' }}>
+              <FieldCanvas
+                tokens={pzTokens} arrows={pzArrows} zones={pzZones}
+                tool={pzTool} arrowType={pzArrowType}
+                drawPt={pzDrawPt} setDrawPt={setPzDrawPt}
+                onMove={(id, x, y) => setPzTokens(ts => ts.map(t => t.id === id ? { ...t, x, y } : t))}
+                onPlace={(kind, x, y) => {
+                  if (kind === 'player') {
+                    setPzTokens(ts => [...ts, { id: 'p' + Date.now(), kind: 'player', x, y, color: playerColors[ts.filter(t=>t.kind==='player').length % playerColors.length], label: String(ts.filter(t=>t.kind==='player').length + 1) }]);
+                  } else {
+                    setPzTokens(ts => [...ts, { id: 'k' + Date.now(), kind, x, y }]);
+                  }
+                }}
+                onArrow={a => setPzArrows(as => [...as, a])}
+                onDelete={id => { setPzTokens(ts => ts.filter(t => t.id !== id)); setPzArrows(as => as.filter(a => a.id !== id)); }}
+                onZoneAdd={z => setPzZones(zs => [...zs, z])}
+                onZoneDelete={id => setPzZones(zs => zs.filter(z => z.id !== id))}
+                viewMode="full"
+              />
+            </div>
+
+            {/* footer */}
+            <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: '#1e293b' }}>
+              <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={savePizarra}><Save size={12} /> Guardar dibujo</button>
+              <button className="btn btn-outline btn-sm" onClick={() => setShowPizarra(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Nuevo Entrenamiento</div>
       <input className="input-field" placeholder="Título (ej: Técnica + Rondo)" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={{ marginBottom: 6 }} />
       <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
@@ -478,37 +607,65 @@ function TrainingForm({ form, setForm, exerciseInput, setExerciseInput, showGall
       {form.exercises.map(ex => (
         <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', background: '#f8f9fb', borderRadius: 6, marginBottom: 3, fontSize: 11 }}>
           {ex.image && <img src={import.meta.env.BASE_URL + 'exercises/' + ex.image} alt="ej" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
+          {ex.canvas_drawing && <span style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, background: '#eef3ff', color: '#0057ff', fontWeight: 700, flexShrink: 0 }}>🎨 Pizarra</span>}
           <span style={{ flex: 1, fontSize: 10 }}>{ex.name} <span style={{ color: '#0057ff', fontWeight: 700 }}>({ex.duration}min)</span></span>
           <button onClick={() => removeExercise(ex.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><X size={12} /></button>
         </div>
       ))}
 
       <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 3, marginTop: 4 }}>O añade uno personalizado:</div>
-      <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
         {exerciseInput.image && (
           <img src={import.meta.env.BASE_URL + 'exercises/' + exerciseInput.image} alt="selected" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
         )}
-        <button className="btn btn-outline btn-sm" onClick={() => setShowGallery(!showGallery)} style={{ padding: '0 8px' }} title="Imagen">
+        <button className="btn btn-outline btn-sm" onClick={() => setShowGallery(!showGallery)} style={{ padding: '0 8px' }} title="Galería">
           <ImageIcon size={14} />
+        </button>
+        <button className="btn btn-outline btn-sm" onClick={() => setShowPizarra(true)} style={{ padding: '0 8px', color: exerciseInput.canvas_drawing ? '#0057ff' : undefined }} title="Dibujar en pizarra">
+          <PenTool size={14} />
         </button>
         <input className="input-field" placeholder="Nombre ejercicio" value={exerciseInput.name} onChange={e => setExerciseInput(ei => ({ ...ei, name: e.target.value }))} style={{ flex: 1 }} />
         <input type="number" className="input-field" value={exerciseInput.duration} onChange={e => setExerciseInput(ei => ({ ...ei, duration: parseInt(e.target.value) || 15 }))} style={{ width: 50 }} />
         <button className="btn btn-outline btn-sm" onClick={addExercise}>+</button>
       </div>
+      {exerciseInput.canvas_drawing && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, padding: '4px 8px', background: '#eef3ff', borderRadius: 6 }}>
+          <PenTool size={11} color="#0057ff" />
+          <span style={{ fontSize: 10, color: '#0057ff', fontWeight: 700, flex: 1 }}>Pizarra dibujada ({exerciseInput.canvas_drawing.tokens?.length || 0} fichas, {exerciseInput.canvas_drawing.arrows?.length || 0} flechas)</span>
+          <button onClick={clearPizarra} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 10 }}>✕ Borrar</button>
+        </div>
+      )}
+
       {showGallery && (
-        <div style={{ background: '#f8f9fb', padding: 8, borderRadius: 8, marginBottom: 6, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
-          {EXERCISES_DATA.map(exData => (
-            <div key={exData.id} style={{ position: 'relative', cursor: 'pointer' }} onClick={() => { 
-              setExerciseInput(ei => ({ ...ei, image: exData.image, name: exData.name, description: exData.description || '', duration: exData.duration || 15 })); 
-              setShowGallery(false); 
-            }}>
-              <img src={import.meta.env.BASE_URL + 'exercises/' + exData.image} alt={exData.name}
-                style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: exerciseInput.image === exData.image ? '2.5px solid #0057ff' : '1.5px solid transparent' }} />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 8, padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderBottomLeftRadius: 6, borderBottomRightRadius: 6 }}>
-                {exData.name}
+        <div style={{ background: '#f8f9fb', padding: 8, borderRadius: 8, marginBottom: 6 }}>
+          {/* Category tabs */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
+            {EXERCISE_CATS.map(cat => {
+              const count = cat.id === 'all' ? EXERCISES_DATA.length : EXERCISES_DATA.filter(e => e.category === cat.id).length;
+              return (
+                <button key={cat.id} onClick={() => setGalleryCategory(cat.id)}
+                  style={{ padding: '3px 8px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 9, fontWeight: 700,
+                    background: galleryCategory === cat.id ? '#0057ff' : '#e2e6ed',
+                    color: galleryCategory === cat.id ? 'white' : '#64748b' }}>
+                  {cat.label} <span style={{ opacity: .7 }}>({count})</span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+            {filteredExercises.map(exData => (
+              <div key={exData.id} style={{ position: 'relative', cursor: 'pointer' }} onClick={() => {
+                setExerciseInput(ei => ({ ...ei, image: exData.image, name: exData.name, description: exData.description || '', duration: exData.duration || 15 }));
+                setShowGallery(false);
+              }}>
+                <img src={import.meta.env.BASE_URL + 'exercises/' + exData.image} alt={exData.name}
+                  style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: exerciseInput.image === exData.image ? '2.5px solid #0057ff' : '1.5px solid transparent' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 8, padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderBottomLeftRadius: 6, borderBottomRightRadius: 6 }}>
+                  {exData.name}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 

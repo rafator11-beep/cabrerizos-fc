@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import FieldCanvas from '../components/FieldCanvas';
-import { Plus, Move, ArrowRight, Trash2, Undo2, Save, FolderOpen, Play, Pause, Monitor, Spline, X, Layers, Minus } from 'lucide-react';
+import Heatmap from '../components/Heatmap';
+import { useRealtimePizarra } from '../hooks/useRealtimePizarra';
+import { useOfflineSync } from '../hooks/useOfflineSync';
+import { Plus, Move, ArrowRight, Trash2, Undo2, Save, FolderOpen, Play, Monitor, Spline, X, Layers, Minus, Wifi, WifiOff, Thermometer, Download, Activity, Target } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 const CATEGORIES = [
@@ -35,9 +38,11 @@ const VECTOR_COLORS = [
 ];
 
 const VECTOR_STYLES = [
-  { id: 'solid', label: 'Pase Raso', icon: <Minus size={14} /> },
-  { id: 'dashed', label: 'Desmarque', icon: <div style={{width: 14, borderBottom: '2px dashed currentColor'}}></div> },
-  { id: 'curved', label: 'Bombeado', icon: <Spline size={14} /> },
+  { id: 'solid',   label: 'Pase corto',    icon: <Minus size={14} /> },
+  { id: 'curved',  label: 'Centro/Largo',  icon: <Spline size={14} /> },
+  { id: 'zigzag',  label: 'Conducción',    icon: <Activity size={14} /> },
+  { id: 'dashed',  label: 'Desmarque',     icon: <div style={{width:14, borderBottom:'2px dashed currentColor'}} /> },
+  { id: 'shoot',   label: 'Tiro/Remate',   icon: <Target size={14} /> },
 ];
 
 export default function Tactica() {
@@ -68,11 +73,29 @@ export default function Tactica() {
   const [fieldView, setFieldView] = useState('full');
   const [mobileTab, setMobileTab] = useState('jugadas'); // 'jugadas' | 'campo'
 
+  // Pilar 1 — Live indicator for realtime updates
+  const [liveFlash, setLiveFlash] = useState(false);
+  // Pilar 2 — Online state tracked reactively
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  // Pilar 3 — Heatmap toggle
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [allPlays, setAllPlays] = useState([]); // full-category plays for heatmap
+  // Pilar 4 — Export state
+  const [exporting, setExporting] = useState(false);
+  const fieldSvgRef = useRef(null); // forwarded into FieldCanvas → SVG DOM element
+
+  const { queueUpdate } = useOfflineSync();
+
   const VIEWS = [
-    { id: 'full',  label: '⬛ Campo completo' },
-    { id: 'left',  label: '◧ Mitad izquierda' },
-    { id: 'right', label: '◨ Mitad derecha' },
+    { id: 'full',     label: '⬛ Campo completo',   ratio: '550/366' },
+    { id: 'left',     label: '◧ Mitad izquierda',  ratio: '308/366' },
+    { id: 'right',    label: '◨ Mitad derecha',    ratio: '308/366' },
+    { id: 'corner_r', label: '↘️ Área Derecha',    ratio: '247/293' },
+    { id: 'corner_l', label: '↙️ Área Izquierda',  ratio: '247/293' },
   ];
+
+  // Aspect ratio of the current view so the container never distorts the field
+  const fieldRatio = VIEWS.find(v => v.id === fieldView)?.ratio ?? '550/366';
   
   const myRosterId = players.find(p => p.auth_profile_id === profile?.id)?.id;
 
@@ -81,15 +104,35 @@ export default function Tactica() {
     setFieldView(VIEWS[(idx + 1) % VIEWS.length].id);
   };
 
+  // Pilar 1 — receive live updates when admin saves a play from another device
+  useRealtimePizarra(activePlay?.id ?? null, useCallback((updated) => {
+    const isMigrated = updated.tokens?.[0]?.step !== undefined;
+    const safe = isMigrated
+      ? updated
+      : { ...updated, tokens: [{ step: 1, tokens: updated.tokens || [], arrows: updated.arrows || [], zones: updated.zones || [] }] };
+    sync(safe);
+    setLiveFlash(true);
+    setTimeout(() => setLiveFlash(false), 1800);
+  }, [])); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pilar 2 — track connectivity for the offline badge
+  useEffect(() => {
+    const up = () => setIsOnline(true);
+    const dn = () => setIsOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', dn);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', dn); };
+  }, []);
+
   useEffect(() => {
     fetchPlays();
     fetchPlayers();
-    
+
     // Auto-adjust field view based on category for optimal tactical design
     if (activeCategory === 'corners' || activeCategory === 'free_kicks_for') {
-      setFieldView('right');
+      setFieldView('corner_r');
     } else if (activeCategory === 'build_up' || activeCategory === 'free_kicks_against') {
-      setFieldView('left');
+      setFieldView('corner_l');
     } else {
       setFieldView('full');
     }
@@ -119,9 +162,11 @@ export default function Tactica() {
           return p;
         });
         setPlays(safePlays);
+        setAllPlays(safePlays); // Pilar 3 — feed all plays to heatmap
         setActivePlay(safePlays[0]);
       } else {
         setPlays([]);
+        setAllPlays([]);
         setActivePlay(null);
       }
     } catch (err) {
@@ -286,18 +331,87 @@ export default function Tactica() {
     setActiveStepIndex(0);
   };
 
+  // Pilar 2 — offline-aware save (queues to IndexedDB when no connection)
   const savePlay = async () => {
     if (!activePlay || activePlay.id.length < 10) return;
-    try {
-      await supabase.from('plays').update({
-        tokens: activePlay.tokens,
-        arrows: []
-      }).eq('id', activePlay.id);
-      alert('✅ Jugada guardada correctamente.');
-    } catch {
-      alert('❌ Error al guardar. Inténtalo de nuevo.');
+    const { error } = await queueUpdate('plays', activePlay.id, {
+      tokens: activePlay.tokens,
+      arrows: [],
+    });
+    if (error) {
+      alert('⚠️ Sin conexión. La jugada se guardará cuando vuelva la red.');
+    } else if (navigator.onLine) {
+      alert('✅ Jugada guardada.');
+    } else {
+      alert('📴 Guardado localmente. Se sincronizará al recuperar la conexión.');
     }
   };
+
+  // Pilar 4 — export active play steps as a WebM video using SVG → canvas → MediaRecorder
+  const exportPlay = useCallback(async () => {
+    if (!activePlay || exporting) return;
+    const svgEl = fieldSvgRef.current;
+    if (!svgEl) return;
+
+    setExporting(true);
+
+    const W_OUT = 1080;
+    const H_OUT = Math.round(W_OUT * (366 / 550));
+
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = W_OUT;
+    offCanvas.height = H_OUT;
+    const ctx = offCanvas.getContext('2d');
+
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm';
+    const stream = offCanvas.captureStream(30);
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4_000_000 });
+    const chunks = [];
+    recorder.ondataavailable = e => e.data.size > 0 && chunks.push(e.data);
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${activePlay.name || 'jugada'}-CFC.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExporting(false);
+    };
+
+    const captureSvgToCanvas = () => new Promise(resolve => {
+      const clone = svgEl.cloneNode(true);
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      clone.setAttribute('width', W_OUT);
+      clone.setAttribute('height', H_OUT);
+      const svgStr = new XMLSerializer().serializeToString(clone);
+      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        ctx.fillStyle = '#2a6118';
+        ctx.fillRect(0, 0, W_OUT, H_OUT);
+        ctx.drawImage(img, 0, 0, W_OUT, H_OUT);
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+      img.src = url;
+    });
+
+    recorder.start();
+
+    for (let i = 0; i < steps.length; i++) {
+      setActiveStepIndex(i);
+      await new Promise(r => setTimeout(r, 120)); // let React re-render the SVG
+      await captureSvgToCanvas();
+      await new Promise(r => setTimeout(r, 1500)); // hold each step 1.5 s
+    }
+
+    recorder.stop();
+  }, [activePlay, exporting, steps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const catInfo = CATEGORIES.find(c => c.id === activeCategory) || CATEGORIES[6];
 
@@ -471,6 +585,19 @@ export default function Tactica() {
   const Toolbar = () => (
     isAdmin && activePlay ? (
       <div style={{ display: "flex", alignItems: "center", gap: 5, background: "white", border: "1px solid #e0e4ed", borderRadius: 9, padding: "6px 8px", flexWrap: 'wrap' }}>
+        {/* Live indicator */}
+        <div title={isOnline ? 'En línea — cambios en tiempo real' : 'Sin conexión — guardado local'}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', borderRadius: 20, background: isOnline ? (liveFlash ? '#d1fae5' : '#f0fdf4') : '#fff7ed', border: `1px solid ${isOnline ? '#6ee7b7' : '#fed7aa'}`, transition: 'background .4s' }}>
+          {isOnline
+            ? <Wifi size={11} color="#059669" />
+            : <WifiOff size={11} color="#f97316" />}
+          <span style={{ fontSize: 9, fontWeight: 700, color: isOnline ? '#059669' : '#f97316' }}>
+            {liveFlash ? '¡LIVE!' : isOnline ? 'Online' : 'Offline'}
+          </span>
+        </div>
+
+        <div style={{ width: 1, height: 20, background: "#e0e4ed", margin: "0 2px" }} />
+
         <button onClick={() => setTool('move')} title="Mover"
           style={{ width: 32, height: 32, borderRadius: 6, border: `1.5px solid ${tool === "move" ? "#0057ff" : "#e0e4ed"}`, background: tool === "move" ? "#eef3ff" : "#f5f6f9", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', color: tool === "move" ? "#0057ff" : "#4a5568" }}>
           <Move size={16} />
@@ -491,8 +618,18 @@ export default function Tactica() {
           style={{ padding: '0 8px', height: 32, borderRadius: 6, border: '1.5px solid #e0e4ed', background: fieldView !== 'full' ? '#eef3ff' : '#f5f6f9', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: fieldView !== 'full' ? '#0057ff' : '#4a5568', whiteSpace: 'nowrap' }}>
           {VIEWS.find(v => v.id === fieldView)?.label}
         </button>
-        
+
+        {/* Pilar 3 — Heatmap toggle */}
+        <button onClick={() => setShowHeatmap(h => !h)} title="Mapa de Calor"
+          style={{ width: 32, height: 32, borderRadius: 6, border: `1.5px solid ${showHeatmap ? '#f97316' : '#e0e4ed'}`, background: showHeatmap ? '#fff7ed' : '#f5f6f9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showHeatmap ? '#f97316' : '#4a5568' }}>
+          <Thermometer size={16} />
+        </button>
+
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+          {/* Pilar 4 — Export video */}
+          <button onClick={exportPlay} disabled={exporting || steps.length < 2} className="btn btn-outline btn-sm" title="Exportar jugada como video">
+            <Download size={12}/> {exporting ? 'Grabando…' : 'Exportar'}
+          </button>
           <button onClick={() => setPresentationMode(true)} className="btn btn-outline btn-sm">
             <Monitor size={14}/> TV Mode
           </button>
@@ -578,9 +715,12 @@ export default function Tactica() {
         {mobileTab === 'campo' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Toolbar />
-            <div style={{ background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)" }}>
-              {activePlay ? (
+            <div style={{ aspectRatio: fieldRatio, width: '100%', background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)", position: 'relative' }}>
+              {showHeatmap ? (
+                <Heatmap plays={allPlays} includeArrows />
+              ) : activePlay ? (
                 <FieldCanvas
+                  ref={fieldSvgRef}
                   tokens={currentStep.tokens || []}
                   arrows={currentStep.arrows || []}
                   zones={currentStep.zones || []}
@@ -592,7 +732,7 @@ export default function Tactica() {
                   setDrawPt={setDrawPt}
                   onPlace={isAdmin ? onPlace : undefined}
                   onDelete={isAdmin ? onDeleteToken : undefined}
-                  onZoneAdd={isAdmin ? onZoneAdd : undefined} 
+                  onZoneAdd={isAdmin ? onZoneAdd : undefined}
                   onZoneDelete={isAdmin ? onZoneDelete : undefined} zoneColor={zoneColor}
                   viewMode={fieldView}
                   animating={animating}
@@ -622,35 +762,40 @@ export default function Tactica() {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Toolbar />
-        <div style={{ flex: 1, background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {activePlay ? (
-            <FieldCanvas
-              tokens={currentStep.tokens || []}
-              arrows={currentStep.arrows || []}
-              zones={currentStep.zones || []}
-              onMove={isAdmin ? onMove : undefined}
-              tool={isAdmin ? tool : 'move'}
-              arrowType="pass"
-              onArrow={isAdmin ? onArrow : undefined}
-              drawPt={drawPt}
-              setDrawPt={setDrawPt}
-              onPlace={isAdmin ? onPlace : undefined}
-              onDelete={isAdmin ? onDeleteToken : undefined}
-              onZoneAdd={isAdmin ? onZoneAdd : undefined} 
-              onZoneDelete={isAdmin ? onZoneDelete : undefined} zoneColor={zoneColor}
-              viewMode={fieldView}
-              animating={animating}
-              selectedTokenId={selectedTokenId} onSelectToken={setSelectedTokenId}
-            />
-          ) : (
-            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)' }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Selecciona una categoría y una jugada</div>
-              <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>
-                {isAdmin ? 'O crea una nueva con el botón +' : 'El entrenador irá subiendo jugadas'}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ aspectRatio: fieldRatio, height: '100%', width: 'auto', maxWidth: '100%', background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)", position: 'relative' }}>
+            {showHeatmap ? (
+              <Heatmap plays={allPlays} includeArrows />
+            ) : activePlay ? (
+              <FieldCanvas
+                ref={fieldSvgRef}
+                tokens={currentStep.tokens || []}
+                arrows={currentStep.arrows || []}
+                zones={currentStep.zones || []}
+                onMove={isAdmin ? onMove : undefined}
+                tool={isAdmin ? tool : 'move'}
+                arrowType="pass"
+                onArrow={isAdmin ? onArrow : undefined}
+                drawPt={drawPt}
+                setDrawPt={setDrawPt}
+                onPlace={isAdmin ? onPlace : undefined}
+                onDelete={isAdmin ? onDeleteToken : undefined}
+                onZoneAdd={isAdmin ? onZoneAdd : undefined}
+                onZoneDelete={isAdmin ? onZoneDelete : undefined} zoneColor={zoneColor}
+                viewMode={fieldView}
+                animating={animating}
+                selectedTokenId={selectedTokenId} onSelectToken={setSelectedTokenId}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)', padding: 20 }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Selecciona una categoría y una jugada</div>
+                <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>
+                  {isAdmin ? 'O crea una nueva con el botón +' : 'El entrenador irá subiendo jugadas'}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         <Timeline />
       </div>

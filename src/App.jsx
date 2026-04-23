@@ -9,6 +9,7 @@ import Tecnica from './pages/Tecnica';
 import Plantilla from './pages/Plantilla';
 import Alineacion from './pages/Alineacion';
 import Feedback from './pages/Feedback';
+import PlayerDashboard from './pages/PlayerDashboard';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="plantilla" element={<Plantilla />} />
         <Route path="alineacion" element={<Alineacion />} />
         <Route path="feedback" element={<Feedback />} />
+        <Route path="mi-sesion" element={<PlayerDashboard />} />
         {/* Legacy route redirect */}
         <Route path="pizarra" element={<Navigate to="/tactica" replace />} />
       </Route>
