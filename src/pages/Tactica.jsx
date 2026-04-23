@@ -593,6 +593,29 @@ export default function Tactica() {
 
   // ── Canvas toolbar (shared) ───────────────────────────────────────────
   const Toolbar = () => (
+    {QUICK_TOOL_BTNS.map(btn => (
+  <button
+    key={btn.id}
+    onClick={() => setTool(btn.id)}
+    title={btn.title}
+    style={{
+      width: 32,
+      height: 32,
+      borderRadius: 6,
+      border: `1.5px solid ${tool === btn.id ? "#0057ff" : "#e0e4ed"}`,
+      background: tool === btn.id ? "#eef3ff" : "#f5f6f9",
+      cursor: "pointer",
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: tool === btn.id ? "#0057ff" : "#4a5568",
+      fontSize: 14,
+      fontWeight: 700
+    }}
+  >
+    {btn.label}
+  </button>
+))}
     isAdmin && activePlay ? (
       <div style={{ display: "flex", alignItems: "center", gap: 5, background: "white", border: "1px solid #e0e4ed", borderRadius: 9, padding: "6px 8px", flexWrap: 'wrap' }}>
         {/* Live indicator */}
