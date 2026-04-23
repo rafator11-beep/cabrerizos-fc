@@ -189,9 +189,10 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       onMouseDown: e => onTokenMD(e, t),
       onTouchStart: e => onTokenTS(e, t),
       onClick: e => {
-        e.stopPropagation();
-        if (isBall && onSelectToken) onSelectToken(isSelected ? null : t.id);
-      },
+  e.stopPropagation();
+  if (presentationMode) return;
+  if (onSelectToken) onSelectToken(isSelected ? null : t.id);
+},
       onContextMenu: e => onTokenRC(e, t.id),
       onDoubleClick: e => onTokenDC(e, t.id),
     };
