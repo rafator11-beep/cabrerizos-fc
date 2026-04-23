@@ -81,9 +81,13 @@ export default function Alineacion() {
     if (!svgRef.current) return { x: 0, y: 0 };
     const svg = svgRef.current;
     const pt = svg.createSVGPoint();
-    pt.x = e.clientX || e.touches[0].clientX;
-    pt.y = e.clientY || e.touches[0].clientY;
-    return pt.matrixTransform(svg.getScreenCTM().inverse());
+    const clientX = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    const clientY = e.clientY ?? (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    return pt.matrixTransform(ctm.inverse());
   };
 
   const onDragStart = (e, type, index) => {
@@ -173,7 +177,8 @@ export default function Alineacion() {
             <rect x={W-75} y={H/2 - 60} width={60} height={120} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
 
             {/* Starter Tokens */}
-            {activeLineup?.starters.map((s, i) => {
+            {activeLineup?.starters?.map((s, i) => {
+              if (!s) return null;
               const p = players.find(player => player.id === s.player_id);
               const isDragging = dragging?.type === 'starter' && dragging.index === i;
               return (

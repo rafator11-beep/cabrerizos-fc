@@ -100,7 +100,7 @@ export default function Tactica() {
     setLoading(false);
   };
 
-  const steps = activePlay?.tokens || [{ step: 1, tokens: [], arrows: [], zones: [] }];
+  const steps = (activePlay?.tokens && activePlay.tokens.length > 0) ? activePlay.tokens : [{ step: 1, tokens: [], arrows: [], zones: [] }];
   const currentStep = steps[activeStepIndex] || steps[0];
 
   const updateCurrentStep = (updates) => {
@@ -232,7 +232,7 @@ export default function Tactica() {
             arrowType={arrowType}
             animating={animating}
             onMove={(id, x, y) => {
-              if (isPlayerMode) return;
+              if (isPlayerMode || !currentStep) return;
               const nextTs = (currentStep.tokens || []).map(t => t.id === id ? { ...t, x, y } : t);
               updateCurrentStep({ tokens: nextTs });
             }}

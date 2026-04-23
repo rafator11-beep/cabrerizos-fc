@@ -76,7 +76,7 @@ const FieldCanvas = forwardRef(({
     const isCurved = a.type === 'curved';
     const isZigzag = a.type === 'zigzag';
     const isDashed = a.type === 'run' || a.type === 'dashed';
-    
+    if (!a?.from || !a?.to) return null;
     const dx = a.to.x - a.from.x;
     const dy = a.to.y - a.from.y;
     const dist = Math.hypot(dx, dy);
@@ -113,7 +113,7 @@ const FieldCanvas = forwardRef(({
 
     switch(t.kind) {
       case 'ball': return (
-        <g key={t.id} transform={`translate(${t.x}, ${t.y})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${t.x || 0}, ${t.y || 0})`} {...ev} className="cursor-grab active:cursor-grabbing">
           <circle r={8} fill="white" stroke="#333" strokeWidth="1" />
           <path d="M -4 -4 L 4 4 M -4 4 L 4 -4" stroke="#333" strokeWidth="0.5" />
         </g>
@@ -124,7 +124,7 @@ const FieldCanvas = forwardRef(({
         const tokenColor = isRival ? '#ef4444' : (t.color || '#0057ff');
         
         return (
-          <g key={t.id} transform={`translate(${t.x}, ${t.y})`} {...ev} className="cursor-grab active:cursor-grabbing">
+          <g key={t.id} transform={`translate(${t.x || 0}, ${t.y || 0})`} {...ev} className="cursor-grab active:cursor-grabbing">
             <defs>
               <filter id={`f-shadow-${t.id}`}><feDropShadow dx="0" dy="1.5" stdDeviation="2.5" floodOpacity="0.3"/></filter>
               <clipPath id={`f-clip-${t.id}`}><circle r={17}/></clipPath>
