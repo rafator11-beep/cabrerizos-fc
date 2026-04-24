@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Edit3, Save, X, User, Camera, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit3, Save, X, User, Camera, Plus, Trash2, ChevronDown, ChevronUp, Activity, Move, Spline } from 'lucide-react';
 import FieldCanvas from '../components/FieldCanvas';
 
 const PIZARRA_ARROW_TYPES = [
@@ -67,7 +67,9 @@ export default function Plantilla() {
         y: 50 + Math.random() * 260,
         color: isRival ? '#ef4444' : '#0057ff',
         label,
-        name: isRival ? null : p.name,
+        name: isRival ? null : [p.name, p.surname].filter(Boolean).join(' ').trim(),
+        photo_url: isRival ? '' : (p.photo_url || ''),
+        assigned_player_id: isRival ? null : p.id,
         isRival,
       }]);
     }
@@ -247,6 +249,8 @@ export default function Plantilla() {
                   setDrawPt={setPizarraDrawPt}
                   onPlace={(kind, x, y) => setPizarraTokens(ts => [...ts, { id: kind + Date.now(), kind, x, y }])}
                   onDelete={id => setPizarraTokens(ts => ts.filter(t => t.id !== id))}
+                  viewMode="full"
+                  adaptiveView={false}
                 />
               </div>
 
@@ -477,10 +481,10 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: hasStats ? 8 : 0 }}>
         {/* Photo */}
         <div onClick={isAdmin ? onPhotoClick : undefined}
-          style={{ width: 52, height: 52, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#0057ff', overflow: 'hidden', border: '2.5px solid #e2e6ed', cursor: isAdmin ? 'pointer' : 'default', position: 'relative', flexShrink: 0 }}>
+          style={{ width: 50, height: 64, borderRadius: 14, background: 'linear-gradient(180deg,#f8fafc,#e2e8f0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#0057ff', overflow: 'hidden', border: '2px solid #dbe4f0', cursor: isAdmin ? 'pointer' : 'default', position: 'relative', flexShrink: 0, boxShadow: '0 10px 22px rgba(15,23,42,.12)' }}>
           {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.number || <User size={22} />)}
-          {isAdmin && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 16, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Camera size={9} color="white" /></div>}
-          {uploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}><div style={{ width: 14, height: 14, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /></div>}
+          {isAdmin && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 18, background: 'linear-gradient(180deg,rgba(15,23,42,.25),rgba(15,23,42,.78))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Camera size={10} color="white" /></div>}
+          {uploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14 }}><div style={{ width: 14, height: 14, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /></div>}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>

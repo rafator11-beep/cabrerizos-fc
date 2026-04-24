@@ -992,6 +992,126 @@ const lastAutosavedRef = useRef('');
     ) : null
   );
 
+  const MobileAdminSteps = () => activePlay ? (
+    <div style={{ borderRadius: 18, background: 'rgba(15,23,42,.92)', border: '1px solid rgba(148,163,184,.18)', padding: 10, boxShadow: '0 16px 36px rgba(2,6,23,.22)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
+        <button
+          onClick={() => { setIsPlaying(true); setActiveStepIndex(0); }}
+          disabled={steps.length < 2 || isPlaying}
+          style={{ minHeight: 42, padding: '0 13px', borderRadius: 14, border: '1px solid rgba(96,165,250,.35)', background: steps.length < 2 || isPlaying ? 'rgba(148,163,184,.12)' : 'linear-gradient(135deg,#2563eb,#38bdf8)', color: '#f8fafc', fontWeight: 900, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <Play size={15} /> Play
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: '#f8fafc', fontWeight: 950, fontSize: 13 }}>Paso {activeStepIndex + 1} de {steps.length}</div>
+          <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700 }}>Duplica posiciones y crea variantes sin perder el campo.</div>
+        </div>
+        {steps.length > 1 && (
+          <button
+            onClick={deleteCurrentStep}
+            style={{ width: 42, height: 42, borderRadius: 14, border: '1px solid rgba(248,113,113,.35)', background: 'rgba(127,29,29,.2)', color: '#fca5a5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Borrar paso actual"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 2 }}>
+        {steps.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => { setActiveStepIndex(i); setIsPlaying(false); }}
+            style={{ flex: '0 0 auto', minWidth: 58, minHeight: 38, borderRadius: 13, border: `1px solid ${activeStepIndex === i ? 'rgba(96,165,250,.65)' : 'rgba(148,163,184,.2)'}`, background: activeStepIndex === i ? 'rgba(37,99,235,.24)' : 'rgba(255,255,255,.06)', color: activeStepIndex === i ? '#bfdbfe' : '#cbd5e1', fontWeight: 900, fontSize: 12 }}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          onClick={addStep}
+          style={{ flex: '0 0 auto', minHeight: 38, padding: '0 14px', borderRadius: 13, border: '1px solid rgba(52,211,153,.45)', background: 'rgba(6,78,59,.36)', color: '#86efac', fontWeight: 950, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <Plus size={15} /> Paso
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  const MobileAdminTools = () => activePlay ? (
+    <div style={{ borderRadius: 18, background: 'rgba(15,23,42,.88)', border: '1px solid rgba(148,163,184,.16)', padding: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 9 }}>
+        {[
+          { id: 'move', label: 'Mover', icon: <Move size={16} /> },
+          { id: 'arrow', label: 'Flecha', icon: <ArrowRight size={16} /> },
+          { id: 'zone', label: 'Zona', icon: <Layers size={16} /> },
+        ].map(item => (
+          <button
+            key={item.id}
+            onClick={() => { setTool(item.id); if (item.id === 'zone') setZoneColor('red'); }}
+            style={{ minHeight: 44, borderRadius: 14, border: `1px solid ${tool === item.id ? 'rgba(96,165,250,.62)' : 'rgba(148,163,184,.18)'}`, background: tool === item.id ? 'rgba(37,99,235,.28)' : 'rgba(255,255,255,.06)', color: tool === item.id ? '#bfdbfe' : '#e2e8f0', fontWeight: 900, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          >
+            {item.icon} {item.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+        {ELEM_BTNS.filter(e => e.id !== 'zone' && e.id !== 'player').map(e => (
+          <button
+            key={e.id}
+            onClick={() => setTool(t => t === e.id ? 'move' : e.id)}
+            style={{ flex: '0 0 auto', minWidth: 58, minHeight: 44, borderRadius: 14, border: `1px solid ${tool === e.id ? 'rgba(52,211,153,.55)' : 'rgba(148,163,184,.16)'}`, background: tool === e.id ? 'rgba(6,95,70,.32)' : 'rgba(255,255,255,.06)', color: '#f8fafc', fontWeight: 900, fontSize: 18 }}
+            title={e.label}
+          >
+            {e.icon}
+          </button>
+        ))}
+        <button onClick={() => { if (selectedTokenId) onDeleteToken(selectedTokenId); }} disabled={!selectedTokenId} style={{ flex: '0 0 auto', minWidth: 54, minHeight: 44, borderRadius: 14, border: '1px solid rgba(248,113,113,.3)', background: selectedTokenId ? 'rgba(127,29,29,.3)' : 'rgba(148,163,184,.08)', color: selectedTokenId ? '#fca5a5' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Trash2 size={17} />
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  const MobilePlayerStrip = () => activePlay ? (
+    <div style={{ borderRadius: 18, background: 'rgba(15,23,42,.9)', border: '1px solid rgba(148,163,184,.16)', padding: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+        <div>
+          <div style={{ color: '#f8fafc', fontWeight: 950, fontSize: 13 }}>Plantilla</div>
+          <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700 }}>Toca para poner o quitar del campo.</div>
+        </div>
+        <button onClick={savePlay} style={{ minHeight: 38, padding: '0 12px', borderRadius: 13, border: '1px solid rgba(52,211,153,.42)', background: 'rgba(6,78,59,.35)', color: '#86efac', fontWeight: 950, fontSize: 12 }}>
+          Guardar
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: 9, overflowX: 'auto', paddingBottom: 4 }}>
+        {players.map(p => {
+          const label = String(p.number || '?');
+          const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === label && !t.isRival);
+          return (
+            <button
+              key={p.id}
+              onClick={() => togglePlayer(p, false)}
+              style={{ flex: '0 0 76px', borderRadius: 15, border: `1px solid ${on ? 'rgba(96,165,250,.65)' : 'rgba(148,163,184,.16)'}`, background: on ? 'rgba(37,99,235,.24)' : 'rgba(255,255,255,.06)', color: '#f8fafc', padding: 7, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+            >
+              <div style={{ width: 36, height: 48, borderRadius: 10, overflow: 'hidden', background: on ? '#1d4ed8' : '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bfdbfe', fontWeight: 950, boxShadow: '0 8px 18px rgba(0,0,0,.2)' }}>
+                {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.number || '?')}
+              </div>
+              <span style={{ width: '100%', fontSize: 10, fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
+            </button>
+          );
+        })}
+        {Array.from({ length: 11 }).map((_, i) => {
+          const num = String(i + 1);
+          const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === num && t.isRival);
+          return (
+            <button key={`rival-mobile-${i}`} onClick={() => togglePlayer({ number: i + 1 }, true)} style={{ flex: '0 0 46px', minHeight: 48, borderRadius: 14, border: `1px solid ${on ? 'rgba(248,113,113,.68)' : 'rgba(248,113,113,.2)'}`, background: on ? 'rgba(220,38,38,.3)' : 'rgba(127,29,29,.12)', color: on ? '#fecaca' : '#fca5a5', fontWeight: 950 }}>
+              R{num}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
+
   const DesktopToolbar = () => (
     isAdmin && activePlay ? (
       <div style={{ ...DARK_PANEL, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -1291,28 +1411,56 @@ const lastAutosavedRef = useRef('');
   // ── Mobile layout (admin) ─────────────────────────────────────────────
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 4, background: '#f0f2f5', borderRadius: 10, padding: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 'calc(100dvh - 78px)', margin: -4, padding: 8, background: 'linear-gradient(180deg,#05070a,#0f172a 48%,#111827)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, background: 'rgba(15,23,42,.82)', border: '1px solid rgba(148,163,184,.16)', borderRadius: 18, padding: 5, position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(14px)' }}>
           <button onClick={() => setMobileTab('jugadas')}
-            style={{ flex: 1, padding: '8px 4px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: mobileTab === 'jugadas' ? 'white' : 'transparent', color: mobileTab === 'jugadas' ? '#0057ff' : '#64748b', boxShadow: mobileTab === 'jugadas' ? '0 1px 4px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>
+            style={{ minHeight: 46, borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 950, fontSize: 14, background: mobileTab === 'jugadas' ? '#f8fafc' : 'transparent', color: mobileTab === 'jugadas' ? '#0f172a' : '#cbd5e1', boxShadow: mobileTab === 'jugadas' ? '0 10px 24px rgba(15,23,42,.22)' : 'none', transition: 'all .15s' }}>
             📋 Jugadas
           </button>
           <button onClick={() => setMobileTab('campo')}
-            style={{ flex: 1, padding: '8px 4px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: mobileTab === 'campo' ? 'white' : 'transparent', color: mobileTab === 'campo' ? '#0057ff' : '#64748b', boxShadow: mobileTab === 'campo' ? '0 1px 4px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>
+            style={{ minHeight: 46, borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 950, fontSize: 14, background: mobileTab === 'campo' ? '#f8fafc' : 'transparent', color: mobileTab === 'campo' ? '#0f172a' : '#cbd5e1', boxShadow: mobileTab === 'campo' ? '0 10px 24px rgba(15,23,42,.22)' : 'none', transition: 'all .15s' }}>
             ⚽ Campo
           </button>
         </div>
 
         {mobileTab === 'jugadas' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <SidebarContent />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ borderRadius: 20, background: '#f8fafc', padding: 10, boxShadow: '0 18px 44px rgba(2,6,23,.28)' }}>
+              <SidebarContent />
+            </div>
+            {activePlay && (
+              <button onClick={() => setMobileTab('campo')} style={{ minHeight: 52, borderRadius: 16, border: '1px solid rgba(96,165,250,.35)', background: 'linear-gradient(135deg,#2563eb,#38bdf8)', color: '#f8fafc', fontWeight: 950, fontSize: 14, boxShadow: '0 18px 35px rgba(37,99,235,.28)' }}>
+                Editar en campo: {activePlay.name}
+              </button>
+            )}
           </div>
         )}
 
         {mobileTab === 'campo' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Toolbar />
-            <div style={{ aspectRatio: fieldRatio, width: '100%', background: "#2a6118", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.2)", position: 'relative' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, color: '#f8fafc' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 950, letterSpacing: '.14em', textTransform: 'uppercase', color: catInfo.color }}>Editor movil</div>
+                <div style={{ fontSize: 18, fontWeight: 950, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activePlay?.name || 'Selecciona una jugada'}</div>
+              </div>
+              <button onClick={() => setMobileTab('jugadas')} style={{ minHeight: 40, padding: '0 13px', borderRadius: 14, border: '1px solid rgba(148,163,184,.18)', background: 'rgba(255,255,255,.08)', color: '#e2e8f0', fontWeight: 900 }}>
+                Cambiar
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 7 }}>
+              {VIEWS.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setFieldView(v.id)}
+                  style={{ minHeight: 42, borderRadius: 14, border: `1px solid ${fieldView === v.id ? 'rgba(96,165,250,.65)' : 'rgba(148,163,184,.18)'}`, background: fieldView === v.id ? 'rgba(37,99,235,.28)' : 'rgba(255,255,255,.07)', color: fieldView === v.id ? '#bfdbfe' : '#e2e8f0', fontWeight: 950, fontSize: 12 }}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ width: '100%', height: fieldView === 'full' ? '44dvh' : '58dvh', minHeight: fieldView === 'full' ? 300 : 390, maxHeight: fieldView === 'full' ? 430 : 560, background: "#2a6118", borderRadius: 22, overflow: "hidden", boxShadow: "0 24px 70px rgba(0,0,0,.38)", position: 'relative', border: '1px solid rgba(255,255,255,.08)' }}>
               {showHeatmap ? (
                 <Heatmap plays={allPlays} includeArrows />
               ) : activePlay ? (
@@ -1335,7 +1483,7 @@ const lastAutosavedRef = useRef('');
                   animating={animating}
                   selectedTokenId={selectedTokenId} onSelectToken={setSelectedTokenId}
                   myRosterId={myRosterId}
-                  adaptiveView={shouldOpenFieldView}
+                  adaptiveView={false}
                 />
               ) : (
                 <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)', padding: '40px 20px' }}>
@@ -1344,7 +1492,9 @@ const lastAutosavedRef = useRef('');
                 </div>
               )}
             </div>
-            <Timeline />
+            <MobileAdminSteps />
+            <MobileAdminTools />
+            <MobilePlayerStrip />
           </div>
         )}
       </div>

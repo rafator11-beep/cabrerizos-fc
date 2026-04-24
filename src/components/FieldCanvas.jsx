@@ -311,9 +311,15 @@ const FieldCanvas = forwardRef(function FieldCanvas({
       const labelY = crowded ? (placeLabelAbove ? -19 : 21) : 20;
       const labelRectY = crowded ? (placeLabelAbove ? -27 : 13) : 12;
       const hasInstruction = !!(token.tactical_note || token.tactical_role);
+      const clipId = `player-photo-${String(token.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
       return (
         <g key={token.id} {...eventProps}>
+          <defs>
+            <clipPath id={clipId}>
+              <rect x={-8.5} y={-12} width={17} height={23} rx={4} />
+            </clipPath>
+          </defs>
           {(token.tactical_note || token.tactical_role) ? (
             <title>{[token.tactical_role, token.tactical_note].filter(Boolean).join(' - ')}</title>
           ) : null}
@@ -324,9 +330,17 @@ const FieldCanvas = forwardRef(function FieldCanvas({
               <animate attributeName="opacity" values="1;0.38;1" dur="1.5s" repeatCount="indefinite" />
             </circle>
           )}
-          <circle cx={0} cy={0} r={10.2} fill={token.color || '#e74c3c'} stroke={isMyRole ? '#fbbf24' : 'white'} strokeWidth={isMyRole ? '2' : '1.8'} />
+          {token.photo_url ? (
+            <g>
+              <rect x={-10} y={-13.5} width={20} height={27} rx={5} fill={token.color || '#0057ff'} stroke={isMyRole ? '#fbbf24' : 'white'} strokeWidth={isMyRole ? '2' : '1.7'} />
+              <image href={token.photo_url} x={-8.5} y={-12} width={17} height={23} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice" />
+              <rect x={-10} y={6.5} width={20} height={7} rx={3.5} fill="rgba(15,23,42,.82)" />
+            </g>
+          ) : (
+            <circle cx={0} cy={0} r={10.2} fill={token.color || '#e74c3c'} stroke={isMyRole ? '#fbbf24' : 'white'} strokeWidth={isMyRole ? '2' : '1.8'} />
+          )}
           {hasInstruction && <circle cx={8.5} cy={-8.5} r={3.1} fill="#fbbf24" stroke="#0f172a" strokeWidth="1.2" />}
-          <text x={0} y={0} textAnchor="middle" dy="2.5" fontSize="8.2" fontWeight="900" fill="white">
+          <text x={0} y={token.photo_url ? 11.7 : 0} textAnchor="middle" dy={token.photo_url ? "0" : "2.5"} fontSize={token.photo_url ? "5.6" : "8.2"} fontWeight="900" fill="white">
             {token.label}
           </text>
           {labelText && (
