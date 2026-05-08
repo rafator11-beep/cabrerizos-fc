@@ -1,7 +1,6 @@
-import React from 'react';
-
 const FieldToken = ({ jugador, x, y, dragging, onPointerDown }) => {
   const initials = jugador?.nombre?.split(' ').map(n => n[0]).join('').toUpperCase() || '+';
+  const hasPhoto = !!jugador?.foto;
 
   return (
     <div
@@ -11,12 +10,8 @@ const FieldToken = ({ jugador, x, y, dragging, onPointerDown }) => {
         left: `${x}%`,
         top: `${y}%`,
         transform: 'translate(-50%, -50%)',
-        width: '44px',
-        height: '44px',
-        borderRadius: '50%',
-        backgroundColor: jugador ? 'var(--c-surface2)' : 'rgba(255,255,255,0.1)',
-        border: `2px solid ${dragging ? 'var(--c-accent)' : 'var(--c-border)'}`,
-        boxShadow: dragging ? '0 0 15px var(--c-accent)' : 'none',
+        width: hasPhoto ? '52px' : '44px',
+        height: hasPhoto ? '66px' : '44px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -24,11 +19,26 @@ const FieldToken = ({ jugador, x, y, dragging, onPointerDown }) => {
         touchAction: 'none',
         zIndex: dragging ? 100 : 1,
         transition: dragging ? 'none' : 'all 0.2s ease',
-        overflow: 'hidden'
+        ...(hasPhoto ? {} : {
+          borderRadius: '50%',
+          backgroundColor: jugador ? 'var(--c-surface2)' : 'rgba(255,255,255,0.1)',
+          border: `2px solid ${dragging ? 'var(--c-accent)' : 'var(--c-border)'}`,
+          boxShadow: dragging ? '0 0 15px var(--c-accent)' : 'none',
+          overflow: 'hidden',
+        }),
       }}
     >
-      {jugador?.foto ? (
-        <img src={jugador.foto} alt={jugador.nombre} style={{ width: '100%', height: '100%', objectCover: 'cover' }} />
+      {hasPhoto ? (
+        <img
+          src={jugador.foto}
+          alt={jugador.nombre}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: `drop-shadow(0 10px 15px rgba(0,0,0,0.5))${dragging ? ' drop-shadow(0 0 8px rgba(0,255,135,0.7))' : ''}`,
+          }}
+        />
       ) : (
         <span style={{ fontSize: '14px', fontWeight: 'bold', fontFamily: 'var(--font-display)', color: jugador ? 'var(--c-text)' : 'var(--c-muted)' }}>
           {initials}

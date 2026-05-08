@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Save, X, UserCheck, Map, Image as ImageIcon, ChevronRight } from 'lucide-react';
+import { Save, X, UserCheck, Map, Image as ImageIcon, ChevronRight, Plus } from 'lucide-react';
 import FieldCanvas from './FieldCanvas';
 import { resolveExerciseImageSrc } from '../utils/exerciseImages';
 
@@ -19,25 +19,27 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
     activeTraining.attendees?.length ? activeTraining.attendees : players.map(p => p.id)
   );
 
+  const normalizeGa = (ga) => ({
+    red:    ga?.red    || ga?.teamA  || [],
+    yellow: ga?.yellow || ga?.teamB  || [],
+    green:  ga?.green  || [],
+    blue:   ga?.blue   || [],
+    pink:   ga?.pink   || ga?.jokers || [],
+  });
+
   const normalizeEx = (ex) => {
-    const ga = ex.group_assignments || {};
-    return {
-      ...ex,
-      group_assignments: {
-        red:    ga.red    || ga.teamA || [],
-        yellow: ga.yellow || ga.teamB || [],
-        green:  ga.green  || [],
-        blue:   ga.blue   || [],
-        pink:   ga.pink   || ga.jokers || [],
-      },
-      canvas_tokens: ex.canvas_tokens || [],
-    };
+    const ga = normalizeGa(ex.group_assignments);
+    const stations = ex.stations?.length
+      ? ex.stations.map(s => ({ ...s, group_assignments: normalizeGa(s.group_assignments) }))
+      : [{ id: 's1', name: 'Posta 1', group_assignments: ga }];
+    return { ...ex, group_assignments: ga, canvas_tokens: ex.canvas_tokens || [], stations };
   };
 
   const [exercises, setExercises] = useState((activeTraining.exercises || []).map(normalizeEx));
-  const [activeExIdx, setActiveExIdx]   = useState(0);
-  const [canvasMode, setCanvasMode]     = useState(false);
-  const [previewImage, setPreviewImage] = useState(false);
+  const [activeExIdx, setActiveExIdx]       = useState(0);
+  const [activeStationIdx, setActiveStationIdx] = useState(0);
+  const [canvasMode, setCanvasMode]         = useState(false);
+  const [previewImage, setPreviewImage]     = useState(false);
 
   const attendingPlayers = players.filter(p => attendees.includes(p.id));
 
@@ -55,31 +57,62 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
     }
   };
 
-  // ── Group cycling: Libre → A → B → C → D → Comodín → Libre ─────────────
+  // ── Group cycling within the active station (other stations unaffected) ──
   const cycleGroup = (exIdx, pid) => {
     setExercises(prev => {
       const exs = [...prev];
-      const ga = { ...exs[exIdx].group_assignments };
-      let current = null;
-      GRUPOS.forEach(g => { if (ga[g.id]?.includes(pid)) current = g.id; });
-      GRUPOS.forEach(g => { ga[g.id] = (ga[g.id] || []).filter(id => id !== pid); });
-      if (!current) {
-        ga[GRUPOS[0].id].push(pid);
-      } else {
-        const idx = GRUPOS.findIndex(g => g.id === current);
-        if (idx < GRUPOS.length - 1) ga[GRUPOS[idx + 1].id].push(pid);
-        // last group → back to Libre (do nothing)
-      }
-      exs[exIdx] = { ...exs[exIdx], group_assignments: ga };
+      const ex = { ...exs[exIdx] };
+      const stations = ex.stations.map((s, i) => {
+        if (i !== activeStationIdx) return s;
+        const ga = { ...s.group_assignments };
+        let current = null;
+        GRUPOS.forEach(g => { if (ga[g.id]?.includes(pid)) current = g.id; });
+        GRUPOS.forEach(g => { ga[g.id] = (ga[g.id] || []).filter(id => id !== pid); });
+        if (!current) {
+          ga[GRUPOS[0].id] = [...ga[GRUPOS[0].id], pid];
+        } else {
+          const idx = GRUPOS.findIndex(g => g.id === current);
+          if (idx < GRUPOS.length - 1) ga[GRUPOS[idx + 1].id] = [...ga[GRUPOS[idx + 1].id], pid];
+        }
+        return { ...s, group_assignments: ga };
+      });
+      exs[exIdx] = { ...ex, stations };
       return exs;
     });
   };
 
+  const addStation = (exIdx) => {
+    setExercises(prev => {
+      const exs = [...prev];
+      const ex = { ...exs[exIdx] };
+      const newStation = {
+        id: `s${Date.now()}`,
+        name: `Posta ${ex.stations.length + 1}`,
+        group_assignments: { red: [], yellow: [], green: [], blue: [], pink: [] },
+      };
+      exs[exIdx] = { ...ex, stations: [...ex.stations, newStation] };
+      return exs;
+    });
+    setActiveStationIdx(exercises[exIdx].stations.length);
+  };
+
   const getPlayerGroup = (ex, pid) => {
+    const ga = ex.stations[activeStationIdx]?.group_assignments || ex.group_assignments;
     for (const g of GRUPOS) {
-      if (ex.group_assignments[g.id]?.includes(pid)) return g;
+      if (ga[g.id]?.includes(pid)) return g;
     }
     return null;
+  };
+
+  const getPlayerStationSummary = (ex, pid) => {
+    return ex.stations
+      .map((s, i) => {
+        for (const g of GRUPOS) {
+          if (s.group_assignments[g.id]?.includes(pid)) return { stationName: s.name, group: g, stationIdx: i };
+        }
+        return null;
+      })
+      .filter(Boolean);
   };
 
   // ── Canvas ───────────────────────────────────────────────────────────────
@@ -109,11 +142,15 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
       };
     });
 
-  // ── Save ─────────────────────────────────────────────────────────────────
+  // ── Save — sync stations[0].group_assignments to top-level for back-compat
   const handleSave = async () => {
+    const exercisesToSave = exercises.map(ex => ({
+      ...ex,
+      group_assignments: ex.stations?.[0]?.group_assignments || ex.group_assignments,
+    }));
     try {
       const { data, error } = await supabase
-        .from('trainings').update({ attendees, exercises })
+        .from('trainings').update({ attendees, exercises: exercisesToSave })
         .eq('id', activeTraining.id).select().single();
       if (error) throw error;
       onSave(data);
@@ -241,10 +278,36 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
             </div>
           )}
 
+          {/* Station tabs */}
+          <div style={{ padding: '10px 14px 0', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {ex.stations.map((s, si) => (
+                <button
+                  key={s.id}
+                  onClick={() => setActiveStationIdx(si)}
+                  style={{
+                    padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${activeStationIdx === si ? '#0057ff' : '#e0e4ed'}`,
+                    background: activeStationIdx === si ? '#eef3ff' : 'white',
+                    color: activeStationIdx === si ? '#0057ff' : '#64748b',
+                    fontWeight: 800, fontSize: 11, cursor: 'pointer',
+                  }}
+                >
+                  {s.name}
+                </button>
+              ))}
+              <button
+                onClick={() => addStation(activeExIdx)}
+                style={{ padding: '5px 10px', borderRadius: 20, border: '1.5px dashed #cbd5e1', background: 'white', color: '#64748b', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                <Plus size={11} /> Añadir posta
+              </button>
+            </div>
+          </div>
+
           {/* Group assignment grid */}
           <div style={{ padding: 14 }}>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .6, color: '#96a0b5', marginBottom: 10 }}>
-              Asignación de grupos — clic para ciclar
+              {ex.stations[activeStationIdx]?.name || 'Posta'} — clic para ciclar grupo
             </div>
 
             {/* Legend */}
@@ -263,6 +326,7 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 6 }}>
               {attendingPlayers.map(p => {
                 const g = getPlayerGroup(ex, p.id);
+                const allAssignments = getPlayerStationSummary(ex, p.id);
                 const style = g
                   ? { bg: g.bg, color: g.color, border: g.border, label: g.label, icon: PETO_ICONS[g.id] }
                   : { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0', label: 'Libre', icon: '⬜' };
@@ -275,6 +339,11 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
                         {p.name}
                       </div>
                       <div style={{ fontSize: 9, color: style.color, opacity: .7 }}>{style.label}</div>
+                      {allAssignments.length > 1 && (
+                        <div style={{ fontSize: 8, color: '#0057ff', fontWeight: 700, marginTop: 1 }}>
+                          {allAssignments.map(a => `${a.stationName}: ${a.group.label}`).join(' · ')}
+                        </div>
+                      )}
                     </div>
                     <ChevronRight size={11} color={style.color} style={{ opacity: .5, flexShrink: 0 }} />
                   </div>
@@ -283,10 +352,11 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
             </div>
           </div>
 
-          {/* Summary by group */}
+          {/* Summary by group for active station */}
           <div style={{ padding: '10px 14px', borderTop: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {GRUPOS.map(g => {
-              const members = (ex.group_assignments[g.id] || [])
+              const ga = ex.stations[activeStationIdx]?.group_assignments || ex.group_assignments;
+              const members = (ga[g.id] || [])
                 .map(id => attendingPlayers.find(p => p.id === id)?.name)
                 .filter(Boolean);
               if (!members.length) return null;

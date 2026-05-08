@@ -30,15 +30,6 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          {
-            urlPattern: /^https:\/\/yaltxcmspsvnhnxomhwa\.supabase\.co\/storage\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'supabase-storage',
-              expiration: { maxEntries: 100, maxAgeSeconds: 2592000 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
         ],
       },
       manifest: {
@@ -60,11 +51,25 @@ export default defineConfig({
     }),
   ],
   base: '/cabrerizos-fc/',
+
   build: {
-    target: 'esnext',
-    chunkSizeWarningLimit: 700,
+    minify: 'terser',
     sourcemap: false,
-    cssMinify: true,
-    assetsInlineLimit: 4096,
+    terserOptions: {
+      compress: {
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor:   ['react', 'react-dom'],
+          router:   ['react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 800,
   },
 })
