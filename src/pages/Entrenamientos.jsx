@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Calendar, Clock, Trash2, X, ChevronLeft, Dumbbell, Activity, Target, Download, Filter, Star } from 'lucide-react';
+import { Plus, Calendar, Clock, Trash2, X, ChevronLeft, Dumbbell, Activity, Target, Download, Filter, Star, Users, Zap } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import PostMatchRating from '../components/PostMatchRating';
 import ExerciseBuilder from '../components/ExerciseBuilder';
+import DailyAttendance from '../components/DailyAttendance';
+import PlayerFocus from '../components/PlayerFocus';
+import { distributeGroups } from '../lib/SmartDistributor';
 
 const INTENSITIES = [
   { id: 'baja', label: 'Baja', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: '🟢' },
@@ -36,6 +39,9 @@ export default function Entrenamientos() {
   const [activeType, setActiveType] = useState('all');
   const [showRating, setShowRating] = useState(false);
   const [roster, setRoster] = useState([]);
+  const [attendees, setAttendees] = useState([]);
+  const [showAttendance, setShowAttendance] = useState(false);
+  const [distributing, setDistributing] = useState(false);
   const [form, setForm] = useState({ title: '', date: new Date().toISOString().split('T')[0], intensity: 'media', duration: '90', objective: '', type: 'tecnico' });
 
   useEffect(() => { fetchTrainings(); fetchRoster(); }, []);
@@ -50,9 +56,38 @@ export default function Entrenamientos() {
     const { data } = await supabase.from('trainings').select('*').order('date', { ascending: false });
     if (data) {
       setTrainings(data);
-      if (data.length > 0) setActiveTraining(data[0]);
+      if (data.length > 0) {
+        setActiveTraining(data[0]);
+        // Restore attendance from saved data
+        if (data[0].attendance) {
+          const savedAttendees = roster.filter(p => data[0].attendance.includes(p.id));
+          setAttendees(savedAttendees);
+        }
+      }
     }
     setLoading(false);
+  };
+
+  // When activeTraining changes, load its attendance
+  useEffect(() => {
+    if (activeTraining?.attendance && roster.length > 0) {
+      setAttendees(roster.filter(p => activeTraining.attendance.includes(p.id)));
+    } else {
+      setAttendees([]);
+    }
+  }, [activeTraining?.id, roster]);
+
+  const handleAutoDistribute = async () => {
+    if (!activeTraining?.exercises?.length || !attendees.length) return;
+    setDistributing(true);
+    const lineup = distributeGroups(activeTraining.exercises, attendees);
+    const { error } = await supabase.from('trainings').update({ session_lineup: lineup }).eq('id', activeTraining.id);
+    if (!error) {
+      const updated = { ...activeTraining, session_lineup: lineup };
+      setActiveTraining(updated);
+      setTrainings(ts => ts.map(t => t.id === updated.id ? updated : t));
+    }
+    setDistributing(false);
   };
 
   const createTraining = async () => {
@@ -230,7 +265,86 @@ export default function Entrenamientos() {
               </div>
 
               <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 pb-24">
-                {/* Exercise Builder — renders exercises for admin AND player */}
+
+                {/* Player Focus — shows player's team assignments */}
+                {!isAdmin && activeTraining.session_lineup && (
+                  <PlayerFocus
+                    exercises={activeTraining.exercises || []}
+                    sessionLineup={activeTraining.session_lineup}
+                    playerId={profile?.id}
+                    playerName={profile?.name}
+                  />
+                )}
+
+                {/* Daily Attendance — Admin toggle */}
+                {isAdmin && (
+                  <div>
+                    <button onClick={() => setShowAttendance(!showAttendance)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all mb-3 ${showAttendance ? 'bg-amber-500 text-bg' : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'}`}>
+                      <Users size={14} /> Asistencia ({attendees.length}/{roster.length})
+                    </button>
+                    {showAttendance && (
+                      <DailyAttendance
+                        roster={roster}
+                        trainingId={activeTraining.id}
+                        initialAttendance={activeTraining.attendance || []}
+                        onAttendanceChange={setAttendees}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Auto-Distribute Button — Admin */}
+                {isAdmin && attendees.length > 0 && (activeTraining.exercises || []).length > 0 && (
+                  <button onClick={handleAutoDistribute} disabled={distributing}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 hover:shadow-xl hover:shadow-purple-500/30">
+                    <Zap size={14} />
+                    {distributing ? 'Distribuyendo...' : `Generar Grupos Automáticos (${attendees.length} jugadores)`}
+                  </button>
+                )}
+
+                {/* Session Lineup Preview — Admin */}
+                {isAdmin && activeTraining.session_lineup && (activeTraining.exercises || []).length > 0 && (
+                  <div className="bg-surface-2 rounded-2xl border border-purple-500/10 p-4 space-y-3">
+                    <h4 className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Distribución Automática</h4>
+                    {(activeTraining.exercises || []).map((ex, i) => {
+                      const lineup = activeTraining.session_lineup[ex.id];
+                      if (!lineup) return null;
+                      return (
+                        <div key={ex.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-lg bg-accent text-bg flex items-center justify-center text-[9px] font-black">{i+1}</span>
+                            <span className="text-[10px] font-bold text-white truncate">{ex.name}</span>
+                            {lineup.parsed && <span className="text-[8px] text-muted bg-white/5 px-1.5 py-0.5 rounded">{lineup.parsed}</span>}
+                          </div>
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
+                            {[
+                              {k:'equipoA',l:'Eq. A',bg:'rgba(59,130,246,0.05)',border:'rgba(59,130,246,0.1)',text:'#60a5fa',badge:'rgba(59,130,246,0.1)'},
+                              {k:'equipoB',l:'Eq. B',bg:'rgba(244,63,94,0.05)',border:'rgba(244,63,94,0.1)',text:'#fb7185',badge:'rgba(244,63,94,0.1)'},
+                              {k:'comodines',l:'Comod.',bg:'rgba(245,158,11,0.05)',border:'rgba(245,158,11,0.1)',text:'#fbbf24',badge:'rgba(245,158,11,0.1)'},
+                              {k:'rotacion',l:'Rotac.',bg:'rgba(255,255,255,0.03)',border:'rgba(255,255,255,0.05)',text:'rgba(255,255,255,0.4)',badge:'rgba(255,255,255,0.05)'},
+                            ].map(t => {
+                              const players = lineup[t.k] || [];
+                              if (!players.length) return null;
+                              return (
+                                <div key={t.k} className="p-2 rounded-lg" style={{ background: t.bg, border: `1px solid ${t.border}` }}>
+                                  <div className="text-[7px] font-black uppercase tracking-widest mb-1" style={{ color: t.text }}>{t.l}</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {players.map(p => (
+                                      <span key={p.id} className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ background: t.badge, color: t.text }}>#{p.number}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Exercise Builder */}
                 <ExerciseBuilder 
                   training={activeTraining} 
                   onUpdate={(updated) => {
