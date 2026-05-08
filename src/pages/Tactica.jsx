@@ -150,7 +150,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
     if (!form.name) return;
     const { data, error } = await supabase.from('plays').insert([{
       name: form.name,
-      category: activeCategory,
+      category: activeCategory || 'tactica_general',
       type: 'tactical',
       tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }]
     }]).select().single();

@@ -305,42 +305,20 @@ export default function Alineacion() {
                       <>
                         {p?.photo_url ? (
                           <foreignObject x={-25} y={-25} width={50} height={50}>
-                            <div style={{
+                            <div className="bg-transparent" style={{
                               width: '100%',
                               height: '100%',
-                              position: 'relative',
-                              background: 'transparent'
+                              position: 'relative'
                             }}>
                               <img 
                                 src={p.photo_url} 
                                 crossOrigin="anonymous" 
+                                className="bg-transparent object-contain drop-shadow-lg"
                                 style={{ 
                                   width: '100%', 
-                                  height: '100%', 
-                                  objectFit: 'contain',
-                                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6)) contrast(1.4) saturate(1.3) brightness(1.1)',
-                                  background: 'transparent'
+                                  height: '100%'
                                 }}
                               />
-                              {/* Overlay to help blend with field */}
-                              <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                background: `
-                                  radial-gradient(circle at center, 
-                                    transparent 0%, 
-                                    transparent 40%, 
-                                    rgba(26, 59, 16, 0.1) 70%, 
-                                    rgba(26, 59, 16, 0.3) 85%, 
-                                    rgba(26, 59, 16, 0.6) 95%
-                                  )
-                                `,
-                                pointerEvents: 'none',
-                                mixBlendMode: 'overlay'
-                              }} />
                             </div>
                           </foreignObject>
                         ) : (
