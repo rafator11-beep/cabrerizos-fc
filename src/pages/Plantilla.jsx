@@ -56,6 +56,7 @@ export default function Plantilla() {
   const [pizarraTool, setPizarraTool] = useState('move');
   const [pizarraArrowType, setPizarraArrowType] = useState('pass');
   const [pizarraDrawPt, setPizarraDrawPt] = useState(null);
+  const [pizarraZoom, setPizarraZoom] = useState(1);
 
   const pizarraTogglePlayer = (p, isRival) => {
     const label = String(p.number || '?');
@@ -200,9 +201,25 @@ export default function Plantilla() {
                 <span className="text-[9px] font-black text-muted uppercase tracking-widest mt-1 block">Juvenil B · Cabrerizos FC</span>
               </div>
             </div>
-            <button onClick={() => setShowPizarra(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-muted hover:text-white transition-all">
-              <X size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Zoom Controls */}
+              <div className="flex items-center gap-1 px-2 py-1 bg-black/20 rounded-lg border border-white/10">
+                <button onClick={() => setPizarraZoom(Math.max(0.5, pizarraZoom - 0.1))} 
+                  className="w-6 h-6 rounded bg-white/10 text-white hover:text-accent flex items-center justify-center text-sm font-black transition-all">
+                  −
+                </button>
+                <span className="px-2 text-[9px] font-black text-white uppercase tracking-widest">
+                  {Math.round(pizarraZoom * 100)}%
+                </span>
+                <button onClick={() => setPizarraZoom(Math.min(2, pizarraZoom + 0.1))} 
+                  className="w-6 h-6 rounded bg-white/10 text-white hover:text-accent flex items-center justify-center text-sm font-black transition-all">
+                  +
+                </button>
+              </div>
+              <button onClick={() => setShowPizarra(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-muted hover:text-white transition-all">
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 flex flex-col min-h-0 md:flex-row overflow-hidden">
@@ -240,22 +257,31 @@ export default function Plantilla() {
 
               <div className="flex-1 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-[#2a6118] to-[#1e4511] opacity-50" />
-                <FieldCanvas
-                  tokens={pizarraTokens}
-                  arrows={pizarraArrows}
-                  onMove={(id, x, y) => setPizarraTokens(ts => ts.map(t => t.id === id ? { ...t, x, y } : t))}
-                  tool={pizarraTool}
-                  arrowType={pizarraArrowType}
-                  onArrow={a => setPizarraArrows(as => [...as, a])}
-                  drawPt={pizarraDrawPt}
-                  setDrawPt={setPizarraDrawPt}
-                  onPlace={(kind, x, y) => setPizarraTokens(ts => [...ts, { id: kind + Date.now(), kind, x, y }])}
-                  onDelete={id => setPizarraTokens(ts => ts.filter(t => t.id !== id))}
-                />
+                <div 
+                  className="w-full h-full flex items-center justify-center relative z-20"
+                  style={{ 
+                    transform: `scale(${pizarraZoom})`,
+                    transformOrigin: 'center',
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <FieldCanvas
+                    tokens={pizarraTokens}
+                    arrows={pizarraArrows}
+                    onMove={(id, x, y) => setPizarraTokens(ts => ts.map(t => t.id === id ? { ...t, x, y } : t))}
+                    tool={pizarraTool}
+                    arrowType={pizarraArrowType}
+                    onArrow={a => setPizarraArrows(as => [...as, a])}
+                    drawPt={pizarraDrawPt}
+                    setDrawPt={setPizarraDrawPt}
+                    onPlace={(kind, x, y) => setPizarraTokens(ts => [...ts, { id: kind + Date.now(), kind, x, y }])}
+                    onDelete={id => setPizarraTokens(ts => ts.filter(t => t.id !== id))}
+                  />
+                </div>
               </div>
 
               {/* Quick Elements Bar */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-black/40 backdrop-blur-2xl rounded-full border border-white/10 shadow-2xl">
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-black/40 backdrop-blur-2xl rounded-full border border-white/10 shadow-2xl z-10">
                 <button onClick={() => pizarraAddToken('ball')} className="flex flex-col items-center gap-1 group">
                   <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center group-active:scale-90 transition-all">⚽</div>
                   <span className="text-[8px] font-black text-white/40 uppercase tracking-tighter">Balón</span>

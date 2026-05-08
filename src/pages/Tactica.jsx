@@ -306,18 +306,18 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           )}
         </div>
 
-        {/* ZOOM BAR */}
+        {/* ZOOM BAR - MOVED TO TOP */}
         {!isPlayerMode && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-3 py-1.5 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-3 py-1.5 bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             <button onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))} 
-              className="w-8 h-8 rounded-xl bg-white/5 text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all">
+              className="w-8 h-8 rounded-xl bg-white/10 text-white hover:text-accent hover:bg-accent/20 flex items-center justify-center transition-all">
               <span className="text-lg font-black">−</span>
             </button>
-            <span className="px-3 text-[10px] font-black text-white/60 uppercase tracking-widest">
+            <span className="px-3 text-[10px] font-black text-white uppercase tracking-widest">
               {Math.round(zoomLevel * 100)}%
             </span>
             <button onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))} 
-              className="w-8 h-8 rounded-xl bg-white/5 text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all">
+              className="w-8 h-8 rounded-xl bg-white/10 text-white hover:text-accent hover:bg-accent/20 flex items-center justify-center transition-all">
               <span className="text-lg font-black">+</span>
             </button>
             <div className="w-px h-6 bg-white/10 mx-2" />
