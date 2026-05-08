@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import DashboardLayout from './pages/DashboardLayout';
 import Home from './pages/Home';
 import Tactica from './pages/Tactica';
+import AdminPCLayout from './layouts/AdminPCLayout';
 import Entrenamientos from './pages/Entrenamientos';
 import Tecnica from './pages/Tecnica';
 import Plantilla from './pages/Plantilla';
@@ -56,7 +57,7 @@ export default function App() {
         >
           <Route index element={<ErrorBoundary boundary="Home"><Home /></ErrorBoundary>} />
           <Route path="entrenamientos" element={<ErrorBoundary boundary="Entrenamientos"><Entrenamientos /></ErrorBoundary>} />
-          <Route path="tactica" element={<ErrorBoundary boundary="Táctica"><Tactica /></ErrorBoundary>} />
+          <Route path="tactica" element={<ErrorBoundary boundary="Táctica"><AdminPCLayout /></ErrorBoundary>} />
           <Route path="tecnica" element={<ErrorBoundary boundary="Técnica"><Tecnica /></ErrorBoundary>} />
           <Route path="plantilla" element={<ErrorBoundary boundary="Plantilla"><Plantilla /></ErrorBoundary>} />
           <Route path="alineacion" element={<ErrorBoundary boundary="Alineación"><Alineacion /></ErrorBoundary>} />

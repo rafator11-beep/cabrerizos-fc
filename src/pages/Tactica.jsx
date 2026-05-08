@@ -29,7 +29,7 @@ const LEGEND = [
   { id: 'zigzag', label: 'Conducción', icon: '〰', color: '#3b82f6' },
 ];
 
-export default function Tactica() {
+export default function Tactica({ externalExercise }) {
   const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
   const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
@@ -163,10 +163,11 @@ export default function Tactica() {
     <div className="flex h-full bg-bg overflow-hidden">
       
       {/* 1. LEFT SIDEBAR: Biblioteca */}
-      <div className={`
-        flex-shrink-0 w-full md:w-64 bg-surface/30 border-r border-white/5 flex flex-col transition-all duration-300
-        ${isMobile && mobileTab !== 'jugadas' ? 'hidden' : 'flex'}
-      `}>
+      {!externalExercise && (
+        <div className={`
+          flex-shrink-0 w-full md:w-64 bg-surface/30 border-r border-white/5 flex flex-col transition-all duration-300
+          ${isMobile && mobileTab !== 'jugadas' ? 'hidden' : 'flex'}
+        `}>
         <div className="p-5 border-b border-white/5 flex items-center justify-between">
           <div>
             <h1 className="text-[10px] font-black text-accent uppercase tracking-[0.3em] leading-none mb-1">Biblioteca</h1>
@@ -209,6 +210,7 @@ export default function Tactica() {
           )}
         </div>
       </div>
+      )}
 
       {/* 2. CENTER: Editor Canvas */}
       <div className={`
