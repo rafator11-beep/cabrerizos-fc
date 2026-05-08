@@ -38,7 +38,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
   const [activePlay, setActivePlay] = useState(null);
   const [activeCategory, setActiveCategory] = useState('corners');
   const [loading, setLoading] = useState(true);
-  const [mobileTab, setMobileTab] = useState('campo'); 
+  const [mobileTab, setMobileTab] = useState('jugadas'); 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '' });
   const [tool, setTool] = useState("move");
