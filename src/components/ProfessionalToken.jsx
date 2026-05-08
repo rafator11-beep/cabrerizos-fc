@@ -40,10 +40,7 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
             alt={name || label}
             className="w-full h-full object-contain"
             style={{ 
-              mixBlendMode: 'screen',
-              filter: isSelected 
-                ? 'drop-shadow(0px 0px 8px rgba(0,255,135,0.8))'
-                : 'drop-shadow(0px 4px 6px rgba(0,0,0,0.5))'
+              mixBlendMode: 'screen'
             }} 
             draggable={false}
           />

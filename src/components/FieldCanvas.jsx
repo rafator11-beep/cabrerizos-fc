@@ -7,12 +7,12 @@ const FH = 366;
 
 // Zoom presets for categories
 const ZOOM_PRESETS = {
-  corner_right_top:    { vx: 330, vy: 0,   vw: 220, vh: 146 },
-  corner_right_bottom: { vx: 330, vy: 220,  vw: 220, vh: 146 },
-  corner_left_top:     { vx: 0,   vy: 0,   vw: 220, vh: 146 },
-  corner_left_bottom:  { vx: 0,   vy: 220,  vw: 220, vh: 146 },
-  penalty_right:       { vx: 320, vy: 50,  vw: 230, vh: 266 },
-  penalty_left:        { vx: 0,   vy: 50,  vw: 230, vh: 266 },
+  corner_right_top:    { vx: 250, vy: 0,   vw: 300, vh: 200 },
+  corner_right_bottom: { vx: 250, vy: 166, vw: 300, vh: 200 },
+  corner_left_top:     { vx: 0,   vy: 0,   vw: 300, vh: 200 },
+  corner_left_bottom:  { vx: 0,   vy: 166, vw: 300, vh: 200 },
+  penalty_right:       { vx: 250, vy: 0,   vw: 300, vh: 366 },
+  penalty_left:        { vx: 0,   vy: 0,   vw: 300, vh: 366 },
 };
 
 const FieldCanvas = forwardRef(({ 

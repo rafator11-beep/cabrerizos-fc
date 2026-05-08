@@ -101,7 +101,6 @@ function AdminPCContent() {
           <Tactica
             externalExercise={selectedExercise}
             overridePreset={cameraPreset}
-            hideLibrary={true}
             hideEditor={activeTab === 'ejercicios'}
           />
         </div>

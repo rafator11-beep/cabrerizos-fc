@@ -310,8 +310,7 @@ export default function Alineacion() {
                               crossOrigin="anonymous" 
                               className="w-full h-full object-contain"
                               style={{ 
-                                mixBlendMode: 'screen',
-                                filter: 'drop-shadow(0px 4px 4px rgba(0,0,0,0.5))'
+                                mixBlendMode: 'screen'
                               }} 
                             />
                           </foreignObject>
