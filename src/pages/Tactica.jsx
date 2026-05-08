@@ -48,6 +48,7 @@ export default function Tactica({ externalExercise, overridePreset }) {
   const [players, setPlayers] = useState([]);
   const [showTools, setShowTools] = useState(false);
   const [zoomPreset, setZoomPreset] = useState(null);
+  const [libCollapsed, setLibCollapsed] = useState(false);
   
   const ZOOM_OPTIONS = [
     { id: null, label: 'Completo', icon: '🏟️' },
@@ -162,54 +163,69 @@ export default function Tactica({ externalExercise, overridePreset }) {
   return (
     <div className="flex h-full bg-bg overflow-hidden">
       
-      {/* 1. LEFT SIDEBAR: Biblioteca */}
+      {/* 1. LEFT SIDEBAR: Biblioteca (colapsable en desktop) */}
       {!externalExercise && (
         <div className={`
-          flex-shrink-0 w-full md:w-64 bg-surface/30 border-r border-white/5 flex flex-col transition-all duration-300
+          flex-shrink-0 bg-surface/30 border-r border-white/5 flex flex-col transition-all duration-300
+          w-full md:w-auto
           ${isMobile && mobileTab !== 'jugadas' ? 'hidden' : 'flex'}
+          ${libCollapsed ? 'md:w-14' : 'md:w-56'}
         `}>
-        <div className="p-5 border-b border-white/5 flex items-center justify-between">
-          <div>
-            <h1 className="text-[10px] font-black text-accent uppercase tracking-[0.3em] leading-none mb-1">Biblioteca</h1>
-            <p className="text-xs font-bold text-white truncate">{CATEGORIES.find(c => c.id === activeCategory)?.label}</p>
-          </div>
-          {!isPlayerMode && (
-            <button onClick={() => setShowForm(true)} className="w-8 h-8 rounded-xl bg-accent/10 text-accent flex items-center justify-center hover:bg-accent hover:text-bg transition-all active:scale-90 shadow-lg shadow-accent/5">
-              <Plus size={18} />
-            </button>
-          )}
-        </div>
 
-        <div className="flex overflow-x-auto no-scrollbar p-2 gap-2 bg-black/10">
-          {CATEGORIES.map(cat => (
-            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} title={cat.label}
-              className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-base transition-all ${activeCategory === cat.id ? 'bg-accent text-bg scale-105 shadow-lg shadow-accent/20' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>
-              {cat.icon}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2">
-          {loading ? (
-            <div className="animate-pulse space-y-2">
-              {[1,2,3,4,5].map(i => <div key={i} className="h-14 bg-white/5 rounded-2xl" />)}
-            </div>
-          ) : plays.length > 0 ? plays.map(p => (
-            <button key={p.id} onClick={() => { setActivePlay(p); setMobileTab('campo'); }}
-              className={`w-full p-4 rounded-2xl text-left border transition-all ${activePlay?.id === p.id ? 'bg-accent/10 border-accent/40 text-white' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-black uppercase tracking-widest truncate">{p.name}</span>
-                {activePlay?.id === p.id && <ChevronRight size={14} className="text-accent flex-shrink-0" />}
+          {/* Header con botón colapsar */}
+          <div className="p-3 border-b border-white/5 flex items-center justify-between gap-2 flex-shrink-0">
+            {!libCollapsed && (
+              <div className="min-w-0">
+                <h1 className="text-[9px] font-black text-accent uppercase tracking-[0.3em] leading-none mb-0.5">Biblioteca</h1>
+                <p className="text-[10px] font-bold text-white truncate">{CATEGORIES.find(c => c.id === activeCategory)?.label}</p>
               </div>
-            </button>
-          )) : (
-            <div className="py-20 text-center opacity-20">
-              <PenTool size={32} className="mx-auto mb-2" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Sin jugadas</p>
+            )}
+            <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+              {!libCollapsed && !isPlayerMode && (
+                <button onClick={() => setShowForm(true)} className="w-7 h-7 rounded-lg bg-accent/10 text-accent flex items-center justify-center hover:bg-accent hover:text-bg transition-all active:scale-90">
+                  <Plus size={14} />
+                </button>
+              )}
+              <button onClick={() => setLibCollapsed(v => !v)} className="hidden md:flex w-7 h-7 rounded-lg bg-white/5 text-white/40 hover:text-white hover:bg-white/10 items-center justify-center transition-all" title={libCollapsed ? 'Expandir biblioteca' : 'Colapsar biblioteca'}>
+                {libCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Categorías (iconos siempre visibles) */}
+          <div className={`flex-shrink-0 bg-black/10 ${libCollapsed ? 'flex flex-col p-1 gap-1' : 'flex overflow-x-auto no-scrollbar p-2 gap-2'}`}>
+            {CATEGORIES.map(cat => (
+              <button key={cat.id} onClick={() => setActiveCategory(cat.id)} title={cat.label}
+                className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-base transition-all ${activeCategory === cat.id ? 'bg-accent text-bg scale-105 shadow-lg shadow-accent/20' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>
+                {cat.icon}
+              </button>
+            ))}
+          </div>
+
+          {/* Lista de jugadas (oculta cuando colapsado) */}
+          {!libCollapsed && (
+            <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1">
+              {loading ? (
+                <div className="animate-pulse space-y-2">
+                  {[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-white/5 rounded-2xl" />)}
+                </div>
+              ) : plays.length > 0 ? plays.map(p => (
+                <button key={p.id} onClick={() => { setActivePlay(p); setMobileTab('campo'); }}
+                  className={`w-full px-3 py-3 rounded-xl text-left border transition-all ${activePlay?.id === p.id ? 'bg-accent/10 border-accent/40 text-white' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest truncate">{p.name}</span>
+                    {activePlay?.id === p.id && <ChevronRight size={12} className="text-accent flex-shrink-0" />}
+                  </div>
+                </button>
+              )) : (
+                <div className="py-12 text-center opacity-20">
+                  <PenTool size={24} className="mx-auto mb-2" />
+                  <p className="text-[9px] font-black uppercase tracking-widest">Sin jugadas</p>
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
       )}
 
       {/* 2. CENTER: Editor Canvas */}
@@ -276,8 +292,17 @@ export default function Tactica({ externalExercise, overridePreset }) {
         )}
 
         {/* FIELD CANVAS (Maximum protagonist) */}
-        <div className="flex-1 p-2 md:p-12 flex items-center justify-center overflow-hidden" style={{ touchAction: 'none' }}>
-          <div className={`w-full h-full max-w-6xl bg-surface rounded-[48px] shadow-[0_0_100px_rgba(0,0,0,0.7)] border border-white/5 relative overflow-hidden group transition-all duration-500 ${zoomPreset ? 'aspect-[3/2]' : 'aspect-[550/366]'}`}>
+        <div className="flex-1 p-2 md:p-4 flex items-center justify-center overflow-hidden" style={{ touchAction: 'none' }}>
+          <div
+            style={{
+              aspectRatio: zoomPreset ? '3/2' : '550/366',
+              height: '100%',
+              maxHeight: '100%',
+              width: 'auto',
+              maxWidth: '100%',
+            }}
+            className="bg-surface rounded-[32px] shadow-[0_0_80px_rgba(0,0,0,0.6)] border border-white/5 relative overflow-hidden group transition-all duration-500"
+          >
             <FieldCanvas
               ref={fieldSvgRef}
               tokens={currentStep.tokens || []}
