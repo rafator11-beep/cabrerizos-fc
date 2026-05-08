@@ -46,7 +46,18 @@ export default function Tactica() {
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [players, setPlayers] = useState([]);
-  const [showTools, setShowTools] = useState(false); 
+  const [showTools, setShowTools] = useState(false);
+  const [zoomPreset, setZoomPreset] = useState(null);
+  
+  const ZOOM_OPTIONS = [
+    { id: null, label: 'Completo', icon: '🏟️' },
+    { id: 'corner_right_top', label: 'Córner ↗', icon: '⛳' },
+    { id: 'corner_right_bottom', label: 'Córner ↘', icon: '⛳' },
+    { id: 'corner_left_top', label: 'Córner ↖', icon: '⛳' },
+    { id: 'corner_left_bottom', label: 'Córner ↙', icon: '⛳' },
+    { id: 'penalty_right', label: 'Área →', icon: '🎯' },
+    { id: 'penalty_left', label: 'Área ←', icon: '🎯' },
+  ];
   
   const fieldSvgRef = useRef(null);
   const { queueUpdate } = useOfflineSync();
@@ -250,9 +261,21 @@ export default function Tactica() {
           )}
         </div>
 
+        {/* ZOOM BAR */}
+        {!isPlayerMode && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-3 py-1.5 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+            {ZOOM_OPTIONS.map(z => (
+              <button key={z.id ?? 'full'} onClick={() => setZoomPreset(z.id)}
+                className={`px-2.5 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${zoomPreset === z.id ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+                {z.icon} {z.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* FIELD CANVAS (Maximum protagonist) */}
         <div className="flex-1 p-2 md:p-12 flex items-center justify-center overflow-hidden" style={{ touchAction: 'none' }}>
-          <div className="w-full h-full max-w-6xl aspect-[550/366] bg-surface rounded-[48px] shadow-[0_0_100px_rgba(0,0,0,0.7)] border border-white/5 relative overflow-hidden group">
+          <div className={`w-full h-full max-w-6xl bg-surface rounded-[48px] shadow-[0_0_100px_rgba(0,0,0,0.7)] border border-white/5 relative overflow-hidden group transition-all duration-500 ${zoomPreset ? 'aspect-[3/2]' : 'aspect-[550/366]'}`}>
             <FieldCanvas
               ref={fieldSvgRef}
               tokens={currentStep.tokens || []}
@@ -260,6 +283,7 @@ export default function Tactica() {
               zones={currentStep.zones || []}
               tool={tool}
               arrowType={arrowType}
+              zoomPreset={zoomPreset}
               animating={animating}
               onMove={(id, x, y) => {
                 if (isPlayerMode || !currentStep) return;

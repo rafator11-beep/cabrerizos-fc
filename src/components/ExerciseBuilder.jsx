@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Clock, Trash2, Search, Users, ChevronDown, ChevronUp, Image } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { EXERCISE_CATALOG, CATEGORIES } from '../lib/exerciseCatalog';
+import ExerciseAssigner from './ExerciseAssigner';
+import RoleVisualizer from './RoleVisualizer';
 
 export default function ExerciseBuilder({ training, onUpdate, roster = [], isAdmin = true, currentPlayerId = null }) {
   const [showTemplates, setShowTemplates] = useState(false);
@@ -38,10 +40,18 @@ export default function ExerciseBuilder({ training, onUpdate, roster = [], isAdm
     if (!error) onUpdate({ ...training, exercises: updated });
   };
 
-  const assignPlayer = async (exIndex, role, player) => {
+  const assignPlayer = async (exIndex, role, playerOrData) => {
     const updated = [...exercises];
-    if (!updated[exIndex].assignments) updated[exIndex].assignments = {};
-    updated[exIndex].assignments[role] = player ? { id: player.id, name: player.name, number: player.number } : null;
+    // Handle special commands from ExerciseAssigner
+    if (role === '__update_roles') {
+      updated[exIndex].roles = playerOrData;
+    } else if (role === '__update_roles_and_assignments') {
+      updated[exIndex].roles = playerOrData.roles;
+      updated[exIndex].assignments = playerOrData.assignments;
+    } else {
+      if (!updated[exIndex].assignments) updated[exIndex].assignments = {};
+      updated[exIndex].assignments[role] = playerOrData ? { id: playerOrData.id, name: playerOrData.name, number: playerOrData.number } : null;
+    }
     await saveExercises(updated);
   };
 
@@ -155,6 +165,11 @@ export default function ExerciseBuilder({ training, onUpdate, roster = [], isAdm
         </div>
       )}
 
+      {/* RoleVisualizer — Player sees their assignments at the top */}
+      {!isAdmin && currentPlayerId && (
+        <RoleVisualizer exercises={exercises} playerId={currentPlayerId} />
+      )}
+
       {/* Exercise List */}
       {exercises.length > 0 && (
         <div className="space-y-3">
@@ -181,41 +196,14 @@ export default function ExerciseBuilder({ training, onUpdate, roster = [], isAdm
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Duration badge */}
                     <span className="flex items-center gap-1 text-[9px] text-accent font-bold bg-accent/10 px-2 py-0.5 rounded-full">
                       <Clock size={10} /> {ex.duration}'
                     </span>
-
-                    {/* Player assignment badge */}
                     {isAssignedToMe && (
                       <span className="px-2 py-0.5 rounded-full bg-accent text-bg text-[8px] font-black uppercase tracking-widest animate-pulse">
                         TU ROL
                       </span>
                     )}
-
-                    {/* Roles indicator */}
-                    {ex.roles && isAdmin && (
-                      <button onClick={() => setExpandedAssign(isExpanded ? null : i)}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 text-[8px] font-bold hover:bg-purple-500/20 transition-all">
-                        <Users size={10} />
-                        {Object.keys(ex.assignments || {}).filter(k => ex.assignments[k]).length}/{(ex.roles || []).length}
-                        {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                      </button>
-                    )}
-
-                    {/* Non-admin: show who's assigned */}
-                    {ex.roles && !isAdmin && ex.assignments && (
-                      <div className="flex -space-x-1">
-                        {Object.entries(ex.assignments).filter(([,v]) => v).map(([role, p]) => (
-                          <span key={role} title={`${role}: ${p.name}`}
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-black border-2 ${p.id === currentPlayerId ? 'bg-accent text-bg border-accent' : 'bg-white/10 text-white border-surface'}`}>
-                            {p.number || role}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Delete */}
                     {isAdmin && (
                       <button onClick={() => removeExercise(i)} className="text-transparent hover:text-rose-500 transition-colors">
                         <Trash2 size={12} />
@@ -224,7 +212,7 @@ export default function ExerciseBuilder({ training, onUpdate, roster = [], isAdm
                   </div>
                 </div>
 
-                {/* Image (full width if expanded or on detail) */}
+                {/* Image */}
                 {ex.image_url && (
                   <div className="px-3 pb-2">
                     <div className="bg-black/20 rounded-xl border border-white/5 p-1 cursor-pointer hover:border-accent/20 transition-all" onClick={() => setLightboxImg(ex.image_url)}>
@@ -233,38 +221,17 @@ export default function ExerciseBuilder({ training, onUpdate, roster = [], isAdm
                   </div>
                 )}
 
-                {/* Player Assignment Panel */}
-                {isExpanded && ex.roles && isAdmin && (
-                  <div className="px-3 pb-3 animate-fade-in">
-                    <div className="bg-surface-2 rounded-xl border border-purple-500/10 p-3 space-y-2">
-                      <div className="text-[8px] font-black text-purple-400 uppercase tracking-widest mb-2">
-                        <Users size={10} className="inline mr-1" /> Asignar jugadores a roles
-                      </div>
-                      {ex.roles.map(role => {
-                        const assigned = ex.assignments?.[role];
-                        return (
-                          <div key={role} className="flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center text-[10px] font-black flex-shrink-0">{role}</span>
-                            <select
-                              value={assigned?.id || ''}
-                              onChange={e => {
-                                const player = roster.find(p => p.id === e.target.value);
-                                assignPlayer(i, role, player || null);
-                              }}
-                              className="input-field !py-1.5 text-xs flex-1"
-                            >
-                              <option value="">— Sin asignar —</option>
-                              {roster.map(p => (
-                                <option key={p.id} value={p.id}>#{p.number} {p.name}</option>
-                              ))}
-                            </select>
-                            {assigned && (
-                              <span className="text-[8px] font-bold text-emerald-400">✓ #{assigned.number}</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                {/* ExerciseAssigner — admin assigns players to roles */}
+                {isAdmin && (
+                  <div className="px-3 pb-3">
+                    <ExerciseAssigner
+                      exercise={ex}
+                      exerciseIndex={i}
+                      roster={roster}
+                      onAssign={assignPlayer}
+                      isExpanded={isExpanded}
+                      onToggle={() => setExpandedAssign(isExpanded ? null : i)}
+                    />
                   </div>
                 )}
 

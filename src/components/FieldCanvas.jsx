@@ -1,9 +1,18 @@
 import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-// Field constants
 const FW = 550;
 const FH = 366;
+
+// Zoom presets for categories
+const ZOOM_PRESETS = {
+  corner_right_top:    { vx: 330, vy: 0,   vw: 220, vh: 146 },
+  corner_right_bottom: { vx: 330, vy: 220,  vw: 220, vh: 146 },
+  corner_left_top:     { vx: 0,   vy: 0,   vw: 220, vh: 146 },
+  corner_left_bottom:  { vx: 0,   vy: 220,  vw: 220, vh: 146 },
+  penalty_right:       { vx: 320, vy: 50,  vw: 230, vh: 266 },
+  penalty_left:        { vx: 0,   vy: 50,  vw: 230, vh: 266 },
+};
 
 const FieldCanvas = forwardRef(({ 
   tokens = [], 
@@ -18,6 +27,7 @@ const FieldCanvas = forwardRef(({
   tool = 'move', 
   arrowType = 'pass',
   zoneColor = 'red',
+  zoomPreset = null,
   animating = false,
   presentationMode = false,
   selectedTokenId,
@@ -35,21 +45,25 @@ const FieldCanvas = forwardRef(({
     getSvg: () => svgRef.current
   }));
 
+  // Calculate viewBox based on zoom preset
+  const vb = zoomPreset && ZOOM_PRESETS[zoomPreset]
+    ? `${ZOOM_PRESETS[zoomPreset].vx} ${ZOOM_PRESETS[zoomPreset].vy} ${ZOOM_PRESETS[zoomPreset].vw} ${ZOOM_PRESETS[zoomPreset].vh}`
+    : `0 0 ${FW} ${FH}`;
+
   const toSVG = (e) => {
     if (!svgRef.current) return { x: 0, y: 0 };
     const ctm = svgRef.current.getScreenCTM();
     if (!ctm) return { x: 0, y: 0 };
     const pt = svgRef.current.createSVGPoint();
-    const touch = e.touches?.[0] || e.changedTouches?.[0];
-    pt.x = e.clientX ?? touch?.clientX ?? 0;
-    pt.y = e.clientY ?? touch?.clientY ?? 0;
+    pt.x = e.clientX ?? 0;
+    pt.y = e.clientY ?? 0;
     const transformed = pt.matrixTransform(ctm.inverse());
     return { x: transformed.x, y: transformed.y };
   };
 
   const handlePointerDown = (e) => {
     if (isPlayerMode && !presentationMode) return;
-    e.preventDefault(); // Prevent scroll on touch
+    e.preventDefault();
     const { x, y } = toSVG(e);
 
     if (tool === 'arrow') {
@@ -75,7 +89,7 @@ const FieldCanvas = forwardRef(({
     }
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e) => {
     if (drawingArrow) {
       if (Math.hypot(drawingArrow.to.x - drawingArrow.from.x, drawingArrow.to.y - drawingArrow.from.y) > 10) {
         onArrow?.(drawingArrow);
@@ -102,7 +116,6 @@ const FieldCanvas = forwardRef(({
     const headSize = 8;
     const type = a.type || 'pass';
 
-    // Color based on type — if a.color is set explicitly, use it
     const colorMap = {
       'pass': '#4ade80',
       'run': '#fbbf24',
@@ -123,7 +136,6 @@ const FieldCanvas = forwardRef(({
       d = `M ${a.from.x} ${a.from.y} Q ${mx} ${my} ${a.to.x} ${a.to.y}`;
     }
 
-    // Zigzag path
     if (type === 'zigzag') {
       const steps = Math.max(3, Math.floor(dist / 20));
       const nx = dx / dist;
@@ -178,8 +190,24 @@ const FieldCanvas = forwardRef(({
         e.stopPropagation(); 
         e.preventDefault();
         if (tool === 'move') {
+          // Capture pointer for fluid cross-element dragging
+          e.target.setPointerCapture(e.pointerId);
           setDragId(t.id);
           onSelectToken?.(t.id);
+        }
+      },
+      onPointerMove: (e) => {
+        if (dragId === t.id) {
+          e.stopPropagation();
+          e.preventDefault();
+          const { x, y } = toSVG(e);
+          onMove?.(t.id, x, y);
+        }
+      },
+      onPointerUp: (e) => {
+        if (dragId === t.id) {
+          e.target.releasePointerCapture(e.pointerId);
+          setDragId(null);
         }
       },
       onDoubleClick: (e) => { e.stopPropagation(); onDelete?.(t.id); }
@@ -190,26 +218,26 @@ const FieldCanvas = forwardRef(({
 
     switch(t.kind) {
       case 'ball': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
           <circle r={10} fill="white" stroke="#555" strokeWidth="1" />
           <path d="M -5 -5 L 5 5 M -5 5 L 5 -5 M 0 -7 L 0 7 M -7 0 L 7 0" stroke="#777" strokeWidth="0.5" opacity={0.4} />
           {isSelected && <circle r={14} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'cone': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
           <path d="M -8 8 L 0 -10 L 8 8 Z" fill="#f59e0b" stroke="#fbbf24" strokeWidth="1" />
           {isSelected && <circle r={14} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'cone_blue': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
           <path d="M -8 8 L 0 -10 L 8 8 Z" fill="#3b82f6" stroke="#60a5fa" strokeWidth="1" />
           {isSelected && <circle r={14} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'goal': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
           <rect x={-14} y={-10} width={28} height={20} rx={2} fill="none" stroke="white" strokeWidth="2" />
           <line x1={-14} y1={-3} x2={14} y2={-3} stroke="white" strokeWidth="0.5" opacity={0.3} />
           <line x1={-14} y1={4} x2={14} y2={4} stroke="white" strokeWidth="0.5" opacity={0.3} />
@@ -219,28 +247,28 @@ const FieldCanvas = forwardRef(({
         </g>
       );
       case 'mannequin': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
           <rect x={-5} y={-8} width={10} height={16} rx={3} fill="#8b5cf6" stroke="white" strokeWidth="1" />
           <circle cy={-12} r={4} fill="#8b5cf6" stroke="white" strokeWidth="1" />
           {isSelected && <circle r={18} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'pole': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
           <line x1={0} y1={-12} x2={0} y2={12} stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
           <circle cy={-12} r={3} fill="#ef4444" />
           {isSelected && <circle r={16} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'ladder': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
           <rect x={-12} y={-6} width={24} height={12} rx={2} fill="none" stroke="#facc15" strokeWidth="1.5" />
           {[-6, 0, 6].map(lx => <line key={lx} x1={lx} y1={-6} x2={lx} y2={6} stroke="#facc15" strokeWidth="1" />)}
           {isSelected && <rect x={-16} y={-10} width={32} height={20} rx={4} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'hurdle': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
           <line x1={-10} y1={4} x2={-10} y2={-6} stroke="#f97316" strokeWidth="2" />
           <line x1={10} y1={4} x2={10} y2={-6} stroke="#f97316" strokeWidth="2" />
           <line x1={-10} y1={-6} x2={10} y2={-6} stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
@@ -254,7 +282,7 @@ const FieldCanvas = forwardRef(({
         const r = 18;
         
         return (
-          <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing">
+          <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
             <defs>
               <filter id={`f-shadow-${t.id}`}><feDropShadow dx="0" dy="1.5" stdDeviation="2" floodOpacity="0.3"/></filter>
               <clipPath id={`f-clip-${t.id}`}><circle r={r - 2}/></clipPath>
@@ -280,7 +308,7 @@ const FieldCanvas = forwardRef(({
   return (
     <svg 
       ref={svgRef}
-      viewBox={`0 0 ${FW} ${FH}`}
+      viewBox={vb}
       className="w-full h-full select-none"
       style={{ touchAction: 'none' }}
       onPointerDown={handlePointerDown}
