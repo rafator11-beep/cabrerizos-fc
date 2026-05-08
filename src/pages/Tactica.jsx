@@ -147,11 +147,12 @@ export default function Tactica({ externalExercise, overridePreset }) {
 
   const createPlay = async () => {
     if (!form.name) return;
-    const { data } = await supabase.from('plays').insert([{ 
-      name: form.name, 
-      category: activeCategory, 
-      tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }] 
+    const { data, error } = await supabase.from('plays').insert([{
+      name: form.name,
+      category: activeCategory,
+      tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }]
     }]).select().single();
+    if (error) { alert('Error al crear jugada: ' + error.message); return; }
     if (data) {
       setPlays([data, ...plays]);
       setActivePlay(data);
