@@ -70,6 +70,29 @@ export default function Tactica({ externalExercise = null, overridePreset = null
     fetchPlayers();
   }, [activeCategory]);
 
+  // Handle external exercise from ExerciseBank
+  useEffect(() => {
+    if (externalExercise) {
+      // Convert exercise to play format
+      const exerciseAsPlay = {
+        id: `exercise_${externalExercise.id}`,
+        name: externalExercise.name,
+        category: 'general',
+        type: 'exercise',
+        tokens: [{ 
+          step: 1, 
+          tokens: externalExercise.tokens || [], 
+          arrows: externalExercise.arrows || [], 
+          zones: externalExercise.zones || [] 
+        }],
+        image_url: externalExercise.image_url,
+        description: externalExercise.desc
+      };
+      setActivePlay(exerciseAsPlay);
+      setActiveStepIndex(0);
+    }
+  }, [externalExercise]);
+
   const fetchPlayers = async () => {
     const { data } = await supabase.from('roster').select('*').order('number');
     if (data) setPlayers(data);

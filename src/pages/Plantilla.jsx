@@ -47,6 +47,7 @@ export default function Plantilla() {
   const [expandedId, setExpandedId] = useState(null);
   const fileInputRef = useRef(null);
   const [uploadingId, setUploadingId] = useState(null);
+  const [showAI, setShowAI] = useState(null);
 
   // Pizarra de análisis
   const [showPizarra, setShowPizarra] = useState(false);
@@ -70,6 +71,7 @@ export default function Plantilla() {
         color: isRival ? '#ef4444' : '#0057ff',
         label,
         name: isRival ? null : p.name,
+        photo_url: isRival ? null : p.photo_url,
         isRival,
       }]);
     }
@@ -358,7 +360,8 @@ export default function Plantilla() {
             onSaveEdit={() => saveEdit(p.id)} onDelete={() => deletePlayer(p.id)}
             onPhotoClick={() => triggerPhotoUpload(p.id)} uploading={uploadingId === p.id}
             updateStat={updateStat} expanded={expandedId === p.id}
-            onToggleExpand={() => setExpandedId(expandedId === p.id ? null : p.id)} />
+            onToggleExpand={() => setExpandedId(expandedId === p.id ? null : p.id)}
+            showAI={showAI} setShowAI={setShowAI} />
         ))}
       </div>
 
@@ -373,7 +376,8 @@ export default function Plantilla() {
                 onSaveEdit={() => saveEdit(p.id)} onDelete={() => deletePlayer(p.id)}
                 onPhotoClick={() => triggerPhotoUpload(p.id)} uploading={uploadingId === p.id}
                 updateStat={updateStat} expanded={expandedId === p.id}
-                onToggleExpand={() => setExpandedId(expandedId === p.id ? null : p.id)} />
+                onToggleExpand={() => setExpandedId(expandedId === p.id ? null : p.id)}
+                showAI={showAI} setShowAI={setShowAI} />
             ))}
           </div>
         </>
@@ -430,7 +434,7 @@ function SectionHeader({ title, count, color }) {
 }
 
 /* ========== PLAYER CARD ========== */
-function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onStartEdit, onCancelEdit, onSaveEdit, onDelete, onPhotoClick, uploading, updateStat, expanded, onToggleExpand }) {
+function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onStartEdit, onCancelEdit, onSaveEdit, onDelete, onPhotoClick, uploading, updateStat, expanded, onToggleExpand, showAI, setShowAI }) {
   const stats = p.stats || {};
   const hasStats = stats.matches_played > 0;
 
@@ -503,6 +507,15 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
           </div>
         </div>
 
+        {/* AI Assistant Button */}
+        <button 
+          onClick={() => setShowAI(showAI === p.id ? null : p.id)}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${showAI === p.id ? 'bg-purple-500/20 text-purple-400' : 'bg-white/5 text-white/40 hover:text-purple-400 hover:bg-purple-500/10'}`}
+          title="Asistente IA"
+        >
+          🤖
+        </button>
+
         {/* Rating badge */}
         {stats.rating > 0 && (
           <div style={{ width: 36, height: 36, borderRadius: 8, background: stats.rating >= 5 ? 'rgba(16,185,129,0.1)' : stats.rating >= 4.7 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -549,6 +562,44 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
         </div>
       )}
 
+      {/* AI Assistant Panel */}
+      {showAI === p.id && (
+        <div style={{ marginTop: 8, padding: 12, background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)', borderRadius: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 16 }}>🤖</span>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#a855f7' }}>Asistente IA Personal</div>
+              <div style={{ fontSize: 9, color: '#8a99ae' }}>Análisis y recomendaciones para {p.name}</div>
+            </div>
+          </div>
+          
+          <div style={{ space: '8px 0' }}>
+            <AIRecommendation 
+              title="Área de Mejora Principal"
+              content={getMainImprovement(p)}
+              icon="🎯"
+            />
+            <AIRecommendation 
+              title="Ejercicio Recomendado"
+              content={getRecommendedExercise(p)}
+              icon="💪"
+            />
+            <AIRecommendation 
+              title="Fortaleza Destacada"
+              content={getMainStrength(p)}
+              icon="⭐"
+            />
+          </div>
+          
+          <button 
+            onClick={() => generateDetailedAnalysis(p)}
+            className="w-full mt-3 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-purple-500/30 transition-all"
+          >
+            Análisis Completo IA
+          </button>
+        </div>
+      )}
+
       {/* Admin actions */}
       {isAdmin && (
         <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
@@ -588,5 +639,119 @@ function StatInput({ label, value, onChange }) {
       <span style={{ fontSize: 10, fontWeight: 600, color: '#8a99ae', flex: 1 }}>{label}</span>
       <input type="number" step="any" className="input-field" value={value || 0} onChange={e => onChange(e.target.value)} style={{ width: 55, textAlign: 'center', padding: '3px 4px' }} />
     </div>
+  );
+}
+
+function AIRecommendation({ title, content, icon }) {
+  return (
+    <div style={{ marginBottom: 8, padding: 8, background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <span style={{ fontSize: 12 }}>{icon}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: '#a855f7' }}>{title}</span>
+      </div>
+      <p style={{ fontSize: 9, color: '#8a99ae', lineHeight: 1.4, margin: 0 }}>{content}</p>
+    </div>
+  );
+}
+
+// AI Analysis Functions
+function getMainImprovement(player) {
+  const stats = player.stats || {};
+  const position = player.position || '';
+  
+  if (position.includes('Portero')) {
+    if (stats.goals_conceded > stats.matches_played * 1.5) {
+      return "Mejorar posicionamiento y reflejos. Practicar paradas a balones altos y salidas del área.";
+    }
+    return "Trabajar distribución del balón con los pies y comunicación con la defensa.";
+  }
+  
+  if (position.includes('Defensa') || position.includes('Central') || position.includes('Lateral')) {
+    if (stats.yellow_cards > 3) {
+      return "Reducir tarjetas amarillas mejorando el timing en las entradas y la disciplina táctica.";
+    }
+    return "Mejorar salida de balón y pase largo. Trabajar marcaje en balones aéreos.";
+  }
+  
+  if (position.includes('Medio')) {
+    if (stats.assists < stats.matches_played * 0.2) {
+      return "Aumentar creatividad y precisión en pases. Trabajar visión de juego y último pase.";
+    }
+    return "Mejorar recuperación de balón y transiciones rápidas. Trabajar resistencia física.";
+  }
+  
+  if (position.includes('Delantero') || position.includes('Extremo')) {
+    if (stats.goals < stats.matches_played * 0.3) {
+      return "Mejorar definición y movimientos en el área. Practicar remates de primera y cabeceo.";
+    }
+    return "Trabajar desmarques y velocidad de reacción. Mejorar juego de espaldas.";
+  }
+  
+  return "Continuar desarrollando habilidades técnicas básicas y comprensión táctica del juego.";
+}
+
+function getRecommendedExercise(player) {
+  const position = player.position || '';
+  
+  if (position.includes('Portero')) {
+    return "Circuito de agilidad con conos + paradas reflejas. 3 series de 8 repeticiones.";
+  }
+  
+  if (position.includes('Defensa') || position.includes('Central')) {
+    return "Ejercicio de marcaje 1vs1 + salida de balón bajo presión. 15 minutos.";
+  }
+  
+  if (position.includes('Lateral')) {
+    return "Subidas por banda con centros + repliegue defensivo. Circuito de 20 minutos.";
+  }
+  
+  if (position.includes('Medio')) {
+    return "Rondo 4vs2 + pases largos a portería contraria. 3 series de 5 minutos.";
+  }
+  
+  if (position.includes('Delantero')) {
+    return "Finalización desde diferentes ángulos + movimientos sin balón. 20 remates.";
+  }
+  
+  if (position.includes('Extremo')) {
+    return "1vs1 en banda + centros al área. 10 repeticiones por cada lado.";
+  }
+  
+  return "Ejercicios de control, pase y tiro básicos. Fundamentos técnicos 30 minutos.";
+}
+
+function getMainStrength(player) {
+  const stats = player.stats || {};
+  const position = player.position || '';
+  
+  if (stats.rating >= 7) {
+    return "Rendimiento consistente y liderazgo en el campo. Ejemplo para compañeros.";
+  }
+  
+  if (stats.goals > stats.matches_played * 0.5) {
+    return "Excelente capacidad goleadora. Instinto natural para encontrar el gol.";
+  }
+  
+  if (stats.assists > stats.matches_played * 0.3) {
+    return "Gran visión de juego y capacidad para asistir. Jugador creativo clave.";
+  }
+  
+  if (stats.minutes > stats.matches_played * 80) {
+    return "Resistencia física excepcional. Jugador confiable para completar partidos.";
+  }
+  
+  if (stats.yellow_cards === 0) {
+    return "Juego limpio y disciplina táctica. Excelente comportamiento deportivo.";
+  }
+  
+  return "Actitud positiva y compromiso con el equipo. Base sólida para seguir creciendo.";
+}
+
+function generateDetailedAnalysis(player) {
+  alert(`Análisis IA completo para ${player.name}:\n\n` +
+    `📊 Rendimiento: ${getMainStrength(player)}\n\n` +
+    `🎯 Área de mejora: ${getMainImprovement(player)}\n\n` +
+    `💪 Ejercicio recomendado: ${getRecommendedExercise(player)}\n\n` +
+    `🔮 Proyección: Continuar con entrenamiento específico para su posición y trabajar aspectos físicos y tácticos.`
   );
 }
