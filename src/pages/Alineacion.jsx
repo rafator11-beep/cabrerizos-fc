@@ -305,18 +305,42 @@ export default function Alineacion() {
                       <>
                         {p?.photo_url ? (
                           <foreignObject x={-25} y={-25} width={50} height={50}>
-                            <img 
-                              src={p.photo_url} 
-                              crossOrigin="anonymous" 
-                              style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'contain',
-                                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6)) contrast(1.1) saturate(1.1)',
-                                mixBlendMode: 'multiply',
-                                background: 'transparent'
-                              }}
-                            />
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              position: 'relative',
+                              background: 'transparent'
+                            }}>
+                              <img 
+                                src={p.photo_url} 
+                                crossOrigin="anonymous" 
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  objectFit: 'contain',
+                                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6)) contrast(1.2) saturate(1.2) brightness(1.1)',
+                                  background: 'transparent',
+                                  WebkitMaskImage: `
+                                    radial-gradient(circle, 
+                                      rgba(0,0,0,1) 0%, 
+                                      rgba(0,0,0,1) 60%, 
+                                      rgba(0,0,0,0.8) 70%, 
+                                      rgba(0,0,0,0.3) 80%, 
+                                      rgba(0,0,0,0) 90%
+                                    )
+                                  `,
+                                  maskImage: `
+                                    radial-gradient(circle, 
+                                      rgba(0,0,0,1) 0%, 
+                                      rgba(0,0,0,1) 60%, 
+                                      rgba(0,0,0,0.8) 70%, 
+                                      rgba(0,0,0,0.3) 80%, 
+                                      rgba(0,0,0,0) 90%
+                                    )
+                                  `
+                                }}
+                              />
+                            </div>
                           </foreignObject>
                         ) : (
                           <>

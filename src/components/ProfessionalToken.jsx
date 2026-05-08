@@ -33,24 +33,50 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
 
       {hasPhoto ? (
         <foreignObject x={-size/2} y={-size/2} width={size} height={size}>
-          <img 
-            src={photo_url} 
-            crossOrigin="anonymous" 
-            alt={name || label}
-            style={{ 
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              filter: `
-                ${isSelected ? 'drop-shadow(0 0 8px #00ff87)' : 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))'}
-                contrast(1.1) 
-                saturate(1.1)
-              `,
-              mixBlendMode: 'multiply',
-              background: 'transparent'
-            }} 
-            draggable={false}
-          />
+          <div style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            background: 'transparent'
+          }}>
+            <img 
+              src={photo_url} 
+              crossOrigin="anonymous" 
+              alt={name || label}
+              style={{ 
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                filter: `
+                  ${isSelected ? 'drop-shadow(0 0 8px #00ff87)' : 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))'}
+                  contrast(1.2) 
+                  saturate(1.2)
+                  brightness(1.1)
+                `,
+                background: 'transparent',
+                // Hacer el fondo gris/blanco transparente
+                WebkitMaskImage: `
+                  radial-gradient(circle, 
+                    rgba(0,0,0,1) 0%, 
+                    rgba(0,0,0,1) 60%, 
+                    rgba(0,0,0,0.8) 70%, 
+                    rgba(0,0,0,0.3) 80%, 
+                    rgba(0,0,0,0) 90%
+                  )
+                `,
+                maskImage: `
+                  radial-gradient(circle, 
+                    rgba(0,0,0,1) 0%, 
+                    rgba(0,0,0,1) 60%, 
+                    rgba(0,0,0,0.8) 70%, 
+                    rgba(0,0,0,0.3) 80%, 
+                    rgba(0,0,0,0) 90%
+                  )
+                `
+              }} 
+              draggable={false}
+            />
+          </div>
         </foreignObject>
       ) : (
         <g filter={isSelected ? `url(#drop-shadow-selected-${id})` : `url(#drop-shadow-${id})`}>
