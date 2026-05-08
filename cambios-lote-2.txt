@@ -1,0 +1,15 @@
+Lote 2 de corrección
+
+Detectado en el código público:
+- src/hooks/useIsMobile.js marca móvil con breakpoint 768.
+- src/pages/DashboardLayout.jsx usa el sidebar deslizante cuando isMobile es true.
+- src/pages/Tactica.jsx en móvil abre por defecto en la pestaña 'jugadas'.
+
+Efecto práctico:
+- En algunos portátiles/zoom/escalado Windows la app entra en modo móvil aunque visualmente parezca escritorio.
+- Por eso ves el menú lateral superpuesto con botón X.
+- Y por eso Táctica parece rota: abre en la pestaña de listado, no en el campo.
+
+Qué incluye este lote:
+- Reemplazo de src/hooks/useIsMobile.js por una versión más estable con matchMedia y breakpoint 640.
+- Instrucción exacta para un cambio de una línea en src/pages/Tactica.jsx.

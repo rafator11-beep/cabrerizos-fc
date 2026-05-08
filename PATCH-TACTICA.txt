@@ -1,0 +1,14 @@
+CAMBIO MANUAL EN src/pages/Tactica.jsx
+
+1) Abre el archivo src/pages/Tactica.jsx en GitHub.
+2) Busca esta línea exacta:
+
+const [mobileTab, setMobileTab] = useState('jugadas');
+
+3) Cámbiala por esta otra:
+
+const [mobileTab, setMobileTab] = useState('campo');
+
+Qué arregla:
+- Si la app entra en vista móvil, Táctica ya no abre primero en la pestaña "Jugadas".
+- Abrirá directamente el campo/pizarra, que es lo que esperas ver.
