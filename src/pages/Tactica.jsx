@@ -48,7 +48,8 @@ export default function Tactica({ externalExercise, overridePreset }) {
   const [players, setPlayers] = useState([]);
   const [showTools, setShowTools] = useState(false);
   const [zoomPreset, setZoomPreset] = useState(null);
-  const [libCollapsed, setLibCollapsed] = useState(false);
+  const [libCollapsed, setLibCollapsed] = useState(true);
+  const [editorCollapsed, setEditorCollapsed] = useState(false);
   
   const ZOOM_OPTIONS = [
     { id: null, label: 'Completo', icon: '🏟️' },
@@ -231,7 +232,7 @@ export default function Tactica({ externalExercise, overridePreset }) {
 
       {/* 2. CENTER: Editor Canvas */}
       <div className={`
-        flex-1 relative flex flex-col bg-[#05070a] overflow-hidden 
+        flex-1 min-h-0 min-w-0 relative flex flex-col bg-[#05070a] overflow-hidden
         ${isMobile && mobileTab !== 'campo' ? 'hidden' : 'flex'}
       `}>
         
@@ -293,7 +294,7 @@ export default function Tactica({ externalExercise, overridePreset }) {
         )}
 
         {/* FIELD CANVAS (Maximum protagonist) */}
-        <div className="flex-1 p-2 md:p-4 flex items-center justify-center overflow-hidden" style={{ touchAction: 'none' }}>
+        <div className="flex-1 min-h-0 p-1 flex items-center justify-center overflow-hidden" style={{ touchAction: 'none' }}>
           <div
             style={{
               aspectRatio: zoomPreset ? '3/2' : '550/366',
@@ -349,113 +350,141 @@ export default function Tactica({ externalExercise, overridePreset }) {
         )}
       </div>
 
-      {/* 3. RIGHT SIDEBAR: Editor PRO Panel (Desktop Only) */}
+      {/* 3. RIGHT SIDEBAR: Editor PRO Panel (Desktop Only, collapsible) */}
       {!isPlayerMode && (
-        <div className="hidden md:flex flex-shrink-0 w-80 bg-surface/60 backdrop-blur-xl border-l border-white/10 flex-col overflow-hidden animate-in slide-in-from-right duration-500">
-          <div className="p-6 border-b border-white/10">
-            <h2 className="text-[11px] font-black text-white uppercase tracking-[0.3em] leading-none mb-1">Editor PRO</h2>
-            <p className="text-[9px] text-muted font-bold uppercase tracking-tighter">Cabrerizos F.C. Engine</p>
-          </div>
+        <div className={`hidden md:flex flex-shrink-0 transition-all duration-300 ${editorCollapsed ? 'w-12' : 'w-72'} bg-surface/60 backdrop-blur-xl border-l border-white/10 flex-col overflow-hidden`}>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
-            
-            {/* Mode Selectors */}
-            <div className="space-y-4">
-              <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Modo de Edición</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setTool('move')} 
-                  className={`flex items-center justify-center gap-3 h-14 rounded-2xl border transition-all ${tool === 'move' ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
-                  <Move size={18} />
-                  <span className="text-[10px] font-black uppercase">Mover</span>
-                </button>
-                <button onClick={() => { setTool('arrow'); setArrowType('pass'); }} 
-                  className={`flex items-center justify-center gap-3 h-14 rounded-2xl border transition-all ${tool === 'arrow' ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
-                  <Spline size={18} />
-                  <span className="text-[10px] font-black uppercase">Trazado</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Elements Palette */}
-            <div className="space-y-4">
-              <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Insertar Objetos</h4>
-              <div className="grid grid-cols-4 gap-2">
-                <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `ball-${Date.now()}`, kind: 'ball', x: 275, y: 183 }] })}
-                  className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Balón">
-                  ⚽
-                </button>
-                <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `cone-${Date.now()}`, kind: 'cone', x: 275, y: 183 }] })}
-                  className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Cono">
-                  🚧
-                </button>
-                <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `man-${Date.now()}`, kind: 'mannequin', x: 275, y: 183 }] })}
-                  className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Barrera/Maniquí">
-                  👤
-                </button>
-                <button className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-white/20 cursor-not-allowed" title="Zonas (Próximamente)">
-                  <Circle size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Arrow Sub-palette */}
-            {tool === 'arrow' && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                <h4 className="text-[9px] font-black text-accent uppercase tracking-[0.2em]">Tipo de Trazo</h4>
-                <div className="grid grid-cols-1 gap-2">
-                  {LEGEND.map(l => (
-                    <button key={l.id} onClick={() => setArrowType(l.id)}
-                      className={`flex items-center gap-4 p-3 rounded-2xl border transition-all ${arrowType === l.id ? 'bg-white/10 border-accent/40 shadow-inner' : 'bg-white/5 border-white/5 opacity-40 hover:opacity-100'}`}>
-                      <span className="text-2xl w-8 text-center">{l.icon}</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest">{l.label}</span>
-                    </button>
-                  ))}
-                </div>
+          {/* Header */}
+          <div className={`flex-shrink-0 border-b border-white/10 flex items-center ${editorCollapsed ? 'justify-center p-2' : 'justify-between p-4'}`}>
+            {!editorCollapsed && (
+              <div>
+                <h2 className="text-[11px] font-black text-white uppercase tracking-[0.3em] leading-none mb-0.5">Editor PRO</h2>
+                <p className="text-[9px] text-muted font-bold uppercase tracking-tighter">Cabrerizos F.C. Engine</p>
               </div>
             )}
-
-            {/* Roster Management */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Plantilla CFC</h4>
-                <span className="px-2 py-0.5 bg-accent/10 text-accent text-[9px] font-black rounded-full">{(currentStep.tokens || []).filter(t => t.kind === 'player' && !t.isRival).length}</span>
-              </div>
-              <div className="grid grid-cols-5 gap-2">
-                {players.map(p => {
-                  const label = String(p.number || '?');
-                  const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === label && !t.isRival);
-                  return (
-                    <button key={p.id} onClick={() => togglePlayer(p, false)}
-                      className={`aspect-square rounded-xl flex items-center justify-center text-[11px] font-black transition-all ${on ? 'bg-accent text-bg shadow-lg shadow-accent/20 scale-95' : 'bg-white/5 text-white/40 hover:bg-white/10 border border-white/5'}`}>
-                      {p.number}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Rivals */}
-              <h4 className="text-[9px] font-black text-rose-500/50 uppercase tracking-[0.2em] pt-4">Rival</h4>
-              <div className="grid grid-cols-6 gap-2">
-                {Array.from({ length: 11 }).map((_, i) => {
-                  const num = String(i + 1);
-                  const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === num && t.isRival);
-                  return (
-                    <button key={i} onClick={() => togglePlayer({ number: i + 1 }, true)}
-                      className={`aspect-square rounded-xl border text-[10px] font-black transition-all ${on ? 'bg-rose-500 border-rose-500 text-white shadow-lg' : 'bg-white/5 border-white/5 text-white/20 hover:text-white/40'}`}>
-                      {num}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <button
+              onClick={() => setEditorCollapsed(v => !v)}
+              className="w-7 h-7 rounded-lg bg-white/5 text-white/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all flex-shrink-0"
+              title={editorCollapsed ? 'Expandir panel' : 'Colapsar panel'}
+            >
+              {editorCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+            </button>
           </div>
-          
-          <div className="p-6 bg-black/30 border-t border-white/5">
-            <div className="flex items-start gap-3 opacity-30">
-              <Info size={14} className="mt-0.5 flex-shrink-0" />
-              <p className="text-[9px] font-medium leading-relaxed">Sugerencia: Usa el ratón para arrastrar jugadores con precisión. Doble clic para eliminar trazos.</p>
+
+          {/* Collapsed: icon strip */}
+          {editorCollapsed ? (
+            <div className="flex-1 flex flex-col items-center gap-2 py-3">
+              <button onClick={savePlay} className="w-9 h-9 bg-accent text-bg rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all" title="Guardar">
+                <Save size={15} />
+              </button>
+              <div className="w-6 h-px bg-white/10 my-1" />
+              <button onClick={() => setTool('move')} className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${tool === 'move' ? 'bg-accent/20 text-accent' : 'text-white/30 hover:text-white hover:bg-white/5'}`} title="Mover">
+                <Move size={15} />
+              </button>
+              <button onClick={() => { setTool('arrow'); setArrowType('pass'); }} className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${tool === 'arrow' ? 'bg-accent/20 text-accent' : 'text-white/30 hover:text-white hover:bg-white/5'}`} title="Trazado">
+                <Spline size={15} />
+              </button>
+              <div className="w-6 h-px bg-white/10 my-1" />
+              <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `ball-${Date.now()}`, kind: 'ball', x: 275, y: 183 }] })} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-base hover:bg-white/10 transition-all" title="Balón">⚽</button>
+              <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `cone-${Date.now()}`, kind: 'cone', x: 275, y: 183 }] })} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-base hover:bg-white/10 transition-all" title="Cono">🚧</button>
+              <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `man-${Date.now()}`, kind: 'mannequin', x: 275, y: 183 }] })} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-base hover:bg-white/10 transition-all" title="Barrera">👤</button>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-6">
+
+                {/* Mode Selectors */}
+                <div className="space-y-3">
+                  <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Modo de Edición</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setTool('move')}
+                      className={`flex items-center justify-center gap-2 h-12 rounded-2xl border transition-all ${tool === 'move' ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
+                      <Move size={16} />
+                      <span className="text-[10px] font-black uppercase">Mover</span>
+                    </button>
+                    <button onClick={() => { setTool('arrow'); setArrowType('pass'); }}
+                      className={`flex items-center justify-center gap-2 h-12 rounded-2xl border transition-all ${tool === 'arrow' ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
+                      <Spline size={16} />
+                      <span className="text-[10px] font-black uppercase">Trazado</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Elements Palette */}
+                <div className="space-y-3">
+                  <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Insertar Objetos</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `ball-${Date.now()}`, kind: 'ball', x: 275, y: 183 }] })}
+                      className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Balón">⚽</button>
+                    <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `cone-${Date.now()}`, kind: 'cone', x: 275, y: 183 }] })}
+                      className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Cono">🚧</button>
+                    <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `man-${Date.now()}`, kind: 'mannequin', x: 275, y: 183 }] })}
+                      className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Barrera/Maniquí">👤</button>
+                    <button className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-white/20 cursor-not-allowed" title="Zonas (Próximamente)">
+                      <Circle size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Arrow Sub-palette */}
+                {tool === 'arrow' && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <h4 className="text-[9px] font-black text-accent uppercase tracking-[0.2em]">Tipo de Trazo</h4>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {LEGEND.map(l => (
+                        <button key={l.id} onClick={() => setArrowType(l.id)}
+                          className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all ${arrowType === l.id ? 'bg-white/10 border-accent/40 shadow-inner' : 'bg-white/5 border-white/5 opacity-40 hover:opacity-100'}`}>
+                          <span className="text-xl w-7 text-center">{l.icon}</span>
+                          <span className="text-[9px] font-black uppercase tracking-widest">{l.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Roster Management */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Plantilla CFC</h4>
+                    <span className="px-2 py-0.5 bg-accent/10 text-accent text-[9px] font-black rounded-full">{(currentStep.tokens || []).filter(t => t.kind === 'player' && !t.isRival).length}</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {players.map(p => {
+                      const label = String(p.number || '?');
+                      const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === label && !t.isRival);
+                      return (
+                        <button key={p.id} onClick={() => togglePlayer(p, false)}
+                          className={`aspect-square rounded-xl flex items-center justify-center text-[11px] font-black transition-all ${on ? 'bg-accent text-bg shadow-lg shadow-accent/20 scale-95' : 'bg-white/5 text-white/40 hover:bg-white/10 border border-white/5'}`}>
+                          {p.number}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <h4 className="text-[9px] font-black text-rose-500/50 uppercase tracking-[0.2em] pt-2">Rival</h4>
+                  <div className="grid grid-cols-6 gap-1.5">
+                    {Array.from({ length: 11 }).map((_, i) => {
+                      const num = String(i + 1);
+                      const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === num && t.isRival);
+                      return (
+                        <button key={i} onClick={() => togglePlayer({ number: i + 1 }, true)}
+                          className={`aspect-square rounded-xl border text-[10px] font-black transition-all ${on ? 'bg-rose-500 border-rose-500 text-white shadow-lg' : 'bg-white/5 border-white/5 text-white/20 hover:text-white/40'}`}>
+                          {num}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-black/30 border-t border-white/5">
+                <div className="flex items-start gap-2 opacity-30">
+                  <Info size={12} className="mt-0.5 flex-shrink-0" />
+                  <p className="text-[8px] font-medium leading-relaxed">Arrastra jugadores con el ratón. Doble clic para eliminar trazos.</p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
