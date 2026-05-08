@@ -308,10 +308,13 @@ export default function Alineacion() {
                             <img 
                               src={p.photo_url} 
                               crossOrigin="anonymous" 
-                              className="w-full h-full object-contain"
                               style={{ 
-                                mixBlendMode: 'screen'
-                              }} 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'contain',
+                                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))',
+                                background: 'transparent'
+                              }}
                             />
                           </foreignObject>
                         ) : (

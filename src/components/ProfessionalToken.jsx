@@ -31,16 +31,18 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
         </filter>
       </defs>
 
-      {/* We use foreignObject so CSS mix-blend-mode and drop-shadow work perfectly without SVG bugs */}
       {hasPhoto ? (
-        <foreignObject x={-size/2 - 5} y={-size/2 - 5} width={size + 10} height={size + 10} className="overflow-visible">
+        <foreignObject x={-size/2} y={-size/2} width={size} height={size}>
           <img 
             src={photo_url} 
             crossOrigin="anonymous" 
             alt={name || label}
-            className="w-full h-full object-contain"
             style={{ 
-              mixBlendMode: 'screen'
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              filter: isSelected ? 'drop-shadow(0 0 8px #00ff87) drop-shadow(0 4px 12px rgba(0,0,0,0.6))' : 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
+              background: 'transparent'
             }} 
             draggable={false}
           />
