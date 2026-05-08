@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import FieldCanvas from '../components/FieldCanvas';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { 
-  Plus, Move, ArrowRight, Trash2, Save, Monitor, Spline, X, 
-  ChevronRight, ChevronLeft, Layers, Users, MousePointer2, 
-  Target, Activity, Info, Settings, Play, Square,
-  Dumbbell, PenTool, Circle, Type
+  Plus, Move, Spline, X, 
+  ChevronRight, ChevronLeft, 
+  Save, Monitor, PenTool, Circle, 
+  Trash2, Info, Play
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -30,7 +30,7 @@ const LEGEND = [
 ];
 
 export default function Tactica({ externalExercise = null, overridePreset = null, hideLibrary = false, hideEditor = false }) {
-  const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
+  const { isRealAdmin, viewAsPlayer } = useAuth();
   const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
   
@@ -51,6 +51,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
   const [zoomLevel, setZoomLevel] = useState(1);
   const [libCollapsed, setLibCollapsed] = useState(true);
   const [editorCollapsed, setEditorCollapsed] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
   
   const ZOOM_OPTIONS = [
     { id: null, label: 'Completo', icon: '🏟️' },
@@ -298,6 +299,37 @@ export default function Tactica({ externalExercise = null, overridePreset = null
 
         {/* Global Actions (Top Right) */}
         <div className="absolute top-4 right-4 z-20 flex gap-2">
+          {/* Zoom Controls - Left of TV */}
+          {!isPlayerMode && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+              <button onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))} 
+                className="w-8 h-8 rounded-xl bg-white/10 text-white hover:text-accent hover:bg-accent/20 flex items-center justify-center transition-all">
+                <span className="text-lg font-black">−</span>
+              </button>
+              <span className="px-3 text-[10px] font-black text-white uppercase tracking-widest">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))} 
+                className="w-8 h-8 rounded-xl bg-white/10 text-white hover:text-accent hover:bg-accent/20 flex items-center justify-center transition-all">
+                <span className="text-lg font-black">+</span>
+              </button>
+            </div>
+          )}
+          
+          {/* TV Mode Button - Now Functional */}
+          {!isPlayerMode && (
+            <button 
+              onClick={() => setPresentationMode(!presentationMode)} 
+              className={`h-11 px-4 rounded-2xl shadow-xl flex items-center gap-2 transition-all ${presentationMode ? 'bg-accent text-bg' : 'bg-surface/90 text-white hover:bg-accent/20'}`}
+              title="Modo Presentación TV"
+            >
+              <Monitor size={18} />
+              <span className="text-[11px] uppercase tracking-[0.2em] hidden sm:inline">
+                {presentationMode ? 'Salir TV' : 'Modo TV'}
+              </span>
+            </button>
+          )}
+          
           {!isPlayerMode && (
             <button onClick={savePlay} className="h-11 px-6 bg-accent text-bg font-black rounded-2xl shadow-xl shadow-accent/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all">
               <Save size={18} />
@@ -305,23 +337,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
             </button>
           )}
         </div>
-
-        {/* ZOOM BAR - SIMPLIFIED */}
-        {!isPlayerMode && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-            <button onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))} 
-              className="w-8 h-8 rounded-xl bg-white/10 text-white hover:text-accent hover:bg-accent/20 flex items-center justify-center transition-all">
-              <span className="text-lg font-black">−</span>
-            </button>
-            <span className="px-3 text-[10px] font-black text-white uppercase tracking-widest">
-              {Math.round(zoomLevel * 100)}%
-            </span>
-            <button onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))} 
-              className="w-8 h-8 rounded-xl bg-white/10 text-white hover:text-accent hover:bg-accent/20 flex items-center justify-center transition-all">
-              <span className="text-lg font-black">+</span>
-            </button>
-          </div>
-        )}
 
         {/* ZOOM PRESETS - BOTTOM BAR */}
         {!isPlayerMode && (
@@ -358,6 +373,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
               arrowType={arrowType}
               zoomPreset={overridePreset || zoomPreset}
               animating={animating}
+              presentationMode={presentationMode}
               onMove={(id, x, y) => {
                 if (isPlayerMode || !currentStep) return;
                 const nextTs = (currentStep.tokens || []).map(t => t.id === id ? { ...t, x, y } : t);
@@ -622,6 +638,113 @@ export default function Tactica({ externalExercise = null, overridePreset = null
             <div className="flex gap-4">
               <button onClick={() => setShowForm(false)} className="flex-1 py-5 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all">Cancelar</button>
               <button onClick={createPlay} className="flex-1 py-5 rounded-2xl bg-accent text-bg font-black uppercase tracking-widest text-xs shadow-xl shadow-accent/20 active:scale-95 transition-all">Crear Jugada</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRESENTATION MODE OVERLAY */}
+      {presentationMode && (
+        <div className="fixed inset-0 z-[200] bg-black flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 bg-gradient-to-r from-accent/20 to-transparent border-b border-accent/20">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-accent rounded-2xl flex items-center justify-center">
+                <Monitor size={24} className="text-bg" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-white tracking-tight">
+                  {activePlay?.name || 'Pizarra Táctica'}
+                </h1>
+                <p className="text-accent text-sm font-bold uppercase tracking-widest">
+                  Cabrerizos F.C. • Modo Presentación
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setPresentationMode(false)}
+              className="w-12 h-12 rounded-2xl bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-all"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="w-full max-w-6xl aspect-[550/366] relative">
+              <FieldCanvas
+                ref={fieldSvgRef}
+                tokens={currentStep.tokens || []}
+                arrows={currentStep.arrows || []}
+                zones={currentStep.zones || []}
+                tool="move"
+                arrowType={arrowType}
+                zoomPreset={overridePreset || zoomPreset}
+                animating={animating}
+                presentationMode={true}
+                onMove={() => {}} // Disabled in presentation mode
+                onArrow={() => {}} // Disabled in presentation mode
+                onPlace={() => {}} // Disabled in presentation mode
+                onDelete={() => {}} // Disabled in presentation mode
+              />
+            </div>
+          </div>
+
+          {/* Bottom Controls */}
+          <div className="p-6 bg-gradient-to-t from-black/50 to-transparent">
+            <div className="flex items-center justify-center gap-6">
+              {/* Step Navigation */}
+              <div className="flex items-center gap-4 px-6 py-3 bg-white/10 backdrop-blur-xl rounded-2xl">
+                <button 
+                  onClick={() => setActiveStepIndex(Math.max(0, activeStepIndex - 1))} 
+                  className="w-10 h-10 rounded-xl text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                
+                <div className="flex items-center gap-3">
+                  {steps.map((_, idx) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => setActiveStepIndex(idx)}
+                      className={`h-4 rounded-full transition-all duration-300 ${
+                        activeStepIndex === idx 
+                          ? 'w-12 bg-accent shadow-[0_0_20px_rgba(0,255,135,0.6)]' 
+                          : 'w-4 bg-white/20 hover:bg-white/40'
+                      }`} 
+                    />
+                  ))}
+                </div>
+
+                <button 
+                  onClick={() => setActiveStepIndex(Math.min(steps.length - 1, activeStepIndex + 1))} 
+                  className="w-10 h-10 rounded-xl text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              </div>
+
+              {/* Animation Toggle */}
+              <button 
+                onClick={() => setAnimating(!animating)} 
+                className={`px-6 py-3 rounded-2xl flex items-center gap-3 transition-all ${
+                  animating 
+                    ? 'bg-accent text-bg shadow-lg shadow-accent/20' 
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+              >
+                <Play size={20} />
+                <span className="font-bold text-sm uppercase tracking-widest">
+                  {animating ? 'Pausar' : 'Reproducir'}
+                </span>
+              </button>
+
+              {/* Step Info */}
+              <div className="px-6 py-3 bg-white/10 backdrop-blur-xl rounded-2xl">
+                <span className="text-white font-bold text-sm uppercase tracking-widest">
+                  Paso {activeStepIndex + 1} de {steps.length}
+                </span>
+              </div>
             </div>
           </div>
         </div>
