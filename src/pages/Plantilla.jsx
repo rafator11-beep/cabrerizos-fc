@@ -477,8 +477,8 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: hasStats ? 8 : 0 }}>
         {/* Photo */}
       <div onClick={isAdmin ? onPhotoClick : undefined}
-          style={{ width: 52, height: 52, borderRadius: '50%', background: p.photo_url ? 'transparent' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#00ff87', overflow: 'hidden', border: '2.5px solid rgba(255,255,255,0.1)', cursor: isAdmin ? 'pointer' : 'default', position: 'relative', flexShrink: 0 }}>
-          {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', background: 'transparent' }} /> : (p.number || <User size={22} />)}
+          style={{ width: 52, height: 52, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#00ff87', overflow: 'hidden', border: '2.5px solid rgba(255,255,255,0.1)', cursor: isAdmin ? 'pointer' : 'default', position: 'relative', flexShrink: 0 }}>
+          {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.number || <User size={22} />)}
           {isAdmin && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 16, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Camera size={9} color="white" /></div>}
           {uploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}><div style={{ width: 14, height: 14, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /></div>}
         </div>

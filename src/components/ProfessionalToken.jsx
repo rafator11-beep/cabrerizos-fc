@@ -33,19 +33,28 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
 
       {hasPhoto ? (
         <foreignObject x={-size/2} y={-size/2} width={size} height={size}>
-          <img 
-            src={photo_url} 
-            crossOrigin="anonymous" 
-            alt={name || label}
-            style={{ 
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              filter: isSelected ? 'drop-shadow(0 0 8px #00ff87) drop-shadow(0 4px 12px rgba(0,0,0,0.6))' : 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
-              background: 'transparent'
-            }} 
-            draggable={false}
-          />
+          <div style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            background: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <img 
+              src={photo_url} 
+              crossOrigin="anonymous" 
+              alt={name || label}
+              style={{ 
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }} 
+              draggable={false}
+            />
+          </div>
         </foreignObject>
       ) : (
         <g filter={isSelected ? `url(#drop-shadow-selected-${id})` : `url(#drop-shadow-${id})`}>

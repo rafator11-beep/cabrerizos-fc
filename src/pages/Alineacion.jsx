@@ -305,17 +305,26 @@ export default function Alineacion() {
                       <>
                         {p?.photo_url ? (
                           <foreignObject x={-25} y={-25} width={50} height={50}>
-                            <img 
-                              src={p.photo_url} 
-                              crossOrigin="anonymous" 
-                              style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'contain',
-                                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))',
-                                background: 'transparent'
-                              }}
-                            />
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              background: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <img 
+                                src={p.photo_url} 
+                                crossOrigin="anonymous" 
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            </div>
                           </foreignObject>
                         ) : (
                           <>
