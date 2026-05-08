@@ -41,6 +41,7 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
             width={size} 
             height={size} 
             preserveAspectRatio="xMidYMid meet" 
+            crossOrigin="anonymous"
           />
         ) : (
           // Fallback if no photo

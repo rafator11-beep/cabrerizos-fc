@@ -32,6 +32,7 @@ const FieldToken = ({ jugador, x, y, dragging, onPointerDown }) => {
         <img
           src={jugador.foto}
           alt={jugador.nombre}
+          crossOrigin="anonymous"
           style={{
             width: '100%',
             height: '100%',

@@ -97,8 +97,8 @@ function AdminPCContent() {
         )}
 
         {/* Center: Large Pitch Workspace */}
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#05070a] relative overflow-hidden p-8 z-0">
-          <div className="w-full max-w-[1200px] h-full max-h-[800px] flex rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden border border-white/5 relative bg-black/20">
+        <div className="flex-1 flex flex-col bg-[#05070a] relative overflow-hidden z-0">
+          <div className="w-full h-full flex overflow-hidden relative">
              <Tactica externalExercise={selectedExercise} overridePreset={cameraPreset} />
           </div>
         </div>

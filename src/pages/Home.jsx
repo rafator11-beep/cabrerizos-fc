@@ -90,7 +90,8 @@ export default function Home() {
       {/* ADMIN DASHBOARD — Desktop Only */}
       {isAdmin && <AdminDashboard />}
 
-      {/* STATS GRID */}
+      <div className={isAdmin ? 'block md:hidden space-y-6 md:space-y-8' : 'space-y-6 md:space-y-8'}>
+        {/* STATS GRID */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(x => (
           <div key={x.l} className="card !p-5 flex flex-col items-start justify-between min-h-[120px] md:min-h-[160px] active:scale-95 transition-all">
@@ -192,6 +193,7 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SeasonCalendar />
         {isAdmin && <QuickNotes />}
+      </div>
       </div>
     </div>
   );

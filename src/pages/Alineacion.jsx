@@ -304,15 +304,24 @@ export default function Alineacion() {
                     ) : (
                       <>
                         {p?.photo_url ? (
-                          <image 
-                            href={p.photo_url} 
-                            x={-22} 
-                            y={-22} 
-                            width={44} 
-                            height={44} 
-                            preserveAspectRatio="xMidYMid meet"
-                            style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))' }}
-                          />
+                          <>
+                            <defs>
+                              <filter id={`drop-al-${i}`} x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="0" dy="4" stdDeviation="3" floodOpacity="0.5" floodColor="#000000" />
+                              </filter>
+                            </defs>
+                            <g filter={`url(#drop-al-${i})`}>
+                              <image 
+                                href={p.photo_url} 
+                                x={-22} 
+                                y={-22} 
+                                width={44} 
+                                height={44} 
+                                preserveAspectRatio="xMidYMid meet"
+                                crossOrigin="anonymous"
+                              />
+                            </g>
+                          </>
                         ) : (
                           <>
                             <circle r={16} fill={posColor} stroke="white" strokeWidth="2" />
