@@ -151,6 +151,7 @@ export default function Tactica({ externalExercise, overridePreset }) {
     const { data, error } = await supabase.from('plays').insert([{
       name: form.name,
       category: activeCategory,
+      type: 'tactical',
       tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }]
     }]).select().single();
     if (error) { alert('Error al crear jugada: ' + error.message); return; }
@@ -294,7 +295,7 @@ export default function Tactica({ externalExercise, overridePreset }) {
         )}
 
         {/* FIELD CANVAS (Maximum protagonist) */}
-        <div className="flex-1 min-h-0 p-1 flex items-center justify-center overflow-hidden" style={{ touchAction: 'none' }}>
+        <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden" style={{ touchAction: 'none' }}>
           <div
             style={{
               aspectRatio: zoomPreset ? '3/2' : '550/366',

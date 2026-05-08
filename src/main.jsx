@@ -6,6 +6,13 @@ import { AppProvider } from './context/AppContext';
 import App from './App';
 import './index.css';
 
+// Force reload when a new service worker takes control (ensures users see updates immediately)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <HashRouter>
