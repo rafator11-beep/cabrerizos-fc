@@ -52,6 +52,8 @@ export default function Tactica({ externalExercise = null, overridePreset = null
   const [libCollapsed, setLibCollapsed] = useState(true);
   const [editorCollapsed, setEditorCollapsed] = useState(false);
   const [presentationMode, setPresentationMode] = useState(false);
+  const [editingPlayId, setEditingPlayId] = useState(null);
+  const [editingName, setEditingName] = useState('');
   
   const ZOOM_OPTIONS = [
     { id: null, label: 'Completo', icon: '🏟️' },
@@ -188,6 +190,27 @@ export default function Tactica({ externalExercise = null, overridePreset = null
     }
   };
 
+  const deletePlay = async (playId) => {
+    if (!confirm('¿Eliminar esta jugada?')) return;
+    const { error } = await supabase.from('plays').delete().eq('id', playId);
+    if (error) { alert('Error al eliminar: ' + error.message); return; }
+    setPlays(ps => ps.filter(p => p.id !== playId));
+    if (activePlay?.id === playId) {
+      const remaining = plays.filter(p => p.id !== playId);
+      setActivePlay(remaining.length > 0 ? remaining[0] : null);
+    }
+  };
+
+  const updatePlayName = async (playId, newName) => {
+    if (!newName.trim()) return;
+    const { error } = await supabase.from('plays').update({ name: newName }).eq('id', playId);
+    if (error) { alert('Error al actualizar: ' + error.message); return; }
+    setPlays(ps => ps.map(p => p.id === playId ? { ...p, name: newName } : p));
+    if (activePlay?.id === playId) {
+      setActivePlay({ ...activePlay, name: newName });
+    }
+  };
+
   return (
     <div className="flex h-full bg-bg overflow-hidden">
       
@@ -238,13 +261,68 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                   {[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-white/5 rounded-2xl" />)}
                 </div>
               ) : plays.length > 0 ? plays.map(p => (
-                <button key={p.id} onClick={() => { setActivePlay(p); setMobileTab('campo'); }}
-                  className={`w-full px-3 py-3 rounded-xl text-left border transition-all ${activePlay?.id === p.id ? 'bg-accent/10 border-accent/40 text-white' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest truncate">{p.name}</span>
-                    {activePlay?.id === p.id && <ChevronRight size={12} className="text-accent flex-shrink-0" />}
-                  </div>
-                </button>
+                <div key={p.id} className={`rounded-xl border transition-all ${activePlay?.id === p.id ? 'bg-accent/10 border-accent/40' : 'bg-white/5 border-white/5 hover:border-white/10'}`}>
+                  {editingPlayId === p.id ? (
+                    <div className="p-3">
+                      <input 
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            updatePlayName(p.id, editingName);
+                            setEditingPlayId(null);
+                          }
+                          if (e.key === 'Escape') {
+                            setEditingPlayId(null);
+                          }
+                        }}
+                        onBlur={() => {
+                          updatePlayName(p.id, editingName);
+                          setEditingPlayId(null);
+                        }}
+                        className="w-full bg-white/10 border border-accent/40 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest text-white outline-none"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <button 
+                        onClick={() => { setActivePlay(p); setMobileTab('campo'); }}
+                        className="flex-1 px-3 py-3 text-left"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest truncate text-white">{p.name}</span>
+                          {activePlay?.id === p.id && <ChevronRight size={12} className="text-accent flex-shrink-0" />}
+                        </div>
+                      </button>
+                      {!isPlayerMode && (
+                        <div className="flex items-center gap-1 px-2">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingPlayId(p.id);
+                              setEditingName(p.name);
+                            }}
+                            className="w-6 h-6 rounded-lg bg-white/5 text-white/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all"
+                            title="Editar nombre"
+                          >
+                            <PenTool size={10} />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deletePlay(p.id);
+                            }}
+                            className="w-6 h-6 rounded-lg bg-white/5 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 flex items-center justify-center transition-all"
+                            title="Eliminar jugada"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )) : (
                 <div className="py-12 text-center opacity-20">
                   <PenTool size={24} className="mx-auto mb-2" />
@@ -647,7 +725,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
       {presentationMode && (
         <div className="fixed inset-0 z-[200] bg-black">
           {/* Header */}
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-6 bg-gradient-to-b from-black/80 to-transparent">
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-6 bg-gradient-to-b from-black/80 to-transparent" style={{ paddingTop: '2rem' }}>
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-accent rounded-2xl flex items-center justify-center">
                 <Monitor size={24} className="text-bg" />
@@ -663,7 +741,8 @@ export default function Tactica({ externalExercise = null, overridePreset = null
             </div>
             <button 
               onClick={() => setPresentationMode(false)}
-              className="w-12 h-12 rounded-2xl bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-all"
+              className="w-12 h-12 rounded-2xl bg-red-600/80 text-white hover:bg-red-600 flex items-center justify-center transition-all shadow-lg"
+              title="Salir del modo presentación"
             >
               <X size={24} />
             </button>
