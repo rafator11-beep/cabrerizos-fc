@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Calendar, Clock, Trash2, X, ChevronLeft, Dumbbell, Activity, Target, Download, Maximize2, Filter, Star } from 'lucide-react';
+import { Plus, Calendar, Clock, Trash2, X, ChevronLeft, Dumbbell, Activity, Target, Download, Filter, Star } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
-import FieldCanvas from '../components/FieldCanvas';
 import PostMatchRating from '../components/PostMatchRating';
 import ExerciseBuilder from '../components/ExerciseBuilder';
 
@@ -35,11 +34,16 @@ export default function Entrenamientos() {
   const [mobileView, setMobileView] = useState('list');
   const [showForm, setShowForm] = useState(false);
   const [activeType, setActiveType] = useState('all');
-  const [lightboxImg, setLightboxImg] = useState(null);
   const [showRating, setShowRating] = useState(false);
+  const [roster, setRoster] = useState([]);
   const [form, setForm] = useState({ title: '', date: new Date().toISOString().split('T')[0], intensity: 'media', duration: '90', objective: '', type: 'tecnico' });
 
-  useEffect(() => { fetchTrainings(); }, []);
+  useEffect(() => { fetchTrainings(); fetchRoster(); }, []);
+
+  const fetchRoster = async () => {
+    const { data } = await supabase.from('roster').select('id, name, number, position');
+    if (data) setRoster(data);
+  };
 
   const fetchTrainings = async () => {
     setLoading(true);
@@ -99,14 +103,6 @@ export default function Entrenamientos() {
       
       {/* PostMatch Rating */}
       {showRating && <PostMatchRating trainingId={activeTraining?.id} onClose={() => setShowRating(false)} />}
-
-      {/* Lightbox */}
-      {lightboxImg && (
-        <div className="lightbox-overlay animate-fade-in" onClick={() => setLightboxImg(null)}>
-          <button className="absolute top-6 right-6 text-white/60" onClick={() => setLightboxImg(null)}><X size={24} /></button>
-          <img src={lightboxImg} alt="Ejercicio" />
-        </div>
-      )}
 
       {/* Create Form Modal */}
       {showForm && (
@@ -234,58 +230,17 @@ export default function Entrenamientos() {
               </div>
 
               <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 pb-24">
-                {/* Exercise Builder — admin can add exercises */}
-                {isAdmin && (
-                  <ExerciseBuilder 
-                    training={activeTraining} 
-                    onUpdate={(updated) => {
-                      setActiveTraining(updated);
-                      setTrainings(trainings.map(t => t.id === updated.id ? updated : t));
-                    }} 
-                  />
-                )}
-
-                {(activeTraining.exercises || []).length > 0 ? (
-                  activeTraining.exercises.map((ex, i) => (
-                    <div key={i} className="group flex flex-col gap-4 p-4 rounded-[24px] bg-white/5 border border-white/5 hover:border-accent/20 transition-all">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="w-7 h-7 rounded-lg bg-accent text-bg flex items-center justify-center text-[10px] font-black">{i + 1}</span>
-                          <h4 className="text-sm font-black text-white">{ex.name}</h4>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-accent bg-accent/10 px-2 py-0.5 rounded-full">
-                          <Clock size={10}/>
-                          <span className="text-[9px] font-black">{ex.duration}'</span>
-                        </div>
-                      </div>
-                      
-                      {ex.description && <p className="text-xs text-muted font-medium px-1">{ex.description}</p>}
-                      
-                      {ex.image_url ? (
-                        <div className="bg-black/30 rounded-2xl border border-white/5 p-2 flex items-center justify-center cursor-pointer relative" onClick={() => setLightboxImg(ex.image_url)}>
-                          <img src={ex.image_url} alt={ex.name} className="max-w-full max-h-[300px] object-contain rounded-xl" />
-                          <button className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center text-white/50"><Maximize2 size={10}/></button>
-                        </div>
-                      ) : ex.canvas_drawing ? (
-                        <div className="aspect-video bg-black/40 rounded-2xl border border-white/5 overflow-hidden">
-                          <FieldCanvas 
-                            tokens={ex.canvas_drawing.tokens || []} 
-                            arrows={ex.canvas_drawing.arrows || []} 
-                            zones={ex.canvas_drawing.zones || []} 
-                            tool="move" 
-                            presentationMode={true}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  ))
-                ) : !isAdmin ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-30">
-                    <Target size={48} className="mb-3" />
-                    <h4 className="text-base font-black text-white uppercase tracking-widest">Sesión Vacía</h4>
-                    <p className="text-xs font-bold mt-2">No se han añadido ejercicios todavía.</p>
-                  </div>
-                ) : null}
+                {/* Exercise Builder — renders exercises for admin AND player */}
+                <ExerciseBuilder 
+                  training={activeTraining} 
+                  onUpdate={(updated) => {
+                    setActiveTraining(updated);
+                    setTrainings(trainings.map(t => t.id === updated.id ? updated : t));
+                  }}
+                  roster={roster}
+                  isAdmin={isAdmin}
+                  currentPlayerId={profile?.id}
+                />
               </div>
             </>
           ) : (
