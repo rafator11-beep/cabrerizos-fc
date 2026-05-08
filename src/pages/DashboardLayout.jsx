@@ -178,7 +178,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto md:overflow-hidden no-scrollbar md:pb-0 bg-bg" style={{ paddingBottom: isMobile ? 'calc(var(--nav-h) + var(--safe-bottom, 0px))' : '0' }}>
+        <main className="flex-1 overflow-y-auto no-scrollbar bg-bg" style={{ paddingBottom: isMobile ? 'calc(var(--nav-h) + var(--safe-bottom, 0px))' : '0' }}>
           <Outlet />
         </main>
 
