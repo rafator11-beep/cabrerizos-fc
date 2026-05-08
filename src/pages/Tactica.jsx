@@ -48,6 +48,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
   const [players, setPlayers] = useState([]);
   const [showTools, setShowTools] = useState(false);
   const [zoomPreset, setZoomPreset] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [libCollapsed, setLibCollapsed] = useState(true);
   const [editorCollapsed, setEditorCollapsed] = useState(false);
   
@@ -285,6 +286,18 @@ export default function Tactica({ externalExercise = null, overridePreset = null
         {/* ZOOM BAR */}
         {!isPlayerMode && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-3 py-1.5 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+            <button onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))} 
+              className="w-8 h-8 rounded-xl bg-white/5 text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all">
+              <span className="text-lg font-black">−</span>
+            </button>
+            <span className="px-3 text-[10px] font-black text-white/60 uppercase tracking-widest">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+            <button onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))} 
+              className="w-8 h-8 rounded-xl bg-white/5 text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all">
+              <span className="text-lg font-black">+</span>
+            </button>
+            <div className="w-px h-6 bg-white/10 mx-2" />
             {ZOOM_OPTIONS.map(z => (
               <button key={z.id ?? 'full'} onClick={() => setZoomPreset(z.id)}
                 className={`px-2.5 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${zoomPreset === z.id ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
@@ -303,6 +316,8 @@ export default function Tactica({ externalExercise = null, overridePreset = null
               maxHeight: '100%',
               width: 'auto',
               maxWidth: '100%',
+              transform: `scale(${zoomLevel})`,
+              transformOrigin: 'center'
             }}
             className="bg-surface rounded-[32px] shadow-[0_0_80px_rgba(0,0,0,0.6)] border border-white/5 relative overflow-hidden group transition-all duration-500"
           >
