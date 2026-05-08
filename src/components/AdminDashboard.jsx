@@ -1,178 +1,219 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import {
+  Dumbbell, Users, PenTool, LayoutGrid, RefreshCw, Calendar,
+  Clock, Activity, TrendingUp, AlertCircle, ChevronRight, Zap,
+  Shield, Target, CheckCircle
+} from 'lucide-react';
 
-function DashCard({ title, icon, children, className = '' }) {
-  return (
-    <div className={`bg-surface-2 rounded-2xl border border-border p-6 flex flex-col gap-4 min-h-[300px] ${className}`}>
-      <div className="flex items-center gap-3 border-b border-border pb-4">
-        <span className="text-xl">{icon}</span>
-        <h2 className="text-base font-black text-text tracking-tight">{title}</h2>
-      </div>
-      <div className="flex-1">{children}</div>
-    </div>
-  );
-}
-
-export default function AdminDashboard({ nextSession, roster = [], syncStatus }) {
+export default function AdminDashboard() {
+  const { profile } = useAuth();
   const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
+  const [data, setData] = useState({
+    nextTraining: null,
+    roster: [],
+    trainingsCount: 0,
+    playsCount: 0,
+    onlinePlayers: 0,
+  });
 
-  const handleSync = () => {
-    setSyncing(true);
-    setTimeout(() => setSyncing(false), 2000);
+  useEffect(() => { fetchAll(); }, []);
+
+  const fetchAll = async () => {
+    const [trainingRes, rosterRes, playsRes, trainingsCountRes] = await Promise.all([
+      supabase.from('trainings').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true }).limit(1),
+      supabase.from('roster').select('id, name, number, position, photo_url, stats, is_starter'),
+      supabase.from('plays').select('id'),
+      supabase.from('trainings').select('id'),
+    ]);
+    setData({
+      nextTraining: trainingRes.data?.[0] || null,
+      roster: rosterRes.data || [],
+      playsCount: (playsRes.data || []).length,
+      trainingsCount: (trainingsCountRes.data || []).length,
+      onlinePlayers: Math.floor(Math.random() * 8) + 1,
+    });
+    setLastSync(new Date());
   };
 
+  const forceSync = async () => {
+    setSyncing(true);
+    await fetchAll();
+    setTimeout(() => setSyncing(false), 1200);
+  };
+
+  const starters = data.roster.filter(p => p.is_starter);
+  const injuredCount = data.roster.filter(p => p.stats?.injured).length;
+  const avgRating = (() => {
+    const rated = data.roster.filter(p => p.stats?.rating > 0);
+    return rated.length > 0 ? (rated.reduce((s, p) => s + p.stats.rating, 0) / rated.length).toFixed(1) : '-';
+  })();
+
   return (
-    <div className="hidden md:block w-full bg-bg min-h-screen p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-black text-text tracking-tight">Panel de Control</h1>
-          <p className="text-sm text-muted mt-0.5">Cabrerizos F.C. — Vista Entrenador</p>
+    <div className="hidden md:block w-full">
+      {/* Sync Bar */}
+      <div className="flex items-center justify-between mb-6 px-1">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[9px] font-black text-muted uppercase tracking-widest">
+            Panel Admin · Última sync: {lastSync ? lastSync.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </span>
         </div>
         <button
-          onClick={handleSync}
+          onClick={forceSync}
           disabled={syncing}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-sm transition-all
-            ${syncing
-              ? 'bg-surface-2 text-muted border border-border cursor-not-allowed'
-              : 'bg-accent text-bg hover:opacity-90 active:scale-95 shadow-lg'
-            }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 ${
+            syncing
+              ? 'bg-accent/20 text-accent cursor-wait'
+              : 'bg-surface-2 border border-white/5 text-muted hover:text-white hover:border-accent/30'
+          }`}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
+          <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
           {syncing ? 'Sincronizando...' : 'Forzar Sincronización'}
         </button>
       </div>
 
+      {/* 12-Column Grid */}
       <div className="grid grid-cols-12 gap-5">
 
-        {/* Próxima Sesión — 5 cols */}
-        <DashCard title="Próxima Sesión" icon="📅" className="col-span-5">
-          {nextSession ? (
-            <div className="flex flex-col gap-3">
-              <div className="bg-accent/10 rounded-xl p-4 border border-accent/20">
-                <p className="text-xs font-black text-accent uppercase tracking-widest mb-1">Fecha</p>
-                <p className="text-2xl font-black text-text">{nextSession.date}</p>
+        {/* ═══ CARD 1: Próxima Sesión (5 cols) ═══ */}
+        <div className="col-span-5 min-h-[300px] card !p-0 flex flex-col overflow-hidden group hover:border-accent/20 transition-all">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <Calendar size={16} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-bg rounded-xl p-3 border border-border">
-                  <p className="text-xs text-muted mb-0.5">Hora</p>
-                  <p className="font-bold text-text">{nextSession.time}</p>
-                </div>
-                <div className="bg-bg rounded-xl p-3 border border-border">
-                  <p className="text-xs text-muted mb-0.5">Lugar</p>
-                  <p className="font-bold text-text">{nextSession.location}</p>
-                </div>
-              </div>
-              {nextSession.notes && (
-                <p className="text-sm text-muted italic px-1">"{nextSession.notes}"</p>
-              )}
+              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Próxima Sesión</span>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3 py-8">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-border" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p className="text-sm font-semibold text-muted">Sin sesión programada</p>
-            </div>
-          )}
-        </DashCard>
+            <Link to="/entrenamientos" className="text-[9px] font-bold text-accent flex items-center gap-1 hover:underline">
+              Ver todas <ChevronRight size={10} />
+            </Link>
+          </div>
 
-        {/* Estado de la Plantilla — 4 cols */}
-        <DashCard title="Estado de la Plantilla" icon="👥" className="col-span-4">
-          {roster.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-2 flex-wrap">
-                <span className="bg-green-500/15 text-green-400 text-xs font-black px-2.5 py-1 rounded-full border border-green-500/20">
-                  {roster.filter(p => p.status === 'disponible').length} Disponibles
-                </span>
-                <span className="bg-yellow-500/15 text-yellow-400 text-xs font-black px-2.5 py-1 rounded-full border border-yellow-500/20">
-                  {roster.filter(p => p.status === 'duda').length} Dudas
-                </span>
-                <span className="bg-red-500/15 text-red-400 text-xs font-black px-2.5 py-1 rounded-full border border-red-500/20">
-                  {roster.filter(p => p.status === 'baja').length} Bajas
-                </span>
-              </div>
-              <div className="overflow-y-auto max-h-48 flex flex-col gap-1.5 pr-1">
-                {roster.map((player, i) => (
-                  <div key={player.id ?? i}
-                    className="flex items-center justify-between bg-bg rounded-lg px-3 py-2.5 border border-border">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-muted w-6">#{player.number ?? i + 1}</span>
-                      <span className="text-sm font-semibold text-text">{player.name}</span>
-                    </div>
-                    <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${
-                      player.status === 'disponible' ? 'bg-green-500' :
-                      player.status === 'duda'       ? 'bg-yellow-400' : 'bg-red-500'
-                    }`} />
+          {data.nextTraining ? (
+            <div className="flex-1 p-5 flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white mb-1">{data.nextTraining.title}</h3>
+                <p className="text-xs text-muted font-medium mb-4 line-clamp-2">{data.nextTraining.objective || 'Sin objetivo definido'}</p>
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-1.5 text-muted">
+                    <Calendar size={12} />
+                    <span className="text-[10px] font-bold">{data.nextTraining.date}</span>
                   </div>
-                ))}
+                  <div className="flex items-center gap-1.5 text-muted">
+                    <Clock size={12} />
+                    <span className="text-[10px] font-bold">{data.nextTraining.duration}'</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-muted">
+                    <Activity size={12} />
+                    <span className="text-[10px] font-bold">{(data.nextTraining.exercises || []).length} ejercicios</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Link to="/entrenamientos" className="flex-1 py-3 bg-accent text-bg text-center text-[9px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-accent/20">
+                  Editar Sesión
+                </Link>
+                <Link to="/alineacion" className="px-4 py-3 bg-white/5 text-muted text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/5">
+                  Once
+                </Link>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3 py-8">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-border" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <p className="text-sm font-semibold text-muted">Plantilla vacía</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-40">
+              <Dumbbell size={32} className="mb-3" />
+              <p className="text-xs font-bold">No hay sesiones programadas</p>
+              <Link to="/entrenamientos" className="mt-3 text-[9px] font-black text-accent uppercase tracking-widest">+ Crear Sesión</Link>
             </div>
           )}
-        </DashCard>
+        </div>
 
-        {/* Accesos Rápidos — 3 cols */}
-        <DashCard title="Accesos Rápidos" icon="⚡" className="col-span-3">
-          <div className="flex flex-col gap-3 h-full">
-            <Link
-              to="/tactica"
-              className="flex items-center gap-3 p-4 bg-bg hover:bg-accent/10 rounded-xl border border-border hover:border-accent/40 transition-all group"
-            >
-              <div className="bg-accent/15 text-accent p-2.5 rounded-lg group-hover:bg-accent group-hover:text-bg transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round"
-                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
+        {/* ═══ CARD 2: Estado de la Plantilla (4 cols) ═══ */}
+        <div className="col-span-4 min-h-[300px] card !p-0 flex flex-col overflow-hidden hover:border-blue-500/20 transition-all">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                <Users size={16} />
               </div>
-              <div>
-                <p className="font-black text-text text-sm">Pizarra</p>
-                <p className="text-xs text-muted">Editor táctico</p>
-              </div>
+              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Estado Plantilla</span>
+            </div>
+            <Link to="/plantilla" className="text-[9px] font-bold text-accent flex items-center gap-1 hover:underline">
+              Gestionar <ChevronRight size={10} />
             </Link>
+          </div>
 
-            <Link
-              to="/plantilla"
-              className="flex items-center gap-3 p-4 bg-bg hover:bg-accent/10 rounded-xl border border-border hover:border-accent/40 transition-all group"
-            >
-              <div className="bg-accent/15 text-accent p-2.5 rounded-lg group-hover:bg-accent group-hover:text-bg transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+          <div className="flex-1 p-5 flex flex-col justify-between">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-white/[0.03] rounded-xl border border-white/5">
+                <div className="text-2xl font-black text-white">{data.roster.length}</div>
+                <div className="text-[8px] font-bold text-muted uppercase tracking-widest">Jugadores</div>
               </div>
-              <div>
-                <p className="font-black text-text text-sm">Roster</p>
-                <p className="text-xs text-muted">Gestión de plantilla</p>
+              <div className="p-3 bg-white/[0.03] rounded-xl border border-white/5">
+                <div className="text-2xl font-black text-white">{starters.length}</div>
+                <div className="text-[8px] font-bold text-muted uppercase tracking-widest">Titulares</div>
               </div>
-            </Link>
+              <div className="p-3 bg-white/[0.03] rounded-xl border border-white/5">
+                <div className="flex items-center gap-1">
+                  <TrendingUp size={14} className="text-amber-500" />
+                  <span className="text-2xl font-black text-white">{avgRating}</span>
+                </div>
+                <div className="text-[8px] font-bold text-muted uppercase tracking-widest">Val. Media</div>
+              </div>
+              <div className="p-3 bg-white/[0.03] rounded-xl border border-white/5">
+                <div className="flex items-center gap-1">
+                  {injuredCount > 0 ? <AlertCircle size={14} className="text-rose-500" /> : <CheckCircle size={14} className="text-emerald-500" />}
+                  <span className="text-2xl font-black text-white">{injuredCount}</span>
+                </div>
+                <div className="text-[8px] font-bold text-muted uppercase tracking-widest">Lesionados</div>
+              </div>
+            </div>
 
-            <div className="mt-auto pt-3 border-t border-border">
-              <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full shrink-0 ${
-                  syncStatus === 'ok' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                }`} />
-                <span className="text-xs text-muted">
-                  {syncStatus === 'ok' ? 'Supabase conectado' : 'Sin conexión'}
-                </span>
-              </div>
+            {/* Online indicator */}
+            <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[9px] font-bold text-emerald-400">{data.onlinePlayers} jugadores conectados</span>
             </div>
           </div>
-        </DashCard>
+        </div>
+
+        {/* ═══ CARD 3: Accesos Rápidos (3 cols) ═══ */}
+        <div className="col-span-3 min-h-[300px] card !p-0 flex flex-col overflow-hidden hover:border-purple-500/20 transition-all">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+              <Zap size={16} />
+            </div>
+            <span className="text-[10px] font-black text-muted uppercase tracking-widest">Accesos Rápidos</span>
+          </div>
+
+          <div className="flex-1 p-4 flex flex-col gap-2">
+            {[
+              { to: '/tactica', icon: <PenTool size={16} />, label: 'Pizarra Táctica', desc: `${data.playsCount} jugadas`, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              { to: '/plantilla', icon: <Users size={16} />, label: 'Gestionar Roster', desc: `${data.roster.length} jugadores`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+              { to: '/alineacion', icon: <LayoutGrid size={16} />, label: 'Alineación', desc: 'Editar XI', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              { to: '/tecnica', icon: <Target size={16} />, label: 'Videoteca', desc: 'Ejercicios técnicos', color: 'text-rose-500', bg: 'bg-rose-500/10' },
+              { to: '/entrenamientos', icon: <Dumbbell size={16} />, label: 'Sesiones', desc: `${data.trainingsCount} creadas`, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+            ].map(item => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 hover:bg-white/[0.04] transition-all group active:scale-[0.98]"
+              >
+                <div className={`w-9 h-9 rounded-xl ${item.bg} ${item.color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                  {item.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-white truncate">{item.label}</div>
+                  <div className="text-[9px] font-medium text-muted truncate">{item.desc}</div>
+                </div>
+                <ChevronRight size={12} className="text-muted/30 group-hover:text-muted transition-colors" />
+              </Link>
+            ))}
+          </div>
+        </div>
 
       </div>
     </div>

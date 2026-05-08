@@ -1,81 +1,97 @@
-import React from 'react';
+import { Component } from 'react';
+import { AlertTriangle, RefreshCw, Copy, Bug } from 'lucide-react';
 
-export class ErrorBoundary extends React.Component {
+export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error, info) {
-    console.error('[CABRERIZOS ERROR BOUNDARY]', {
-      message: error.message,
-      stack: error.stack,
-      componentStack: info.componentStack,
-      timestamp: new Date().toISOString(),
-    });
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo });
+    console.error(
+      `[CRITICAL UI ERROR] ${this.props.boundary || 'App'}:`,
+      error.message,
+      '\nStack:', errorInfo.componentStack
+    );
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, errorInfo: null });
+  };
+
+  handleCopy = () => {
+    const text = `[${this.props.boundary || 'App'}] ${this.state.error?.message}\n${this.state.error?.stack || ''}`;
+    navigator.clipboard.writeText(text).catch(() => {});
   };
 
   render() {
-    if (!this.state.hasError) return this.props.children;
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center p-6 min-h-[200px] animate-fade-in">
+          <div className="w-full max-w-lg bg-rose-500/5 border border-rose-500/20 rounded-2xl p-6 shadow-[0_0_40px_rgba(244,63,94,0.08)]">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-rose-500/10 rounded-xl flex items-center justify-center">
+                <Bug size={20} className="text-rose-500" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-rose-400 uppercase tracking-wider">Error de Renderizado</h3>
+                <p className="text-[9px] font-bold text-rose-400/60 uppercase tracking-widest">
+                  Módulo: {this.props.boundary || 'General'}
+                </p>
+              </div>
+            </div>
 
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg p-6">
-        <div className="max-w-lg w-full bg-surface-2 border-2 border-red-500/50 rounded-2xl shadow-2xl overflow-hidden">
-          <div className="bg-red-500 px-6 py-4 flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white shrink-0" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <h1 className="text-white font-black text-lg tracking-tight">Error de Componente</h1>
-          </div>
-          <div className="p-6">
-            <p className="text-muted text-sm mb-4">
-              Un componente ha fallado. El resto de la app sigue activa.
-            </p>
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-5">
-              <p className="text-xs font-black text-red-400 uppercase tracking-widest mb-2">
-                Mensaje del error
-              </p>
-              <code className="text-sm text-red-300 font-mono break-words leading-relaxed">
-                {this.state.error?.message ?? 'Error desconocido'}
+            {/* Error Message */}
+            <div className="bg-black/30 rounded-xl p-4 mb-4 border border-rose-500/10">
+              <code className="text-xs text-rose-300 font-mono leading-relaxed break-all block">
+                {this.state.error?.message || 'Error desconocido'}
               </code>
             </div>
-            <details className="mb-5">
-              <summary className="cursor-pointer text-xs text-muted hover:text-text font-semibold select-none">
-                Stack trace
-              </summary>
-              <pre className="whitespace-pre-wrap break-words bg-bg rounded-xl p-3 text-xs leading-relaxed max-h-40 overflow-y-auto border border-border text-muted mt-2">
-                {this.state.error?.stack}
-              </pre>
-            </details>
-            <div className="flex gap-3">
+
+            {/* Component Stack (collapsed) */}
+            {this.state.errorInfo?.componentStack && (
+              <details className="mb-4">
+                <summary className="text-[9px] font-bold text-muted uppercase tracking-widest cursor-pointer hover:text-white transition-colors">
+                  ▸ Stack de componentes
+                </summary>
+                <pre className="mt-2 bg-black/20 rounded-lg p-3 text-[10px] text-muted font-mono overflow-x-auto max-h-[150px] overflow-y-auto no-scrollbar border border-white/5">
+                  {this.state.errorInfo.componentStack}
+                </pre>
+              </details>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2">
               <button
                 onClick={this.handleReset}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black text-sm py-2.5 rounded-xl transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-rose-500/10 text-rose-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-500/20 transition-all active:scale-95"
               >
+                <RefreshCw size={12} />
                 Reintentar
               </button>
               <button
-                onClick={() => window.location.reload()}
-                className="flex-1 bg-bg hover:bg-surface-2 text-text font-black text-sm py-2.5 rounded-xl transition-colors border border-border"
+                onClick={this.handleCopy}
+                className="px-4 py-3 bg-white/5 text-muted rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95 border border-white/5"
               >
-                Recargar
+                <Copy size={12} />
               </button>
             </div>
+
+            {/* Hint */}
+            <p className="mt-3 text-[8px] font-medium text-muted/40 text-center">
+              Si el error persiste, recarga la página (F5) o contacta con el administrador.
+            </p>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
+
+    return this.props.children;
   }
 }
-
-export default ErrorBoundary;
