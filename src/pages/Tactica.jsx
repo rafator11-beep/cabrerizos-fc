@@ -303,7 +303,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
               maxHeight: '100%',
               width: 'auto',
               maxWidth: '100%',
-              transformOrigin: 'center'
             }}
             className="bg-surface rounded-[32px] shadow-[0_0_80px_rgba(0,0,0,0.6)] border border-white/5 relative overflow-hidden group transition-all duration-500"
           >

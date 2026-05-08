@@ -126,10 +126,10 @@ function balancedShuffle(players) {
 }
 
 /**
- * Main distribution function with multi-station support.
+ * Main distribution function.
  * @param {Array} exercises - Array of exercise objects with { id, name, description }
  * @param {Array} attendees - Array of player objects with { id, name, number, position }
- * @returns {Object} session_lineup - { [exercise_id]: { estaciones: [{ equipoA: [...], equipoB: [...], comodines: [...] }], rotacion: [...] } }
+ * @returns {Object} session_lineup - { [exercise_id]: { equipoA: [...], equipoB: [...], comodines: [...], rotacion: [...] } }
  */
 export function distributeGroups(exercises, attendees) {
   if (!exercises?.length || !attendees?.length) return {};
@@ -142,11 +142,9 @@ export function distributeGroups(exercises, attendees) {
     if (!parsed) {
       // No pattern found — assign all attendees as a single group
       sessionLineup[ex.id] = {
-        estaciones: [{
-          equipoA: attendees.map(p => ({ id: p.id, name: p.name, number: p.number })),
-          equipoB: [],
-          comodines: [],
-        }],
+        equipoA: attendees.map(p => ({ id: p.id, name: p.name, number: p.number })),
+        equipoB: [],
+        comodines: [],
         rotacion: [],
       };
       return;
@@ -155,37 +153,22 @@ export function distributeGroups(exercises, attendees) {
     const shuffled = balancedShuffle([...attendees]);
     const { teamA, teamB, extras, total } = parsed;
     
-    // Calculate how many stations we can create
-    const playersPerStation = total;
-    const numStations = Math.max(1, Math.floor(shuffled.length / playersPerStation));
-    
-    const estaciones = [];
     let pointer = 0;
+    const pick = (n) => {
+      const slice = shuffled.slice(pointer, pointer + n).map(p => ({ id: p.id, name: p.name, number: p.number }));
+      pointer += n;
+      return slice;
+    };
     
-    for (let station = 0; station < numStations; station++) {
-      const pick = (n) => {
-        const slice = shuffled.slice(pointer, pointer + n).map(p => ({ id: p.id, name: p.name, number: p.number }));
-        pointer += n;
-        return slice;
-      };
-      
-      const groupA = pick(Math.min(teamA, shuffled.length - pointer));
-      const groupB = pick(Math.min(teamB, shuffled.length - pointer));
-      const comodines = pick(Math.min(extras, shuffled.length - pointer));
-      
-      estaciones.push({
-        equipoA: groupA,
-        equipoB: groupB,
-        comodines,
-        parsed: `${teamA}v${teamB}${extras ? `+${extras}` : ''}`,
-      });
-    }
-    
-    // Remaining players go to rotation
+    const groupA = pick(Math.min(teamA, shuffled.length - pointer));
+    const groupB = pick(Math.min(teamB, shuffled.length - pointer));
+    const comodines = pick(Math.min(extras, shuffled.length - pointer));
     const rotacion = shuffled.slice(pointer).map(p => ({ id: p.id, name: p.name, number: p.number }));
     
     sessionLineup[ex.id] = {
-      estaciones,
+      equipoA: groupA,
+      equipoB: groupB,
+      comodines,
       rotacion,
       parsed: `${teamA}v${teamB}${extras ? `+${extras}` : ''}`,
     };
@@ -195,8 +178,8 @@ export function distributeGroups(exercises, attendees) {
 }
 
 /**
- * Get a player's assignments across all exercises with multi-station support.
- * @returns {Array} [{ exerciseName, exerciseIndex, team, parsed, stationIndex }]
+ * Get a player's assignments across all exercises.
+ * @returns {Array} [{ exerciseName, exerciseIndex, team, parsed }]
  */
 export function getPlayerAssignments(sessionLineup, exercises, playerId) {
   if (!sessionLineup || !exercises?.length || !playerId) return [];
@@ -211,42 +194,22 @@ export function getPlayerAssignments(sessionLineup, exercises, playerId) {
       { key: 'equipoA', label: 'Equipo A', color: '#3b82f6' },
       { key: 'equipoB', label: 'Equipo B', color: '#ef4444' },
       { key: 'comodines', label: 'Comodín', color: '#f59e0b' },
+      { key: 'rotacion', label: 'Rotación', color: '#6b7280' },
     ];
     
-    // Check each station
-    if (lineup.estaciones) {
-      lineup.estaciones.forEach((estacion, stationIndex) => {
-        for (const t of teams) {
-          if (estacion[t.key]?.some(p => p.id === playerId)) {
-            assignments.push({
-              exerciseName: ex.name,
-              exerciseIndex: i,
-              team: t.label,
-              teamKey: t.key,
-              color: t.color,
-              parsed: estacion.parsed || lineup.parsed || '',
-              image_url: ex.image_url,
-              stationIndex: stationIndex + 1,
-              stationLabel: `Posta ${stationIndex + 1}`,
-            });
-          }
-        }
-      });
-    }
-    
-    // Check rotation
-    if (lineup.rotacion?.some(p => p.id === playerId)) {
-      assignments.push({
-        exerciseName: ex.name,
-        exerciseIndex: i,
-        team: 'Rotación',
-        teamKey: 'rotacion',
-        color: '#6b7280',
-        parsed: lineup.parsed || '',
-        image_url: ex.image_url,
-        stationIndex: null,
-        stationLabel: 'Rotación',
-      });
+    for (const t of teams) {
+      if (lineup[t.key]?.some(p => p.id === playerId)) {
+        assignments.push({
+          exerciseName: ex.name,
+          exerciseIndex: i,
+          team: t.label,
+          teamKey: t.key,
+          color: t.color,
+          parsed: lineup.parsed || '',
+          image_url: ex.image_url,
+        });
+        break;
+      }
     }
   });
   

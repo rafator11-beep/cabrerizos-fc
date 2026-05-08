@@ -69,7 +69,7 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className={`${isRealAdmin && !isMobile ? 'grid grid-cols-[260px_1fr_320px] h-screen w-screen overflow-hidden' : 'flex h-screen'} bg-bg font-main select-none text-text`}>
+    <div className={`${isRealAdmin && !isMobile ? 'grid grid-cols-[260px_1fr] h-screen w-screen overflow-hidden' : 'flex h-screen'} bg-bg font-main select-none text-text`}>
       
       {/* SIDEBAR */}
       <aside className={`
@@ -115,7 +115,7 @@ export default function DashboardLayout() {
       )}
 
       {/* MAIN CONTAINER */}
-      <div className={`${isRealAdmin && !isMobile ? 'col-span-1 flex flex-col h-full overflow-hidden' : 'flex-1 flex flex-col min-w-0 relative h-full'}`}>
+      <div className={`${isRealAdmin && !isMobile ? 'flex flex-col h-full overflow-hidden' : 'flex-1 flex flex-col min-w-0 relative h-full'}`}>
         
         {/* HEADER — Desktop-optimized with breadcrumb + command trigger */}
         <header className="flex-shrink-0 glass border-b border-white/5 flex items-center justify-between px-4 md:px-6 z-40" style={{ height: 'var(--header-h)' }}>
@@ -219,18 +219,6 @@ export default function DashboardLayout() {
           ))}
         </nav>
       </div>
-
-      {/* DESKTOP RIGHT PANEL */}
-      {isRealAdmin && !isMobile && (
-        <aside className="bg-surface border-l border-white/5 flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-white/5">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest">Herramientas</h3>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {/* Panel content will be populated by individual pages */}
-          </div>
-        </aside>
-      )}
     </div>
   );
 }
