@@ -478,7 +478,39 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
         {/* Photo */}
       <div onClick={isAdmin ? onPhotoClick : undefined}
           style={{ width: 52, height: 52, borderRadius: '50%', background: p.photo_url ? 'white' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#00ff87', overflow: 'hidden', border: '2.5px solid rgba(255,255,255,0.1)', cursor: isAdmin ? 'pointer' : 'default', position: 'relative', flexShrink: 0 }}>
-          {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.number || <User size={22} />)}
+          {p.photo_url ? (
+            <div style={{ 
+              width: '100%', 
+              height: '100%', 
+              position: 'relative',
+              borderRadius: '50%',
+              overflow: 'hidden'
+            }}>
+              <img src={p.photo_url} alt="" style={{ 
+                width: '100%', 
+                height: '100%', 
+                objectFit: 'cover',
+                filter: 'contrast(1.4) saturate(1.3) brightness(1.1)'
+              }} />
+              {/* Subtle overlay to help blend edges */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `
+                  radial-gradient(circle at center, 
+                    transparent 0%, 
+                    transparent 60%, 
+                    rgba(0, 0, 0, 0.1) 85%, 
+                    rgba(0, 0, 0, 0.3) 95%
+                  )
+                `,
+                pointerEvents: 'none'
+              }} />
+            </div>
+          ) : (p.number || <User size={22} />)}
           {isAdmin && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 16, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Camera size={9} color="white" /></div>}
           {uploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}><div style={{ width: 14, height: 14, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /></div>}
         </div>
