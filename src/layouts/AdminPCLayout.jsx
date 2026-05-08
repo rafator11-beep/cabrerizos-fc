@@ -99,7 +99,7 @@ function AdminPCContent() {
         {/* Center: Large Pitch Workspace */}
         <div className="flex-1 flex flex-col bg-[#05070a] relative overflow-hidden z-0">
           <div className="w-full h-full flex overflow-hidden relative">
-             <Tactica externalExercise={selectedExercise} overridePreset={cameraPreset} />
+             <Tactica externalExercise={selectedExercise} overridePreset={cameraPreset} hideLibrary={true} />
           </div>
         </div>
 

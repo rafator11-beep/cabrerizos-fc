@@ -10,7 +10,8 @@ import StatsOverview from '../components/StatsOverview';
 import AdminDashboard from '../components/AdminDashboard';
 
 export default function Home() {
-  const { profile, isAdmin, user } = useAuth();
+  const { profile, isRealAdmin, user } = useAuth();
+  const isAdmin = isRealAdmin;
   const today = new Date().toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
   
   const displayName = profile?.name || user?.user_metadata?.name || (isAdmin ? "Míster" : "Jugador");
@@ -79,7 +80,7 @@ export default function Home() {
         <div className="flex items-center gap-2 text-[10px] font-black text-accent uppercase tracking-[0.2em] opacity-80">
           <Calendar size={12} /> {today}
         </div>
-        <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white">
+        <h1 className="text-4xl md:text-4xl font-black tracking-tighter text-white">
           ¡Hola, <span className="text-accent">{displayName}</span>!
         </h1>
         <p className="text-muted text-xs md:text-base font-medium max-w-md opacity-60">

@@ -37,6 +37,7 @@ const FieldToken = ({ jugador, x, y, dragging, onPointerDown }) => {
             width: '100%',
             height: '100%',
             objectFit: 'contain',
+            mixBlendMode: 'lighten',
             filter: `drop-shadow(0 10px 15px rgba(0,0,0,0.5))${dragging ? ' drop-shadow(0 0 8px rgba(0,255,135,0.7))' : ''}`,
           }}
         />

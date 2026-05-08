@@ -29,7 +29,7 @@ const LEGEND = [
   { id: 'zigzag', label: 'Conducción', icon: '〰', color: '#3b82f6' },
 ];
 
-export default function Tactica({ externalExercise, overridePreset }) {
+export default function Tactica({ externalExercise = null, overridePreset = null, hideLibrary = false }) {
   const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
   const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
@@ -167,7 +167,7 @@ export default function Tactica({ externalExercise, overridePreset }) {
     <div className="flex h-full bg-bg overflow-hidden">
       
       {/* 1. LEFT SIDEBAR: Biblioteca (colapsable en desktop) */}
-      {!externalExercise && (
+      {!externalExercise && !hideLibrary && (
         <div className={`
           flex-shrink-0 bg-surface/30 border-r border-white/5 flex flex-col transition-all duration-300
           w-full md:w-auto

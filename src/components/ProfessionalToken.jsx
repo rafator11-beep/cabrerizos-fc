@@ -31,28 +31,31 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
         </filter>
       </defs>
 
-      <g filter={isSelected ? `url(#drop-shadow-selected-${id})` : `url(#drop-shadow-${id})`}>
-        {hasPhoto ? (
-          // Just the transparent PNG, no circular clip, no background
-          <image 
-            href={photo_url} 
-            x={-size / 2} 
-            y={-size / 2} 
-            width={size} 
-            height={size} 
-            preserveAspectRatio="xMidYMid meet" 
-            crossOrigin="anonymous"
+      {/* We use foreignObject so CSS mix-blend-mode and drop-shadow work perfectly without SVG bugs */}
+      {hasPhoto ? (
+        <foreignObject x={-size/2 - 5} y={-size/2 - 5} width={size + 10} height={size + 10} className="overflow-visible">
+          <img 
+            src={photo_url} 
+            crossOrigin="anonymous" 
+            alt={name || label}
+            className="w-full h-full object-contain"
+            style={{ 
+              mixBlendMode: 'screen',
+              filter: isSelected 
+                ? 'drop-shadow(0px 0px 8px rgba(0,255,135,0.8))'
+                : 'drop-shadow(0px 4px 6px rgba(0,0,0,0.5))'
+            }} 
+            draggable={false}
           />
-        ) : (
-          // Fallback if no photo
-          <g>
-            <circle r={r} fill={tokenColor} stroke="white" strokeWidth="2" />
-            <text textAnchor="middle" dy="5" fontSize="12" fontWeight="900" fill="white" style={{ pointerEvents: 'none', fontFamily: 'system-ui, sans-serif' }}>
-              {label}
-            </text>
-          </g>
-        )}
-      </g>
+        </foreignObject>
+      ) : (
+        <g filter={isSelected ? `url(#drop-shadow-selected-${id})` : `url(#drop-shadow-${id})`}>
+          <circle r={r} fill={tokenColor} stroke="white" strokeWidth="2" />
+          <text textAnchor="middle" dy="5" fontSize="12" fontWeight="900" fill="white" style={{ pointerEvents: 'none', fontFamily: 'system-ui, sans-serif' }}>
+            {label}
+          </text>
+        </g>
+      )}
 
       {/* Clean, professional name badge */}
       {name && (
