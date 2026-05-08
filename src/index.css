@@ -12,8 +12,9 @@
 }
 
 :root {
-  --nav-h: 56px;
-  --header-h: 50px;
+  --nav-h: 64px;
+  --header-h: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
@@ -38,23 +39,40 @@ body {
   overscroll-behavior: none;
 }
 
-/* Glassmorphism */
+/* ── Page Container ── */
+.page-container {
+  @apply flex-1 flex flex-col h-full overflow-y-auto overflow-x-hidden;
+  padding: 16px;
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
+}
+@media (min-width: 768px) {
+  .page-container {
+    padding: 32px 40px;
+    padding-bottom: 32px;
+  }
+}
+
+/* ── Glassmorphism ── */
 .glass {
-  background: rgba(15, 20, 29, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 20, 29, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .glass-card {
-  @apply bg-surface-2/40 backdrop-blur-xl border border-white/5 rounded-[28px] p-6 transition-all active:scale-[0.98];
+  @apply bg-surface-2/40 backdrop-blur-xl border border-white/5 rounded-[24px] p-5 transition-all active:scale-[0.98];
 }
 
-/* Redefining legacy classes for premium look */
+/* ── Card System ── */
 .card {
-  @apply bg-surface border border-white/5 rounded-[32px] p-6 transition-all;
+  @apply bg-surface border border-white/5 rounded-[24px] p-5 transition-all;
+}
+@media (min-width: 768px) {
+  .card { @apply rounded-[32px] p-6; }
 }
 
+/* ── Button System ── */
 .btn {
   @apply inline-flex items-center justify-center gap-2 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40;
 }
@@ -68,34 +86,55 @@ body {
 }
 
 .btn-sm { @apply px-4 py-2 text-[9px]; }
+.btn-danger { @apply bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white; }
 
+/* ── Input System ── */
 .input-field {
-  @apply w-full bg-surface-2/40 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-accent/40 transition-all;
+  @apply w-full bg-surface-2/60 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-accent/40 transition-all placeholder:text-white/20;
 }
 
-/* Animations */
+/* ── Animations ── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Base resets */
+@keyframes slideInBottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-in-bottom {
+  animation: slideInBottom 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Base Resets ── */
 @layer base {
   html, body {
-    @apply overflow-hidden overscroll-none select-none touch-pan-y;
+    @apply overflow-hidden overscroll-none select-none;
+    touch-action: pan-y;
   }
   
   #root {
@@ -106,23 +145,97 @@ body {
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
-/* Utilities */
-.text-accent { color: #00ff87; }
-.bg-accent { background-color: #00ff87; }
-.border-accent { border-color: #00ff87; }
-.text-bg { color: #05070a; }
-.text-muted { color: #8a99ae; }
-
-/* Custom shadows */
+/* ── Custom Shadows ── */
 .shadow-accent-glow {
   box-shadow: 0 0 30px rgba(0, 255, 135, 0.1);
 }
 
-/* Field specific */
+/* ── Field Specific ── */
 .field-container {
   @apply bg-[#05070a] relative overflow-hidden;
+  touch-action: none;
 }
 
 .field-line {
   @apply stroke-white/15 fill-none;
 }
+
+/* ── Mobile Field Canvas ── */
+.mobile-field {
+  @apply w-full relative overflow-hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Category / Tag Chips ── */
+.chip {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95;
+}
+.chip-active {
+  @apply bg-accent/15 text-accent border border-accent/30;
+}
+.chip-inactive {
+  @apply bg-white/5 text-white/40 border border-white/5 hover:bg-white/10;
+}
+
+/* ── Modal / Sheet Overlay ── */
+.modal-overlay {
+  @apply fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md;
+}
+.modal-sheet {
+  @apply bg-surface w-full max-w-md rounded-[32px] p-8 border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.8)];
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Lightbox for images ── */
+.lightbox-overlay {
+  @apply fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4;
+}
+.lightbox-overlay img {
+  @apply max-w-full max-h-full object-contain rounded-2xl;
+}
+
+/* ── Video embed container ── */
+.video-embed {
+  @apply relative w-full overflow-hidden rounded-2xl bg-black/40 border border-white/5;
+  padding-bottom: 56.25%; /* 16:9 */
+}
+.video-embed iframe {
+  @apply absolute top-0 left-0 w-full h-full;
+  border: none;
+}
+
+/* ── Desktop Scrollbar ── */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+}
+
+/* ── Focus ring for keyboard nav ── */
+*:focus-visible {
+  outline: 2px solid rgba(0,255,135,0.4);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* ── Desktop hover lift ── */
+@media (min-width: 768px) {
+  .card:hover {
+    border-color: rgba(255,255,255,0.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+}
+
+/* ── Tooltip utility ── */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-surface-2 text-white text-[9px] font-bold rounded-lg whitespace-nowrap border border-white/10 z-50;
+  animation: fadeIn 0.15s ease;
+}
+

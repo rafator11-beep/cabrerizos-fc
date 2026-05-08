@@ -4,6 +4,10 @@ import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { Calendar, CheckCircle, Clock, Dumbbell, PenTool, Users, LayoutGrid, Target, Star, ChevronRight, Activity, Trophy } from 'lucide-react';
 import NextSession from '../components/NextSession';
+import SeasonCalendar from '../components/SeasonCalendar';
+import QuickNotes from '../components/QuickNotes';
+import StatsOverview from '../components/StatsOverview';
+import AdminDashboard from '../components/AdminDashboard';
 
 export default function Home() {
   const { profile, isAdmin, user } = useAuth();
@@ -24,15 +28,15 @@ export default function Home() {
 
   const fetchDashboard = async () => {
     try {
-      const [{ count: pc }, { count: tc }, { count: plc }, { data: rt }] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'player'),
-        supabase.from('trainings').select('*', { count: 'exact', head: true }),
-        supabase.from('plays').select('*', { count: 'exact', head: true }),
+      const [rosterRes, trainingsRes, playsRes, { data: rt }] = await Promise.all([
+        supabase.from('roster').select('id'),
+        supabase.from('trainings').select('id'),
+        supabase.from('plays').select('id'),
         supabase.from('trainings').select('*').order('date', { ascending: false }).limit(1),
       ]);
-      setPlayerCount(pc || 0);
-      setTrainingCount(tc || 0);
-      setPlayCount(plc || 0);
+      setPlayerCount((rosterRes.data || []).length);
+      setTrainingCount((trainingsRes.data || []).length);
+      setPlayCount((playsRes.data || []).length);
       if (rt?.length > 0) setRecentTraining(rt[0]);
 
       if (!isAdmin && user?.id) {
@@ -50,7 +54,7 @@ export default function Home() {
           console.warn('Roster fetch failed (likely RLS):', e);
         }
       }
-    } catch { }
+    } catch (err) { console.error('Dashboard fetch failed:', err); }
   };
 
   const stats = [
@@ -68,7 +72,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="space-y-6 md:space-y-10 animate-fade-in">
+    <div className="space-y-6 md:space-y-10 animate-fade-in p-6 md:p-10">
       
       {/* MINIMALIST HERO */}
       <div className="flex flex-col gap-2">
@@ -82,6 +86,9 @@ export default function Home() {
           Central de mando del Juvenil B. Gestiona la pizarra y el equipo.
         </p>
       </div>
+
+      {/* ADMIN DASHBOARD — Desktop Only */}
+      {isAdmin && <AdminDashboard />}
 
       {/* STATS GRID */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -176,6 +183,15 @@ export default function Home() {
             </Link>
           ))}
         </div>
+      </div>
+
+      {/* STATS OVERVIEW */}
+      <StatsOverview />
+
+      {/* CALENDAR + NOTES */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <SeasonCalendar />
+        {isAdmin && <QuickNotes />}
       </div>
     </div>
   );

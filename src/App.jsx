@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import DashboardLayout from './pages/DashboardLayout';
 import Home from './pages/Home';
@@ -42,29 +43,31 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Home />} />
-        <Route path="entrenamientos" element={<Entrenamientos />} />
-        <Route path="tactica" element={<Tactica />} />
-        <Route path="tecnica" element={<Tecnica />} />
-        <Route path="plantilla" element={<Plantilla />} />
-        <Route path="alineacion" element={<Alineacion />} />
-        <Route path="feedback" element={<Feedback />} />
-        <Route path="mi-sesion" element={<PlayerDashboard />} />
-        {/* Legacy route redirect */}
-        <Route path="pizarra" element={<Navigate to="/tactica" replace />} />
-      </Route>
-      {/* Catch-all: redirect to home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <ErrorBoundary boundary="App">
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ErrorBoundary boundary="Home"><Home /></ErrorBoundary>} />
+          <Route path="entrenamientos" element={<ErrorBoundary boundary="Entrenamientos"><Entrenamientos /></ErrorBoundary>} />
+          <Route path="tactica" element={<ErrorBoundary boundary="Táctica"><Tactica /></ErrorBoundary>} />
+          <Route path="tecnica" element={<ErrorBoundary boundary="Técnica"><Tecnica /></ErrorBoundary>} />
+          <Route path="plantilla" element={<ErrorBoundary boundary="Plantilla"><Plantilla /></ErrorBoundary>} />
+          <Route path="alineacion" element={<ErrorBoundary boundary="Alineación"><Alineacion /></ErrorBoundary>} />
+          <Route path="feedback" element={<ErrorBoundary boundary="Feedback"><Feedback /></ErrorBoundary>} />
+          <Route path="mi-sesion" element={<ErrorBoundary boundary="Mi Sesión"><PlayerDashboard /></ErrorBoundary>} />
+          {/* Legacy route redirect */}
+          <Route path="pizarra" element={<Navigate to="/tactica" replace />} />
+        </Route>
+        {/* Catch-all: redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }

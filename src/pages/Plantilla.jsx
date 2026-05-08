@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Edit3, Save, X, User, Camera, Plus, Trash2, ChevronDown, ChevronUp, Activity, Move, Spline } from 'lucide-react';
+import { Edit3, Save, X, User, Camera, Plus, Trash2, ChevronDown, ChevronUp, Move, Spline, Activity } from 'lucide-react';
 import FieldCanvas from '../components/FieldCanvas';
 
 const PIZARRA_ARROW_TYPES = [
@@ -67,9 +67,7 @@ export default function Plantilla() {
         y: 50 + Math.random() * 260,
         color: isRival ? '#ef4444' : '#0057ff',
         label,
-        name: isRival ? null : [p.name, p.surname].filter(Boolean).join(' ').trim(),
-        photo_url: isRival ? '' : (p.photo_url || ''),
-        assigned_player_id: isRival ? null : p.id,
+        name: isRival ? null : p.name,
         isRival,
       }]);
     }
@@ -163,7 +161,7 @@ export default function Plantilla() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#96a0b5' }}>Cargando plantilla...</div>;
 
   return (
-    <div style={{ height: 'calc(100vh - 100px)', overflowY: 'auto' }}>
+    <div style={{ height: 'calc(100vh - 100px)', overflowY: 'auto', padding: '24px' }}>
       <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={(e) => { const f = e.target.files?.[0]; if (f && uploadingId) handlePhotoUpload(uploadingId, f); e.target.value = ''; }} />
 
@@ -249,8 +247,6 @@ export default function Plantilla() {
                   setDrawPt={setPizarraDrawPt}
                   onPlace={(kind, x, y) => setPizarraTokens(ts => [...ts, { id: kind + Date.now(), kind, x, y }])}
                   onDelete={id => setPizarraTokens(ts => ts.filter(t => t.id !== id))}
-                  viewMode="full"
-                  adaptiveView={false}
                 />
               </div>
 
@@ -414,10 +410,10 @@ function TeamSummary({ players }) {
 
 function SummaryCard({ icon, label, value, color }) {
   return (
-    <div style={{ flex: '1 1 100px', minWidth: 90, background: 'white', border: '1px solid #e2e6ed', borderRadius: 10, padding: '8px 12px', textAlign: 'center' }}>
+    <div style={{ flex: '1 1 100px', minWidth: 90, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 12px', textAlign: 'center' }}>
       <div style={{ fontSize: 16 }}>{icon}</div>
       <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
-      <div style={{ fontSize: 9, color: '#96a0b5', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 9, color: '#8a99ae', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
     </div>
   );
 }
@@ -480,11 +476,11 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
     <div className="card" style={{ padding: 12, position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: hasStats ? 8 : 0 }}>
         {/* Photo */}
-        <div onClick={isAdmin ? onPhotoClick : undefined}
-          style={{ width: 50, height: 64, borderRadius: 14, background: 'linear-gradient(180deg,#f8fafc,#e2e8f0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#0057ff', overflow: 'hidden', border: '2px solid #dbe4f0', cursor: isAdmin ? 'pointer' : 'default', position: 'relative', flexShrink: 0, boxShadow: '0 10px 22px rgba(15,23,42,.12)' }}>
+      <div onClick={isAdmin ? onPhotoClick : undefined}
+          style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#00ff87', overflow: 'hidden', border: '2.5px solid rgba(255,255,255,0.1)', cursor: isAdmin ? 'pointer' : 'default', position: 'relative', flexShrink: 0 }}>
           {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.number || <User size={22} />)}
-          {isAdmin && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 18, background: 'linear-gradient(180deg,rgba(15,23,42,.25),rgba(15,23,42,.78))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Camera size={10} color="white" /></div>}
-          {uploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14 }}><div style={{ width: 14, height: 14, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /></div>}
+          {isAdmin && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 16, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Camera size={9} color="white" /></div>}
+          {uploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}><div style={{ width: 14, height: 14, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /></div>}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -492,8 +488,8 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
             <span style={{ fontWeight: 800, fontSize: 14 }}>{p.name}</span>
             {p.number && <span style={{ fontWeight: 800, fontSize: 12, color: '#0057ff' }}>#{p.number}</span>}
           </div>
-          <div style={{ fontWeight: 600, fontSize: 11, color: '#64748b' }}>{p.surname}</div>
-          <div style={{ fontSize: 10, color: '#96a0b5', display: 'flex', gap: 6, marginTop: 1, flexWrap: 'wrap' }}>
+          <div style={{ fontWeight: 600, fontSize: 11, color: '#8a99ae' }}>{p.surname}</div>
+          <div style={{ fontSize: 10, color: '#6b7280', display: 'flex', gap: 6, marginTop: 1, flexWrap: 'wrap' }}>
             {p.position && <span>{p.position}</span>}
             {stats.age > 0 && <span>{stats.age} años</span>}
             {stats.laterality && stats.laterality !== 'Desconocido' && <span>· {stats.laterality}</span>}
@@ -502,7 +498,7 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
 
         {/* Rating badge */}
         {stats.rating > 0 && (
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: stats.rating >= 5 ? '#ecfdf5' : stats.rating >= 4.7 ? '#fefce8' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: stats.rating >= 5 ? 'rgba(16,185,129,0.1)' : stats.rating >= 4.7 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <span style={{ fontWeight: 800, fontSize: 13, color: stats.rating >= 5 ? '#059669' : stats.rating >= 4.7 ? '#d97706' : '#dc2626' }}>{stats.rating}</span>
           </div>
         )}
@@ -530,7 +526,7 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
       )}
 
       {expanded && hasStats && (
-        <div style={{ marginTop: 6, padding: '8px 0 0', borderTop: '1px solid #f1f3f7' }}>
+        <div style={{ marginTop: 6, padding: '8px 0 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, fontSize: 10 }}>
             <DetailRow label="Convocatorias" value={stats.matches_played} />
             <DetailRow label="Titularidades" value={stats.starts} />
@@ -559,21 +555,21 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
 
 function Badge({ label, value, color }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 6, background: `${color}10`, fontSize: 10, fontWeight: 700 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 6, background: `${color}15`, fontSize: 10, fontWeight: 700 }}>
       <span style={{ color }}>{label}</span>
-      <span style={{ color: '#334155' }}>{value}</span>
+      <span style={{ color: 'rgba(255,255,255,0.8)' }}>{value}</span>
     </div>
   );
 }
 
 function DetailRow({ label, value, highlight, warn, danger }) {
-  let valColor = '#334155';
-  if (highlight) valColor = '#059669';
-  if (warn) valColor = '#d97706';
-  if (danger) valColor = '#dc2626';
+  let valColor = 'rgba(255,255,255,0.8)';
+  if (highlight) valColor = '#10b981';
+  if (warn) valColor = '#f59e0b';
+  if (danger) valColor = '#ef4444';
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
-      <span style={{ color: '#96a0b5' }}>{label}</span>
+      <span style={{ color: '#8a99ae' }}>{label}</span>
       <span style={{ fontWeight: 700, color: valColor }}>{value || 0}</span>
     </div>
   );
@@ -582,7 +578,7 @@ function DetailRow({ label, value, highlight, warn, danger }) {
 function StatInput({ label, value, onChange }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', flex: 1 }}>{label}</span>
+      <span style={{ fontSize: 10, fontWeight: 600, color: '#8a99ae', flex: 1 }}>{label}</span>
       <input type="number" step="any" className="input-field" value={value || 0} onChange={e => onChange(e.target.value)} style={{ width: 55, textAlign: 'center', padding: '3px 4px' }} />
     </div>
   );

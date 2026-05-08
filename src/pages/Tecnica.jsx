@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Play, Target, Footprints, Shield, Crosshair, Brain, Trash2 } from 'lucide-react';
+import { Plus, Play, Trash2, X, ChevronRight, User } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { getEmbedUrl } from '../utils/ExportHelper';
 
 const TECH_CATEGORIES = [
   { id: 'control', label: 'Control', icon: '🎯', color: '#3b82f6' },
@@ -15,14 +17,24 @@ const TECH_CATEGORIES = [
 
 export default function Tecnica() {
   const { isAdmin, profile } = useAuth();
+  const isMobile = useIsMobile();
   const [items, setItems] = useState([]);
   const [activeCategory, setActiveCategory] = useState('control');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', category: 'control', video_url: '', tips: [] });
+  const [expandedItem, setExpandedItem] = useState(null);
+  const [players, setPlayers] = useState([]);
+  const [filterPlayer, setFilterPlayer] = useState(null);
+  const [form, setForm] = useState({ title: '', description: '', category: 'control', video_url: '', tips: [], assigned_players: [] });
   const [tipInput, setTipInput] = useState('');
 
   useEffect(() => { fetchItems(); }, [activeCategory]);
+  useEffect(() => { fetchPlayers(); }, []);
+
+  const fetchPlayers = async () => {
+    const { data } = await supabase.from('roster').select('id, name, number').order('number');
+    if (data) setPlayers(data);
+  };
 
   const fetchItems = async () => {
     setLoading(true);
@@ -41,18 +53,33 @@ export default function Tecnica() {
 
   const removeTip = (i) => setForm(f => ({ ...f, tips: f.tips.filter((_, idx) => idx !== i) }));
 
+  const togglePlayerAssign = (pid) => {
+    setForm(f => ({
+      ...f,
+      assigned_players: f.assigned_players.includes(pid)
+        ? f.assigned_players.filter(id => id !== pid)
+        : [...f.assigned_players, pid]
+    }));
+  };
+
   const createItem = async () => {
-    if (!form.title) { alert('Pon un título'); return; }
+    if (!form.title) return;
     try {
-      const { data } = await supabase.from('technique').insert([{
-        ...form, category: activeCategory, created_by: profile?.id
-      }]).select().single();
+      const payload = {
+        title: form.title,
+        description: form.description || '',
+        category: activeCategory,
+        video_url: form.video_url || '',
+        tips: form.tips || [],
+      };
+      const { data, error } = await supabase.from('technique').insert([payload]).select().single();
+      if (error) { console.error('Create technique error:', error); alert('Error: ' + error.message); return; }
       if (data) {
         setItems([data, ...items]);
         setShowForm(false);
-        setForm({ title: '', description: '', category: activeCategory, video_url: '', tips: [] });
+        setForm({ title: '', description: '', category: activeCategory, video_url: '', tips: [], assigned_players: [] });
       }
-    } catch { alert('Error al crear.'); }
+    } catch (e) { console.error(e); }
   };
 
   const deleteItem = async (id) => {
@@ -63,106 +90,208 @@ export default function Tecnica() {
 
   const catInfo = TECH_CATEGORIES.find(c => c.id === activeCategory) || TECH_CATEGORIES[6];
 
+  const filteredItems = filterPlayer
+    ? items.filter(item => (item.assigned_players || []).includes(filterPlayer))
+    : items;
+
   return (
-    <div style={{ height: 'calc(100vh - 100px)', overflowY: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>🎯 Técnica Individual</h2>
+    <div className="flex flex-col h-full overflow-hidden">
+      
+      {/* Expanded Item Modal */}
+      {expandedItem && (
+        <div className="modal-overlay animate-fade-in" onClick={() => setExpandedItem(null)}>
+          <div className="bg-surface w-full max-w-2xl max-h-[90vh] rounded-[32px] border border-white/10 shadow-2xl overflow-hidden flex flex-col" style={{ animation: 'scaleIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards' }} onClick={e => e.stopPropagation()}>
+            {/* Video embed */}
+            {expandedItem.video_url && getEmbedUrl(expandedItem.video_url) && (
+              <div className="video-embed flex-shrink-0">
+                <iframe src={getEmbedUrl(expandedItem.video_url)} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              </div>
+            )}
+            <div className="p-6 overflow-y-auto no-scrollbar">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{catInfo.icon}</span>
+                  <h3 className="text-xl font-black text-white">{expandedItem.title}</h3>
+                </div>
+                <button onClick={() => setExpandedItem(null)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-muted"><X size={16}/></button>
+              </div>
+              {expandedItem.description && <p className="text-sm text-muted font-medium leading-relaxed mb-4">{expandedItem.description}</p>}
+              {expandedItem.video_url && !getEmbedUrl(expandedItem.video_url) && (
+                <a href={expandedItem.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-xl text-xs font-black mb-4">
+                  <Play size={14} /> Ver vídeo externo
+                </a>
+              )}
+              {(expandedItem.tips || []).length > 0 && (
+                <div className="space-y-2 mt-4">
+                  <h4 className="text-[10px] font-black text-accent uppercase tracking-widest">Consejos</h4>
+                  {expandedItem.tips.map((tip, i) => (
+                    <div key={i} className="flex items-start gap-2 p-3 bg-white/5 rounded-xl border border-white/5">
+                      <span className="text-accent text-sm">💡</span>
+                      <span className="text-xs text-muted font-medium">{tip}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Form Modal */}
+      {showForm && isAdmin && (
+        <div className="modal-overlay animate-fade-in" onClick={() => setShowForm(false)}>
+          <div className="modal-sheet max-h-[90vh] overflow-y-auto no-scrollbar" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-black text-white mb-4">Nuevo ejercicio de {catInfo.label}</h3>
+            <div className="space-y-3">
+              <input className="input-field" placeholder="Título del ejercicio" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} autoFocus />
+              <textarea className="input-field min-h-[80px]" placeholder="Descripción detallada..." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              <input className="input-field" placeholder="URL de vídeo (YouTube, Vimeo...)" value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} />
+              
+              {/* Tips */}
+              <div>
+                <label className="text-[9px] font-black text-muted uppercase tracking-widest mb-1 block">Consejos</label>
+                {form.tips.map((tip, i) => (
+                  <div key={i} className="flex gap-2 items-center mb-1 p-2 bg-white/5 rounded-lg text-xs text-muted">
+                    <span className="flex-1">💡 {tip}</span>
+                    <button onClick={() => removeTip(i)} className="text-rose-500 text-xs">✕</button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input className="input-field flex-1" placeholder="Añadir consejo..." value={tipInput} onChange={e => setTipInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addTip(); }} />
+                  <button className="btn btn-outline btn-sm" onClick={addTip}>+</button>
+                </div>
+              </div>
+
+              {/* Assign to players */}
+              <div>
+                <label className="text-[9px] font-black text-muted uppercase tracking-widest mb-2 block">Asignar a jugadores</label>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {players.map(p => {
+                    const on = form.assigned_players.includes(p.id);
+                    return (
+                      <button key={p.id} onClick={() => togglePlayerAssign(p.id)}
+                        className={`p-1.5 rounded-lg text-center border transition-all ${on ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-white/5 text-white/30'}`}>
+                        <div className="text-xs font-black">{p.number}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button className="flex-1 py-3 rounded-xl bg-accent text-bg font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all" onClick={createItem}>Crear</button>
+                <button className="py-3 px-6 rounded-xl bg-white/5 text-white font-black uppercase tracking-widest text-[10px]" onClick={() => setShowForm(false)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 md:px-10 md:pt-8 flex-shrink-0">
+        <h2 className="text-xl md:text-3xl font-black text-white tracking-tighter">🎯 Técnica</h2>
         {isAdmin && (
           <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
-            <Plus size={14} /> Nuevo ejercicio
+            <Plus size={14} /> Nuevo
           </button>
         )}
       </div>
 
       {/* Category tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div className="flex gap-1.5 px-4 md:px-10 pb-2 overflow-x-auto no-scrollbar flex-shrink-0">
         {TECH_CATEGORIES.map(cat => (
-          <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-            style={{
-              padding: '6px 12px', borderRadius: 20, border: 'none',
-              background: activeCategory === cat.id ? `${cat.color}15` : '#f1f5f9',
-              color: activeCategory === cat.id ? cat.color : '#64748b',
-              fontWeight: activeCategory === cat.id ? 700 : 500,
-              fontSize: 12, cursor: 'pointer', transition: 'all .12s',
-            }}>
-            {cat.icon} {cat.label}
+          <button key={cat.id} onClick={() => { setActiveCategory(cat.id); setFilterPlayer(null); }}
+            className={`chip flex-shrink-0 ${activeCategory === cat.id ? 'chip-active' : 'chip-inactive'}`}>
+            <span>{cat.icon}</span> <span className="hidden sm:inline">{cat.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Create form */}
-      {showForm && isAdmin && (
-        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Nuevo ejercicio de {catInfo.label}</div>
-          <input className="input-field" placeholder="Título del ejercicio" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={{ marginBottom: 8 }} />
-          <textarea className="input-field" placeholder="Descripción detallada..." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} style={{ marginBottom: 8, resize: 'vertical' }} />
-          <input className="input-field" placeholder="URL de vídeo (YouTube, etc.)" value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} style={{ marginBottom: 8 }} />
-          
-          <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>Consejos:</div>
-          {form.tips.map((tip, i) => (
-            <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 3, fontSize: 11, padding: '4px 8px', background: '#f8f9fb', borderRadius: 6 }}>
-              <span style={{ flex: 1 }}>💡 {tip}</span>
-              <button onClick={() => removeTip(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}>✕</button>
-            </div>
-          ))}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-            <input className="input-field" placeholder="Añadir consejo..." value={tipInput} onChange={e => setTipInput(e.target.value)} style={{ flex: 1 }}
-              onKeyDown={e => { if (e.key === 'Enter') addTip(); }} />
-            <button className="btn btn-outline btn-sm" onClick={addTip}>+</button>
-          </div>
-
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-primary btn-sm" onClick={createItem}>Crear</button>
-            <button className="btn btn-outline btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
-          </div>
-        </div>
-      )}
+      {/* Player filter row */}
+      <div className="flex gap-1.5 px-4 md:px-10 pb-3 overflow-x-auto no-scrollbar flex-shrink-0 items-center">
+        <span className="text-[8px] font-black text-muted uppercase tracking-widest flex-shrink-0 mr-1"><User size={10} className="inline mr-1"/>Filtrar:</span>
+        <button onClick={() => setFilterPlayer(null)} className={`chip flex-shrink-0 ${!filterPlayer ? 'chip-active' : 'chip-inactive'}`}>Todos</button>
+        {players.slice(0, 15).map(p => (
+          <button key={p.id} onClick={() => setFilterPlayer(p.id)}
+            className={`chip flex-shrink-0 ${filterPlayer === p.id ? 'chip-active' : 'chip-inactive'}`}>
+            {p.number}
+          </button>
+        ))}
+      </div>
 
       {/* Items grid */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#96a0b5' }}>Cargando...</div>
-      ) : items.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#96a0b5' }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>{catInfo.icon}</div>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>No hay ejercicios de {catInfo.label} todavía.</div>
-          {isAdmin && <div style={{ fontSize: 11, marginTop: 6 }}>Pulsa <strong>Nuevo ejercicio</strong> para añadir uno.</div>}
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
-          {items.map(item => (
-            <div key={item.id} className="card" style={{ padding: 16, position: 'relative' }}>
-              {isAdmin && (
-                <button onClick={() => deleteItem(item.id)}
-                  style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
-                  <Trash2 size={14} />
-                </button>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: `${catInfo.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
-                  {catInfo.icon}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 md:px-10 pb-8">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[1,2,3].map(i => <div key={i} className="h-48 bg-surface-2 animate-pulse rounded-[24px] border border-white/5" />)}
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="py-16 text-center opacity-30">
+            <div className="text-4xl mb-3">{catInfo.icon}</div>
+            <p className="text-[10px] font-black uppercase tracking-widest">No hay ejercicios de {catInfo.label}</p>
+            {isAdmin && <p className="text-[9px] mt-2 text-muted">Pulsa <strong>Nuevo</strong> para añadir uno.</p>}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredItems.map(item => {
+              const embedUrl = getEmbedUrl(item.video_url);
+              return (
+                <div key={item.id} className="card !p-0 overflow-hidden group cursor-pointer hover:border-accent/20 transition-all" onClick={() => setExpandedItem(item)}>
+                  {/* Video preview */}
+                  {embedUrl ? (
+                    <div className="relative aspect-video bg-black/40 overflow-hidden">
+                      <img src={`https://img.youtube.com/vi/${item.video_url?.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]}/mqdefault.jpg`}
+                        alt="" className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity" 
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-12 h-12 bg-accent/90 rounded-full flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                          <Play size={20} className="text-bg ml-0.5" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : item.video_url ? (
+                    <div className="h-20 bg-gradient-to-br from-surface-2 to-surface flex items-center justify-center">
+                      <Play size={24} className="text-muted/30" />
+                    </div>
+                  ) : null}
+                  
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{catInfo.icon}</span>
+                        <h4 className="text-sm font-black text-white leading-tight">{item.title}</h4>
+                      </div>
+                      {isAdmin && (
+                        <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-muted/30 hover:text-rose-500 transition-colors flex-shrink-0">
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                    {item.description && <p className="text-[11px] text-muted font-medium line-clamp-2 mb-2">{item.description}</p>}
+                    {(item.tips || []).length > 0 && (
+                      <div className="flex items-center gap-1 text-[9px] text-accent font-bold">
+                        💡 {item.tips.length} consejo{item.tips.length > 1 ? 's' : ''}
+                      </div>
+                    )}
+                    {(item.assigned_players || []).length > 0 && (
+                      <div className="flex gap-1 mt-2 flex-wrap">
+                        {(item.assigned_players || []).slice(0, 5).map(pid => {
+                          const p = players.find(pl => pl.id === pid);
+                          return p ? (
+                            <span key={pid} className="px-1.5 py-0.5 bg-accent/10 text-accent text-[8px] font-black rounded">{p.number}</span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{item.title}</div>
-              </div>
-              {item.description && (
-                <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5, marginBottom: 8 }}>{item.description}</div>
-              )}
-              {item.video_url && (
-                <a href={item.video_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#0057ff', fontWeight: 600, textDecoration: 'none', padding: '4px 8px', background: '#eef3ff', borderRadius: 6, marginBottom: 8 }}>
-                  <Play size={12} /> Ver vídeo
-                </a>
-              )}
-              {(item.tips || []).length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  {(item.tips || []).map((tip, i) => (
-                    <div key={i} style={{ fontSize: 11, color: '#475569', padding: '3px 0', lineHeight: 1.4 }}>💡 {tip}</div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
