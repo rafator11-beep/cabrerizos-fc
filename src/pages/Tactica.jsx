@@ -306,9 +306,9 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           )}
         </div>
 
-        {/* ZOOM BAR - MOVED TO TOP */}
+        {/* ZOOM BAR - SIMPLIFIED */}
         {!isPlayerMode && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-3 py-1.5 bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             <button onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))} 
               className="w-8 h-8 rounded-xl bg-white/10 text-white hover:text-accent hover:bg-accent/20 flex items-center justify-center transition-all">
               <span className="text-lg font-black">−</span>
@@ -320,7 +320,12 @@ export default function Tactica({ externalExercise = null, overridePreset = null
               className="w-8 h-8 rounded-xl bg-white/10 text-white hover:text-accent hover:bg-accent/20 flex items-center justify-center transition-all">
               <span className="text-lg font-black">+</span>
             </button>
-            <div className="w-px h-6 bg-white/10 mx-2" />
+          </div>
+        )}
+
+        {/* ZOOM PRESETS - BOTTOM BAR */}
+        {!isPlayerMode && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-3 py-1.5 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             {ZOOM_OPTIONS.map(z => (
               <button key={z.id ?? 'full'} onClick={() => setZoomPreset(z.id)}
                 className={`px-2.5 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${zoomPreset === z.id ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>

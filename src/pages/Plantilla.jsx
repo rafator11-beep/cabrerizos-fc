@@ -202,17 +202,17 @@ export default function Plantilla() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Zoom Controls */}
-              <div className="flex items-center gap-1 px-2 py-1 bg-black/20 rounded-lg border border-white/10">
+              {/* Zoom Controls - Simplified */}
+              <div className="flex items-center gap-1 px-2 py-1 bg-black/30 rounded-lg border border-white/10">
                 <button onClick={() => setPizarraZoom(Math.max(0.5, pizarraZoom - 0.1))} 
-                  className="w-6 h-6 rounded bg-white/10 text-white hover:text-accent flex items-center justify-center text-sm font-black transition-all">
+                  className="w-7 h-7 rounded bg-white/10 text-white hover:text-accent flex items-center justify-center text-sm font-black transition-all">
                   −
                 </button>
-                <span className="px-2 text-[9px] font-black text-white uppercase tracking-widest">
+                <span className="px-2 text-[9px] font-black text-white/80 uppercase tracking-widest">
                   {Math.round(pizarraZoom * 100)}%
                 </span>
                 <button onClick={() => setPizarraZoom(Math.min(2, pizarraZoom + 0.1))} 
-                  className="w-6 h-6 rounded bg-white/10 text-white hover:text-accent flex items-center justify-center text-sm font-black transition-all">
+                  className="w-7 h-7 rounded bg-white/10 text-white hover:text-accent flex items-center justify-center text-sm font-black transition-all">
                   +
                 </button>
               </div>
