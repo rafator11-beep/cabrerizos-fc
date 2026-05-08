@@ -29,7 +29,7 @@ const LEGEND = [
   { id: 'zigzag', label: 'Conducción', icon: '〰', color: '#3b82f6' },
 ];
 
-export default function Tactica({ externalExercise }) {
+export default function Tactica({ externalExercise, overridePreset }) {
   const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
   const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
@@ -285,7 +285,7 @@ export default function Tactica({ externalExercise }) {
               zones={currentStep.zones || []}
               tool={tool}
               arrowType={arrowType}
-              zoomPreset={zoomPreset}
+              zoomPreset={overridePreset || zoomPreset}
               animating={animating}
               onMove={(id, x, y) => {
                 if (isPlayerMode || !currentStep) return;

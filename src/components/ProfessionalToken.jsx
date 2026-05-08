@@ -1,10 +1,15 @@
 import React from 'react';
 
-export default function ProfessionalToken({ token, isSelected, onPointerDown, onPointerMove, onPointerUp, onDoubleClick }) {
+export default function ProfessionalToken({ token, isSelected, onPointerDown, onPointerMove, onPointerUp, onDoubleClick, zoomScale = 1 }) {
   const { id, x = 0, y = 0, photo_url, name, label, isRival } = token;
   const tokenColor = isRival ? '#ef4444' : (token.color || '#0057ff');
-  const r = 18;
   const hasPhoto = !!photo_url;
+  
+  // Base scale is 1, but when zoomed in, we might want tokens to scale down slightly relative to the field 
+  // to maintain visual crispness, but the user requested them to scale automatically.
+  // The base size
+  const r = 18; 
+  const size = r * 3; 
 
   return (
     <g 
@@ -14,54 +19,69 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onDoubleClick={onDoubleClick}
-      className="cursor-grab active:cursor-grabbing transition-transform duration-200 md:scale-125" 
+      className="cursor-grab active:cursor-grabbing transition-transform duration-200" 
       style={{ touchAction: 'none' }}
     >
       <defs>
-        <filter id={`f-shadow-${id}`}>
-          <feDropShadow dx="0" dy="8" stdDeviation="6" floodOpacity="0.4" />
+        <filter id={`drop-shadow-${id}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="3" floodOpacity="0.5" floodColor="#000000" />
         </filter>
-        <clipPath id={`f-clip-${id}`}>
-          <path d={`M 0 ${-r} A ${r} ${r} 0 1 1 0 ${r} A ${r} ${r} 0 1 1 0 ${-r} Z`} />
-        </clipPath>
+        <filter id={`drop-shadow-selected-${id}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="0" stdDeviation="6" floodOpacity="0.8" floodColor="#00ff87" />
+        </filter>
       </defs>
 
-      <g filter={`url(#f-shadow-${id})`}>
+      <g filter={isSelected ? `url(#drop-shadow-selected-${id})` : `url(#drop-shadow-${id})`}>
         {hasPhoto ? (
+          // Just the transparent PNG, no circular clip, no background
           <image 
             href={photo_url} 
-            x={-r * 1.5} 
-            y={-r * 1.5} 
-            width={r * 3} 
-            height={r * 3} 
-            preserveAspectRatio="xMidYMid slice" 
+            x={-size / 2} 
+            y={-size / 2} 
+            width={size} 
+            height={size} 
+            preserveAspectRatio="xMidYMid meet" 
           />
         ) : (
+          // Fallback if no photo
           <g>
             <circle r={r} fill={tokenColor} stroke="white" strokeWidth="2" />
-            <text textAnchor="middle" dy="5" fontSize="12" fontWeight="900" fill="white" style={{ pointerEvents: 'none' }}>
+            <text textAnchor="middle" dy="5" fontSize="12" fontWeight="900" fill="white" style={{ pointerEvents: 'none', fontFamily: 'system-ui, sans-serif' }}>
               {label}
             </text>
           </g>
         )}
       </g>
 
+      {/* Clean, professional name badge */}
       {name && (
-        <text 
-          textAnchor="middle" 
-          dy={hasPhoto ? r * 1.6 : r + 12} 
-          fontSize="8" 
-          fontWeight="900" 
-          fill="white" 
-          className="uppercase tracking-widest" 
-          style={{ textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}
-        >
-          {name.split(' ')[0]}
-        </text>
+        <g transform={`translate(0, ${hasPhoto ? size / 2 + 2 : r + 10})`}>
+          <rect 
+            x="-25" 
+            y="0" 
+            width="50" 
+            height="12" 
+            rx="4" 
+            fill="rgba(0,0,0,0.4)" 
+            className="pointer-events-none"
+          />
+          <text 
+            textAnchor="middle" 
+            dy="9" 
+            fontSize="8" 
+            fontWeight="700" 
+            fill="white" 
+            className="pointer-events-none"
+            style={{ fontFamily: 'Montserrat, Roboto, sans-serif', letterSpacing: '0.05em' }}
+          >
+            {name.split(' ')[0]}
+          </text>
+        </g>
       )}
 
-      {isSelected && (
-        <circle r={hasPhoto ? r * 1.4 : r + 4} fill="none" stroke="#00ff87" strokeWidth="2" strokeDasharray="4,3" />
+      {/* Optional selection ring if it doesn't have a photo, or rely purely on the neon drop-shadow defined above */}
+      {isSelected && !hasPhoto && (
+        <circle r={r + 4} fill="none" stroke="#00ff87" strokeWidth="2" strokeDasharray="4,3" className="pointer-events-none" />
       )}
     </g>
   );
