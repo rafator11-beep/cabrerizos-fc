@@ -294,26 +294,34 @@ export default function Alineacion() {
                   onMouseDown={(e) => onDragStart(e, i)} onTouchStart={(e) => onDragStart(e, i)}
                   onDoubleClick={() => removePlayer(i)} className="cursor-grab active:cursor-grabbing">
                   
-                  {isEmpty ? (
-                    <>
-                      {/* Empty slot with position indicator */}
-                      <circle r={18} fill="rgba(255,255,255,0.03)" stroke={posColor} strokeWidth="1.5" strokeDasharray="4,3" />
-                      <text textAnchor="middle" dy="1" fontSize="8" fontWeight="900" fill={posColor} opacity={0.7}>{s.pos}</text>
-                      <text textAnchor="middle" dy="12" fontSize="6" fontWeight="700" fill="white" opacity={0.2}>{i + 1}</text>
-                    </>
-                  ) : (
-                    <>
-                      <defs><clipPath id={`clip-al-${i}`}><circle r={16}/></clipPath></defs>
-                      <circle r={18} fill={posColor} stroke="white" strokeWidth="2" />
-                      {p?.photo_url ? (
-                        <image href={p.photo_url} x={-16} y={-16} width={32} height={32} clipPath={`url(#clip-al-${i})`} preserveAspectRatio="xMidYMid slice" />
-                      ) : (
-                        <text textAnchor="middle" dy="5" fontSize="13" fontWeight="900" fill="white">{p?.number || '?'}</text>
-                      )}
-                      <circle r={18} fill="none" stroke="white" strokeWidth="2" />
-                      {p && <text textAnchor="middle" dy={30} fontSize="7" fontWeight="800" fill="white" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{(p.name || '').split(' ')[0]}</text>}
-                    </>
-                  )}
+                    {isEmpty ? (
+                      <>
+                        {/* Empty slot with position indicator */}
+                        <circle r={18} fill="rgba(255,255,255,0.03)" stroke={posColor} strokeWidth="1.5" strokeDasharray="4,3" />
+                        <text textAnchor="middle" dy="1" fontSize="8" fontWeight="900" fill={posColor} opacity={0.7}>{s.pos}</text>
+                        <text textAnchor="middle" dy="12" fontSize="6" fontWeight="700" fill="white" opacity={0.2}>{i + 1}</text>
+                      </>
+                    ) : (
+                      <>
+                        {p?.photo_url ? (
+                          <image 
+                            href={p.photo_url} 
+                            x={-22} 
+                            y={-22} 
+                            width={44} 
+                            height={44} 
+                            preserveAspectRatio="xMidYMid meet"
+                            style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))' }}
+                          />
+                        ) : (
+                          <>
+                            <circle r={16} fill={posColor} stroke="white" strokeWidth="2" />
+                            <text textAnchor="middle" dy="5" fontSize="13" fontWeight="900" fill="white">{p?.number || '?'}</text>
+                          </>
+                        )}
+                        {p && <text textAnchor="middle" dy={p?.photo_url ? 32 : 28} fontSize="9" fontWeight="900" fill="white" style={{ textShadow: '0 2px 4px rgba(0,0,0,1)' }}>{(p.name || '').split(' ')[0]}</text>}
+                      </>
+                    )}
                 </g>
               );
             })}
