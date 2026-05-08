@@ -179,10 +179,12 @@ const FieldCanvas = forwardRef(({
     const dashArray = isDashed ? "8,5" : a.dash || "none";
 
     return (
-      <g key={a.id} opacity={isGhost ? 0.4 : 0.9} className="pointer-events-none">
-        <path d={d} fill="none" stroke={color} strokeWidth="2.5" strokeDasharray={dashArray} strokeLinecap="round" />
+      <g key={a.id} opacity={isGhost ? 0.4 : 0.9} className={presentationMode ? "pointer-events-none" : "cursor-pointer"}>
+        <path d={d} fill="none" stroke={color} strokeWidth="2.5" strokeDasharray={dashArray} strokeLinecap="round" 
+          onDoubleClick={() => !presentationMode && onDelete?.(a.id)} />
         <path d={`M ${a.to.x} ${a.to.y} L ${a.to.x - headSize * Math.cos(angle - Math.PI/6)} ${a.to.y - headSize * Math.sin(angle - Math.PI/6)} M ${a.to.x} ${a.to.y} L ${a.to.x - headSize * Math.cos(angle + Math.PI/6)} ${a.to.y - headSize * Math.sin(angle + Math.PI/6)}`} 
-          stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" 
+          onDoubleClick={() => !presentationMode && onDelete?.(a.id)} />
       </g>
     );
   };

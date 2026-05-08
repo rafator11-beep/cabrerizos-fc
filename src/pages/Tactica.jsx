@@ -645,9 +645,9 @@ export default function Tactica({ externalExercise = null, overridePreset = null
 
       {/* PRESENTATION MODE OVERLAY */}
       {presentationMode && (
-        <div className="fixed inset-0 z-[200] bg-black flex flex-col">
+        <div className="fixed inset-0 z-[200] bg-black">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 bg-gradient-to-r from-accent/20 to-transparent border-b border-accent/20">
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-6 bg-gradient-to-b from-black/80 to-transparent">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-accent rounded-2xl flex items-center justify-center">
                 <Monitor size={24} className="text-bg" />
@@ -669,15 +669,16 @@ export default function Tactica({ externalExercise = null, overridePreset = null
             </button>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1 flex items-center justify-center p-8">
-            <div className="w-full max-w-6xl">
+          {/* Field Container - Full Screen */}
+          <div className="absolute inset-0 flex items-center justify-center p-20">
+            <div className="w-full h-full max-w-none max-h-none flex items-center justify-center">
               <div 
-                className="bg-surface rounded-[32px] shadow-[0_0_80px_rgba(0,0,0,0.6)] border border-white/5 relative overflow-hidden"
+                className="bg-surface rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
                 style={{
-                  aspectRatio: '550/366',
-                  width: '100%',
-                  height: 'auto'
+                  width: '90vw',
+                  height: '90vh',
+                  maxWidth: '1200px',
+                  maxHeight: '800px'
                 }}
               >
                 <FieldCanvas
@@ -689,17 +690,17 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                   zoomPreset={overridePreset || zoomPreset}
                   animating={animating}
                   presentationMode={true}
-                  onMove={() => {}} // Disabled in presentation mode
-                  onArrow={() => {}} // Disabled in presentation mode
-                  onPlace={() => {}} // Disabled in presentation mode
-                  onDelete={() => {}} // Disabled in presentation mode
+                  onMove={() => {}}
+                  onArrow={() => {}}
+                  onPlace={() => {}}
+                  onDelete={() => {}}
                 />
               </div>
             </div>
           </div>
 
           {/* Bottom Controls */}
-          <div className="p-6 bg-gradient-to-t from-black/50 to-transparent">
+          <div className="absolute bottom-0 left-0 right-0 z-10 p-6 bg-gradient-to-t from-black/80 to-transparent">
             <div className="flex items-center justify-center gap-6">
               {/* Step Navigation */}
               <div className="flex items-center gap-4 px-6 py-3 bg-white/10 backdrop-blur-xl rounded-2xl">
