@@ -69,20 +69,22 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-bg overflow-hidden font-main select-none text-text">
+    <div className={`${isRealAdmin && !isMobile ? 'grid grid-cols-[260px_1fr_320px] h-screen w-screen overflow-hidden' : 'flex h-screen'} bg-bg font-main select-none text-text`}>
       
       {/* SIDEBAR */}
       <aside className={`
-        fixed inset-y-0 left-0 z-[100] w-[260px] bg-bg border-r border-white/5 
-        transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
-        md:relative md:translate-x-0 md:flex-shrink-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${isRealAdmin && !isMobile ? 'relative' : `
+          fixed inset-y-0 left-0 z-[100] w-[260px] bg-bg border-r border-white/5 
+          transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
+          md:relative md:translate-x-0 md:flex-shrink-0
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
       `}>
         <Sidebar onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
       </aside>
 
       {/* MOBILE OVERLAY */}
-      {sidebarOpen && (
+      {sidebarOpen && !isRealAdmin && (
         <div 
           onClick={() => setSidebarOpen(false)}
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] md:hidden animate-fade-in"
@@ -113,14 +115,14 @@ export default function DashboardLayout() {
       )}
 
       {/* MAIN CONTAINER */}
-      <div className="flex-1 flex flex-col min-w-0 relative h-full">
+      <div className={`${isRealAdmin && !isMobile ? 'col-span-1 flex flex-col h-full overflow-hidden' : 'flex-1 flex flex-col min-w-0 relative h-full'}`}>
         
         {/* HEADER — Desktop-optimized with breadcrumb + command trigger */}
         <header className="flex-shrink-0 glass border-b border-white/5 flex items-center justify-between px-4 md:px-6 z-40" style={{ height: 'var(--header-h)' }}>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden w-9 h-9 flex items-center justify-center bg-surface-2 rounded-xl active:scale-90 transition-transform border border-white/5"
+              className={`${isRealAdmin && !isMobile ? 'hidden' : 'md:hidden'} w-9 h-9 flex items-center justify-center bg-surface-2 rounded-xl active:scale-90 transition-transform border border-white/5`}
             >
               <Menu size={18} />
             </button>
@@ -178,7 +180,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto no-scrollbar bg-bg" style={{ paddingBottom: isMobile ? 'calc(var(--nav-h) + var(--safe-bottom, 0px))' : '0' }}>
+        <main className={`${isRealAdmin && !isMobile ? 'flex-1 overflow-hidden' : 'flex-1 overflow-y-auto no-scrollbar'} bg-bg`} style={{ paddingBottom: isMobile ? 'calc(var(--nav-h) + var(--safe-bottom, 0px))' : '0' }}>
           <Outlet />
         </main>
 
@@ -187,7 +189,7 @@ export default function DashboardLayout() {
 
         {/* MOBILE BOTTOM NAV */}
         <nav 
-          className="md:hidden fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-1 z-50"
+          className={`${isRealAdmin && !isMobile ? 'hidden' : 'md:hidden'} fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-1 z-50`}
           style={{ height: 'var(--nav-h)', paddingBottom: 'var(--safe-bottom, 0px)' }}
         >
           {bottomNav.map(item => (
@@ -217,6 +219,18 @@ export default function DashboardLayout() {
           ))}
         </nav>
       </div>
+
+      {/* DESKTOP RIGHT PANEL */}
+      {isRealAdmin && !isMobile && (
+        <aside className="bg-surface border-l border-white/5 flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-white/5">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest">Herramientas</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {/* Panel content will be populated by individual pages */}
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

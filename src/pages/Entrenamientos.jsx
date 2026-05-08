@@ -317,27 +317,72 @@ export default function Entrenamientos() {
                             <span className="text-[10px] font-bold text-white truncate">{ex.name}</span>
                             {lineup.parsed && <span className="text-[8px] text-muted bg-white/5 px-1.5 py-0.5 rounded">{lineup.parsed}</span>}
                           </div>
-                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
-                            {[
-                              {k:'equipoA',l:'Eq. A',bg:'rgba(59,130,246,0.05)',border:'rgba(59,130,246,0.1)',text:'#60a5fa',badge:'rgba(59,130,246,0.1)'},
-                              {k:'equipoB',l:'Eq. B',bg:'rgba(244,63,94,0.05)',border:'rgba(244,63,94,0.1)',text:'#fb7185',badge:'rgba(244,63,94,0.1)'},
-                              {k:'comodines',l:'Comod.',bg:'rgba(245,158,11,0.05)',border:'rgba(245,158,11,0.1)',text:'#fbbf24',badge:'rgba(245,158,11,0.1)'},
-                              {k:'rotacion',l:'Rotac.',bg:'rgba(255,255,255,0.03)',border:'rgba(255,255,255,0.05)',text:'rgba(255,255,255,0.4)',badge:'rgba(255,255,255,0.05)'},
-                            ].map(t => {
-                              const players = lineup[t.k] || [];
-                              if (!players.length) return null;
-                              return (
-                                <div key={t.k} className="p-2 rounded-lg" style={{ background: t.bg, border: `1px solid ${t.border}` }}>
-                                  <div className="text-[7px] font-black uppercase tracking-widest mb-1" style={{ color: t.text }}>{t.l}</div>
+                          
+                          {/* Multi-Station Support */}
+                          {lineup.estaciones ? (
+                            <div className="space-y-3">
+                              {lineup.estaciones.map((estacion, stationIndex) => (
+                                <div key={stationIndex} className="space-y-2">
+                                  <div className="text-[8px] font-black text-accent uppercase tracking-widest">Posta {stationIndex + 1}</div>
+                                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-1.5">
+                                    {[
+                                      {k:'equipoA',l:'Eq. A',bg:'rgba(59,130,246,0.05)',border:'rgba(59,130,246,0.1)',text:'#60a5fa',badge:'rgba(59,130,246,0.1)'},
+                                      {k:'equipoB',l:'Eq. B',bg:'rgba(244,63,94,0.05)',border:'rgba(244,63,94,0.1)',text:'#fb7185',badge:'rgba(244,63,94,0.1)'},
+                                      {k:'comodines',l:'Comod.',bg:'rgba(245,158,11,0.05)',border:'rgba(245,158,11,0.1)',text:'#fbbf24',badge:'rgba(245,158,11,0.1)'},
+                                    ].map(t => {
+                                      const players = estacion[t.k] || [];
+                                      if (!players.length) return null;
+                                      return (
+                                        <div key={t.k} className="p-2 rounded-lg" style={{ background: t.bg, border: `1px solid ${t.border}` }}>
+                                          <div className="text-[7px] font-black uppercase tracking-widest mb-1" style={{ color: t.text }}>{t.l}</div>
+                                          <div className="flex flex-wrap gap-1">
+                                            {players.map(p => (
+                                              <span key={p.id} className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ background: t.badge, color: t.text }}>#{p.number}</span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {/* Rotation players */}
+                              {lineup.rotacion && lineup.rotacion.length > 0 && (
+                                <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5">
+                                  <div className="text-[7px] font-black uppercase tracking-widest mb-1 text-muted">Rotación</div>
                                   <div className="flex flex-wrap gap-1">
-                                    {players.map(p => (
-                                      <span key={p.id} className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ background: t.badge, color: t.text }}>#{p.number}</span>
+                                    {lineup.rotacion.map(p => (
+                                      <span key={p.id} className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-white/5 text-muted">#{p.number}</span>
                                     ))}
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
+                              )}
+                            </div>
+                          ) : (
+                            // Legacy single-station format
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
+                              {[
+                                {k:'equipoA',l:'Eq. A',bg:'rgba(59,130,246,0.05)',border:'rgba(59,130,246,0.1)',text:'#60a5fa',badge:'rgba(59,130,246,0.1)'},
+                                {k:'equipoB',l:'Eq. B',bg:'rgba(244,63,94,0.05)',border:'rgba(244,63,94,0.1)',text:'#fb7185',badge:'rgba(244,63,94,0.1)'},
+                                {k:'comodines',l:'Comod.',bg:'rgba(245,158,11,0.05)',border:'rgba(245,158,11,0.1)',text:'#fbbf24',badge:'rgba(245,158,11,0.1)'},
+                                {k:'rotacion',l:'Rotac.',bg:'rgba(255,255,255,0.03)',border:'rgba(255,255,255,0.05)',text:'rgba(255,255,255,0.4)',badge:'rgba(255,255,255,0.05)'},
+                              ].map(t => {
+                                const players = lineup[t.k] || [];
+                                if (!players.length) return null;
+                                return (
+                                  <div key={t.k} className="p-2 rounded-lg" style={{ background: t.bg, border: `1px solid ${t.border}` }}>
+                                    <div className="text-[7px] font-black uppercase tracking-widest mb-1" style={{ color: t.text }}>{t.l}</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {players.map(p => (
+                                        <span key={p.id} className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ background: t.badge, color: t.text }}>#{p.number}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

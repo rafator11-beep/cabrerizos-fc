@@ -237,7 +237,20 @@ export default function Tecnica() {
             {filteredItems.map(item => {
               const embedUrl = getEmbedUrl(item.video_url);
               return (
-                <div key={item.id} className="card !p-0 overflow-hidden group cursor-pointer hover:border-accent/20 transition-all" onClick={() => setExpandedItem(item)}>
+                <div key={item.id} className="card !p-0 overflow-hidden group cursor-pointer hover:border-accent/20 transition-all" onClick={async () => {
+                  // Pre-load exercise data from Supabase
+                  try {
+                    const { data: exerciseData } = await supabase.from('technique').select('*').eq('id', item.id).single();
+                    if (exerciseData) {
+                      setExpandedItem(exerciseData);
+                    } else {
+                      setExpandedItem(item);
+                    }
+                  } catch (error) {
+                    console.error('Error loading exercise:', error);
+                    setExpandedItem(item);
+                  }
+                }}>
                   {/* Video preview */}
                   {embedUrl ? (
                     <div className="relative aspect-video bg-black/40 overflow-hidden">
