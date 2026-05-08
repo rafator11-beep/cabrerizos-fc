@@ -671,22 +671,30 @@ export default function Tactica({ externalExercise = null, overridePreset = null
 
           {/* Main Content */}
           <div className="flex-1 flex items-center justify-center p-8">
-            <div className="w-full max-w-6xl aspect-[550/366] relative">
-              <FieldCanvas
-                ref={fieldSvgRef}
-                tokens={currentStep.tokens || []}
-                arrows={currentStep.arrows || []}
-                zones={currentStep.zones || []}
-                tool="move"
-                arrowType={arrowType}
-                zoomPreset={overridePreset || zoomPreset}
-                animating={animating}
-                presentationMode={true}
-                onMove={() => {}} // Disabled in presentation mode
-                onArrow={() => {}} // Disabled in presentation mode
-                onPlace={() => {}} // Disabled in presentation mode
-                onDelete={() => {}} // Disabled in presentation mode
-              />
+            <div className="w-full max-w-6xl">
+              <div 
+                className="bg-surface rounded-[32px] shadow-[0_0_80px_rgba(0,0,0,0.6)] border border-white/5 relative overflow-hidden"
+                style={{
+                  aspectRatio: '550/366',
+                  width: '100%',
+                  height: 'auto'
+                }}
+              >
+                <FieldCanvas
+                  tokens={currentStep.tokens || []}
+                  arrows={currentStep.arrows || []}
+                  zones={currentStep.zones || []}
+                  tool="move"
+                  arrowType={arrowType}
+                  zoomPreset={overridePreset || zoomPreset}
+                  animating={animating}
+                  presentationMode={true}
+                  onMove={() => {}} // Disabled in presentation mode
+                  onArrow={() => {}} // Disabled in presentation mode
+                  onPlace={() => {}} // Disabled in presentation mode
+                  onDelete={() => {}} // Disabled in presentation mode
+                />
+              </div>
             </div>
           </div>
 
