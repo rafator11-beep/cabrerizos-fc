@@ -97,15 +97,18 @@ function AdminPCContent() {
         )}
 
         {/* Center: Large Pitch Workspace */}
-        <div className="flex-1 flex flex-col bg-[#05070a] relative overflow-hidden z-0">
-          <div className="w-full h-full flex overflow-hidden relative">
-             <Tactica externalExercise={selectedExercise} overridePreset={cameraPreset} hideLibrary={true} />
-          </div>
+        <div className="flex-1 min-w-0 min-h-0 bg-[#05070a] relative overflow-hidden z-0">
+          <Tactica
+            externalExercise={selectedExercise}
+            overridePreset={cameraPreset}
+            hideLibrary={true}
+            hideEditor={activeTab === 'ejercicios'}
+          />
         </div>
 
         {/* Right Drawer: Methodology (Optional depending on tab) */}
         {activeTab === 'ejercicios' && (
-           <div className="w-[320px] flex-shrink-0 bg-surface/30 border-l border-white/5 z-10">
+           <div className="w-72 flex-shrink-0 bg-surface/30 border-l border-white/5 z-10 overflow-y-auto no-scrollbar">
              <MethodologySidebar exercise={selectedExercise} />
            </div>
         )}

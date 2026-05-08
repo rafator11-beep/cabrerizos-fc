@@ -29,7 +29,7 @@ const LEGEND = [
   { id: 'zigzag', label: 'Conducción', icon: '〰', color: '#3b82f6' },
 ];
 
-export default function Tactica({ externalExercise = null, overridePreset = null, hideLibrary = false }) {
+export default function Tactica({ externalExercise = null, overridePreset = null, hideLibrary = false, hideEditor = false }) {
   const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
   const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
@@ -352,7 +352,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
       </div>
 
       {/* 3. RIGHT SIDEBAR: Editor PRO Panel (Desktop Only, collapsible) */}
-      {!isPlayerMode && (
+      {!isPlayerMode && !hideEditor && (
         <div className={`hidden md:flex flex-shrink-0 transition-all duration-300 ${editorCollapsed ? 'w-12' : 'w-72'} bg-surface/60 backdrop-blur-xl border-l border-white/10 flex-col overflow-hidden`}>
 
           {/* Header */}

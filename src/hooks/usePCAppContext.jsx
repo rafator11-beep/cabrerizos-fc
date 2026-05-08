@@ -4,7 +4,7 @@ const PCAppContext = createContext();
 
 export function PCAppProvider({ children }) {
   const [activeTab, setActiveTab] = useState('tactica'); // 'tactica', 'alineacion', 'ejercicios'
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [activeCategory, setActiveCategory] = useState('corners');
   const [cameraPreset, setCameraPreset] = useState(null); // null = full field
   const [selectedTokenId, setSelectedTokenId] = useState(null);
