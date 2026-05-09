@@ -35,10 +35,17 @@ export default function ChatSystem() {
 
   const loadPlayers = async () => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('roster')
-        .select('id, name, number, photo_url, auth_profile_id')
+        .select('id, name, surname, number, photo_url, auth_profile_id')
         .order('number');
+      
+      if (error) {
+        console.error('Error loading players:', error);
+        return;
+      }
+      
+      console.log('Players loaded:', data);
       setPlayers(data || []);
     } catch (error) {
       console.error('Error loading players:', error);
@@ -181,16 +188,20 @@ export default function ChatSystem() {
             value={selectedPlayer?.id || ''}
             onChange={(e) => {
               const player = players.find(p => p.id === parseInt(e.target.value));
+              console.log('Selected player:', player);
               setSelectedPlayer(player);
             }}
           >
-            <option value="">Selecciona un jugador...</option>
+            <option value="">Selecciona un jugador... ({players.length} disponibles)</option>
             {players.map(p => (
               <option key={p.id} value={p.id}>
-                #{p.number} {p.name}
+                #{p.number} {p.name} {p.surname}
               </option>
             ))}
           </select>
+          {players.length === 0 && (
+            <p className="text-xs text-red-400 mt-2">⚠️ No se encontraron jugadores en la base de datos</p>
+          )}
         </div>
       )}
 
