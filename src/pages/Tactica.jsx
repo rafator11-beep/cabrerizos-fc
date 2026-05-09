@@ -752,18 +752,19 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           </div>
 
           {/* MAIN CONTENT AREA */}
-          <div className="absolute inset-0 pt-24 pb-32 px-8">
-            <div className="h-full flex gap-8">
+          <div className="absolute inset-0 pt-24 pb-32 px-6">
+            <div className="h-full flex gap-6">
               
               {/* LEFT PANEL - FIELD */}
-              <div className="flex-1 flex items-center justify-center">
-                <div className="w-full h-full max-w-5xl">
+              <div className="flex-1 flex items-center justify-center min-w-0">
+                <div className="w-full h-full max-w-4xl">
                   <div 
                     className="bg-gradient-to-br from-green-900/20 to-green-800/20 rounded-3xl shadow-2xl border-2 border-accent/20 overflow-hidden backdrop-blur-sm"
                     style={{
                       width: '100%',
                       height: '100%',
-                      maxHeight: '70vh'
+                      maxHeight: '65vh',
+                      aspectRatio: '550/366'
                     }}
                   >
                     <FieldCanvas
@@ -785,23 +786,23 @@ export default function Tactica({ externalExercise = null, overridePreset = null
               </div>
 
               {/* RIGHT PANEL - LEGEND & INFO */}
-              <div className="w-80 flex flex-col gap-6">
+              <div className="w-72 flex flex-col gap-4 flex-shrink-0">
                 
                 {/* BALL ACTIONS LEGEND */}
-                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-3xl p-6 border border-white/10 backdrop-blur-xl">
-                  <h3 className="text-accent text-xl font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
-                    <span className="text-2xl">⚽</span>
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-xl">
+                  <h3 className="text-accent text-lg font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <span className="text-xl">⚽</span>
                     Acciones con Balón
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {LEGEND.map(l => (
-                      <div key={l.id} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
-                        <div className="w-12 h-8 flex items-center justify-center rounded-xl bg-black/20">
-                          <span className="text-2xl" style={{ color: l.color }}>{l.icon}</span>
+                      <div key={l.id} className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                        <div className="w-8 h-6 flex items-center justify-center rounded-lg bg-black/20">
+                          <span className="text-lg" style={{ color: l.color }}>{l.icon}</span>
                         </div>
-                        <div>
-                          <p className="text-white font-black text-sm uppercase tracking-widest">{l.label}</p>
-                          <p className="text-white/60 text-xs font-medium">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white font-black text-xs uppercase tracking-widest">{l.label}</p>
+                          <p className="text-white/60 text-[10px] font-medium truncate">
                             {l.id === 'pass' && 'Pase directo por el suelo'}
                             {l.id === 'run' && 'Movimiento sin balón'}
                             {l.id === 'shoot' && 'Disparo o pase largo'}
@@ -815,68 +816,68 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                 </div>
 
                 {/* PLAYER MOVEMENTS LEGEND */}
-                <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-3xl p-6 border border-blue-400/20 backdrop-blur-xl">
-                  <h3 className="text-blue-400 text-xl font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
-                    <span className="text-2xl">🏃</span>
+                <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-2xl p-4 border border-blue-400/20 backdrop-blur-xl">
+                  <h3 className="text-blue-400 text-lg font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <span className="text-xl">🏃</span>
                     Movimientos de Jugadores
                   </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
-                      <div className="w-12 h-8 flex items-center justify-center rounded-xl bg-black/20">
-                        <span className="text-2xl text-yellow-400">╌</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                      <div className="w-8 h-6 flex items-center justify-center rounded-lg bg-black/20">
+                        <span className="text-lg text-yellow-400">╌</span>
                       </div>
-                      <div>
-                        <p className="text-white font-black text-sm uppercase tracking-widest">Desmarque</p>
-                        <p className="text-white/60 text-xs font-medium">Movimiento para recibir</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
-                      <div className="w-12 h-8 flex items-center justify-center rounded-xl bg-black/20">
-                        <span className="text-2xl text-orange-400">→</span>
-                      </div>
-                      <div>
-                        <p className="text-white font-black text-sm uppercase tracking-widest">Carrera</p>
-                        <p className="text-white/60 text-xs font-medium">Movimiento de apoyo</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-black text-xs uppercase tracking-widest">Desmarque</p>
+                        <p className="text-white/60 text-[10px] font-medium">Movimiento para recibir</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
-                      <div className="w-12 h-8 flex items-center justify-center rounded-xl bg-black/20">
-                        <span className="text-2xl text-red-400">↗</span>
+                    <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                      <div className="w-8 h-6 flex items-center justify-center rounded-lg bg-black/20">
+                        <span className="text-lg text-orange-400">→</span>
                       </div>
-                      <div>
-                        <p className="text-white font-black text-sm uppercase tracking-widest">Diagonal</p>
-                        <p className="text-white/60 text-xs font-medium">Ruptura en diagonal</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-black text-xs uppercase tracking-widest">Carrera</p>
+                        <p className="text-white/60 text-[10px] font-medium">Movimiento de apoyo</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
-                      <div className="w-12 h-8 flex items-center justify-center rounded-xl bg-black/20">
-                        <span className="text-2xl text-purple-400">⤿</span>
+                    <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                      <div className="w-8 h-6 flex items-center justify-center rounded-lg bg-black/20">
+                        <span className="text-lg text-red-400">↗</span>
                       </div>
-                      <div>
-                        <p className="text-white font-black text-sm uppercase tracking-widest">Curvado</p>
-                        <p className="text-white/60 text-xs font-medium">Movimiento envolvente</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-black text-xs uppercase tracking-widest">Diagonal</p>
+                        <p className="text-white/60 text-[10px] font-medium">Ruptura en diagonal</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                      <div className="w-8 h-6 flex items-center justify-center rounded-lg bg-black/20">
+                        <span className="text-lg text-purple-400">⤿</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-black text-xs uppercase tracking-widest">Curvado</p>
+                        <p className="text-white/60 text-[10px] font-medium">Movimiento envolvente</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* STEP INFO */}
-                <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-3xl p-6 border border-accent/20 backdrop-blur-xl">
-                  <h3 className="text-accent text-xl font-black uppercase tracking-[0.2em] mb-4">
+                <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-4 border border-accent/20 backdrop-blur-xl">
+                  <h3 className="text-accent text-lg font-black uppercase tracking-[0.2em] mb-3">
                     Información del Paso
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-white/60 text-sm font-medium">Paso Actual:</span>
-                      <span className="text-white font-black text-lg">{activeStepIndex + 1} de {steps.length}</span>
+                      <span className="text-white/60 text-xs font-medium">Paso Actual:</span>
+                      <span className="text-white font-black text-base">{activeStepIndex + 1} de {steps.length}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-white/60 text-sm font-medium">Jugadores:</span>
-                      <span className="text-white font-black text-lg">{(currentStep.tokens || []).filter(t => t.kind === 'player').length}</span>
+                      <span className="text-white/60 text-xs font-medium">Jugadores:</span>
+                      <span className="text-white font-black text-base">{(currentStep.tokens || []).filter(t => t.kind === 'player').length}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-white/60 text-sm font-medium">Acciones:</span>
-                      <span className="text-white font-black text-lg">{(currentStep.arrows || []).length}</span>
+                      <span className="text-white/60 text-xs font-medium">Acciones:</span>
+                      <span className="text-white font-black text-base">{(currentStep.arrows || []).length}</span>
                     </div>
                   </div>
                 </div>
@@ -887,27 +888,27 @@ export default function Tactica({ externalExercise = null, overridePreset = null
 
           {/* BOTTOM CONTROLS */}
           <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 via-black/70 to-transparent border-t border-white/10 backdrop-blur-xl">
-            <div className="flex items-center justify-center gap-8 px-8 py-6">
+            <div className="flex items-center justify-center gap-6 px-6 py-4">
               
               {/* Step Navigation */}
-              <div className="flex items-center gap-6 px-8 py-4 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/10">
+              <div className="flex items-center gap-4 px-6 py-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10">
                 <button 
                   onClick={() => setActiveStepIndex(Math.max(0, activeStepIndex - 1))} 
-                  className="w-12 h-12 rounded-2xl text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all"
+                  className="w-10 h-10 rounded-xl text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all"
                   disabled={activeStepIndex === 0}
                 >
-                  <ChevronLeft size={28} />
+                  <ChevronLeft size={24} />
                 </button>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   {steps.map((_, idx) => (
                     <button 
                       key={idx} 
                       onClick={() => setActiveStepIndex(idx)}
-                      className={`h-5 rounded-full transition-all duration-300 ${
+                      className={`h-4 rounded-full transition-all duration-300 ${
                         activeStepIndex === idx 
-                          ? 'w-16 bg-accent shadow-[0_0_25px_rgba(0,255,135,0.8)]' 
-                          : 'w-5 bg-white/20 hover:bg-white/40'
+                          ? 'w-12 bg-accent shadow-[0_0_20px_rgba(0,255,135,0.8)]' 
+                          : 'w-4 bg-white/20 hover:bg-white/40'
                       }`} 
                     />
                   ))}
@@ -915,24 +916,24 @@ export default function Tactica({ externalExercise = null, overridePreset = null
 
                 <button 
                   onClick={() => setActiveStepIndex(Math.min(steps.length - 1, activeStepIndex + 1))} 
-                  className="w-12 h-12 rounded-2xl text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all"
+                  className="w-10 h-10 rounded-xl text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all"
                   disabled={activeStepIndex === steps.length - 1}
                 >
-                  <ChevronRight size={28} />
+                  <ChevronRight size={24} />
                 </button>
               </div>
 
               {/* Animation Toggle */}
               <button 
                 onClick={() => setAnimating(!animating)} 
-                className={`px-8 py-4 rounded-3xl flex items-center gap-4 transition-all font-black text-lg uppercase tracking-widest ${
+                className={`px-6 py-3 rounded-2xl flex items-center gap-3 transition-all font-black text-sm uppercase tracking-widest ${
                   animating 
                     ? 'bg-accent text-black shadow-xl shadow-accent/30' 
                     : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
                 }`}
               >
-                <Play size={24} />
-                {animating ? 'Pausar Animación' : 'Reproducir Animación'}
+                <Play size={20} />
+                {animating ? 'Pausar' : 'Reproducir'}
               </button>
 
             </div>
