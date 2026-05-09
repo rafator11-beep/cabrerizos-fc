@@ -68,5 +68,12 @@ export default defineConfig({
     sourcemap: false,
     cssMinify: true,
     assetsInlineLimit: 4096,
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`
+      }
+    }
   },
 })
