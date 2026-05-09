@@ -18,25 +18,27 @@ export default function Feedback() {
 
   const fetchFeedbacks = async () => {
     setLoading(true);
-    let query = supabase.from('feedback').select(`
-      id, type, content, created_at,
-      profiles ( name, surname, number )
-    `).order('created_at', { ascending: false });
+    try {
+      let query = supabase.from('feedback').select(`
+        id, type, content, created_at,
+        profiles ( name, surname, number )
+      `).order('created_at', { ascending: false });
 
-    // If not admin, only show own feedback
-    if (!isAdmin && profile?.id) {
-      query = query.eq('player_id', profile.id);
-    }
+      // If not admin, only show own feedback
+      if (!isAdmin && profile?.id) {
+        query = query.eq('player_id', profile.id);
+      }
 
-    const { data, error } = await query;
-    if (data) {
-      setFeedbacks(data);
-    } else {
-      // Mock data
-      setFeedbacks([
-        { id: '1', type: 'exercise_suggestion', content: 'Estaría genial hacer un torneo de fut-tenis el viernes.', profiles: { name: 'Luis', surname: 'Campos', number: 7 }, created_at: new Date().toISOString() },
-        { id: '2', type: 'session_comment', content: 'Me costó un poco entender la presión 4-3-3 de ayer, necesito repasarlo.', profiles: { name: 'Diego', surname: 'Soto', number: 4 }, created_at: new Date().toISOString() }
-      ]);
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error loading feedback:', error);
+      }
+      
+      setFeedbacks(data || []);
+    } catch (error) {
+      console.error('Error fetching feedbacks:', error);
+      setFeedbacks([]);
     }
     setLoading(false);
   };
@@ -56,14 +58,16 @@ export default function Feedback() {
       profiles ( name, surname, number )
     `).single();
 
+    if (error) {
+      console.error('Error submitting feedback:', error);
+      alert('❌ Error al enviar el comentario');
+      return;
+    }
+
     if (data) {
       setFeedbacks([data, ...feedbacks]);
       setContent('');
-    } else {
-      // Mock insert
-      const mock = { ...newFeedback, id: Date.now().toString(), profiles: { name: profile.name, surname: profile.surname, number: 10 }, created_at: new Date().toISOString() };
-      setFeedbacks([mock, ...feedbacks]);
-      setContent('');
+      alert('✅ Comentario enviado correctamente');
     }
   };
 

@@ -230,6 +230,21 @@ export default function ChatSystem() {
       }
 
       console.log('Message sent successfully:', data);
+      
+      // Crear notificación para el jugador
+      if (isRealAdmin && selectedPlayer?.auth_profile_id) {
+        const notificationData = {
+          player_id: selectedPlayer.auth_profile_id,
+          type: 'chat_message',
+          title: 'Nuevo mensaje del entrenador',
+          message: `${profile?.name || 'El entrenador'} te ha enviado un mensaje`,
+          read: false
+        };
+        
+        await supabase.from('notifications').insert([notificationData]);
+        console.log('Notification created for player');
+      }
+      
       setNewMessage('');
       
       // Recargar mensajes y conversaciones
