@@ -9,42 +9,25 @@ export default function ChatSystem() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [players, setPlayers] = useState([]);
-  const [selectedPlayerId, setSelectedPlayerId] = useState('');
+  const [selectedPlayerAuthId, setSelectedPlayerAuthId] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const selectedPlayer = players.find(p => {
-    const playerId = parseInt(selectedPlayerId);
-    const match = p.id === playerId;
-    
-    if (selectedPlayerId) {
-      console.log('=== FINDING PLAYER ===');
-      console.log('Looking for ID:', selectedPlayerId, '(parsed:', playerId, ')');
-      console.log('Players available:', players.length);
-      console.log('First 3 players:', players.slice(0, 3).map(p => ({ id: p.id, name: p.name, auth_profile_id: p.auth_profile_id })));
-      console.log('Match found:', match);
-      if (match) {
-        console.log('Selected player:', p);
-      }
-      console.log('=====================');
-    }
-    
-    return match;
-  });
+  const selectedPlayer = players.find(p => p.auth_profile_id === selectedPlayerAuthId);
   
   // Debug mejorado
   useEffect(() => {
-    if (selectedPlayerId) {
+    if (selectedPlayerAuthId) {
       console.log('=== DEBUG CHAT ===');
-      console.log('selectedPlayerId:', selectedPlayerId, typeof selectedPlayerId);
-      console.log('players:', players);
+      console.log('selectedPlayerAuthId:', selectedPlayerAuthId);
+      console.log('players:', players.length, 'available');
       console.log('selectedPlayer:', selectedPlayer);
       console.log('isRealAdmin:', isRealAdmin);
       console.log('==================');
     }
-  }, [selectedPlayerId, selectedPlayer, isRealAdmin, players]);
+  }, [selectedPlayerAuthId, selectedPlayer, isRealAdmin, players]);
 
   useEffect(() => {
     if (isRealAdmin) {
@@ -69,7 +52,7 @@ export default function ChatSystem() {
         subscription?.unsubscribe();
       };
     }
-  }, [isOpen, selectedPlayerId, user]);
+  }, [isOpen, selectedPlayerAuthId, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -305,7 +288,7 @@ export default function ChatSystem() {
         </div>
         <div className="flex items-center gap-2">
           {/* Botón para nueva conversación */}
-          {isRealAdmin && !selectedPlayerId && (
+          {isRealAdmin && !selectedPlayerAuthId && (
             <button
               onClick={() => setShowAllPlayers(!showAllPlayers)}
               className="w-8 h-8 rounded-lg bg-accent/20 text-accent flex items-center justify-center hover:bg-accent/30 transition-all"
@@ -324,7 +307,7 @@ export default function ChatSystem() {
       </div>
 
       {/* Lista de conversaciones O lista de todos los jugadores */}
-      {isRealAdmin && !selectedPlayerId && (
+      {isRealAdmin && !selectedPlayerAuthId && (
         <div className="flex-1 overflow-y-auto">
           {showAllPlayers ? (
             /* Lista de TODOS los jugadores para iniciar conversación */
@@ -341,13 +324,12 @@ export default function ChatSystem() {
               <div className="space-y-2">
                 {players.map(p => (
                   <button
-                    key={p.id}
+                    key={p.auth_profile_id}
                     type="button"
                     onClick={() => {
                       console.log('Clicking player:', p);
-                      console.log('Player ID (roster):', p.id);
                       console.log('Player auth_profile_id:', p.auth_profile_id);
-                      setSelectedPlayerId(String(p.id));
+                      setSelectedPlayerAuthId(p.auth_profile_id);
                       setShowAllPlayers(false);
                       // Cargar mensajes inmediatamente
                       setTimeout(() => loadMessages(), 100);
@@ -393,11 +375,11 @@ export default function ChatSystem() {
             <div className="divide-y divide-white/5">
               {conversations.map((conv) => (
                 <button
-                  key={conv.player.id}
+                  key={conv.player.auth_profile_id}
                   type="button"
                   onClick={() => {
                     console.log('Selecting player from conversation:', conv.player);
-                    setSelectedPlayerId(String(conv.player.id));
+                    setSelectedPlayerAuthId(conv.player.auth_profile_id);
                     setTimeout(() => loadMessages(), 100);
                   }}
                   className="w-full p-4 hover:bg-white/5 transition-colors flex items-center gap-3 text-left"
@@ -445,7 +427,7 @@ export default function ChatSystem() {
       )}
 
       {/* Chat activo con jugador seleccionado */}
-      {isRealAdmin && selectedPlayerId ? (
+      {isRealAdmin && selectedPlayerAuthId ? (
         selectedPlayer ? (
           <>
             {/* Header del jugador seleccionado */}
@@ -471,7 +453,7 @@ export default function ChatSystem() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedPlayerId('');
+                    setSelectedPlayerAuthId('');
                     setMessages([]);
                   }}
                   className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold text-white transition-all"
@@ -527,9 +509,9 @@ export default function ChatSystem() {
           <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
             <User size={40} className="text-muted opacity-20 mb-3" />
             <p className="text-sm text-muted mb-2">Jugador no encontrado</p>
-            <p className="text-xs text-muted mb-4">ID: {selectedPlayerId}</p>
+            <p className="text-xs text-muted mb-4">Auth ID: {selectedPlayerAuthId}</p>
             <button
-              onClick={() => setSelectedPlayerId('')}
+              onClick={() => setSelectedPlayerAuthId('')}
               className="px-4 py-2 bg-accent text-bg rounded-xl text-sm font-black hover:scale-105 transition-all"
             >
               Volver a la lista
@@ -585,16 +567,16 @@ export default function ChatSystem() {
           <input
             type="text"
             className="input-field flex-1 text-sm"
-            placeholder={isRealAdmin && !selectedPlayerId ? "Selecciona un jugador primero..." : "Escribe un mensaje..."}
+            placeholder={isRealAdmin && !selectedPlayerAuthId ? "Selecciona un jugador primero..." : "Escribe un mensaje..."}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-            disabled={isRealAdmin && !selectedPlayerId}
+            disabled={isRealAdmin && !selectedPlayerAuthId}
           />
           <button
             type="button"
             onClick={sendMessage}
-            disabled={!newMessage.trim() || (isRealAdmin && !selectedPlayerId)}
+            disabled={!newMessage.trim() || (isRealAdmin && !selectedPlayerAuthId)}
             className="w-10 h-10 bg-accent text-bg rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Send size={16} />
