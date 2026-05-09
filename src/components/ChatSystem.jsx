@@ -192,10 +192,15 @@ export default function ChatSystem() {
 
       {/* Player Selector (Admin only) - CUSTOM DROPDOWN */}
       {isRealAdmin && (
-        <div className="p-3 border-b border-white/10">
+        <div className="p-3 border-b border-white/10 relative">
           {/* Selected Player Display / Trigger */}
           <button
-            onClick={() => setShowPlayerList(!showPlayerList)}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowPlayerList(!showPlayerList);
+            }}
             className="w-full input-field text-sm flex items-center justify-between cursor-pointer hover:border-accent/40"
           >
             {selectedPlayer ? (
@@ -212,13 +217,17 @@ export default function ChatSystem() {
 
           {/* Dropdown List */}
           {showPlayerList && (
-            <div className="absolute left-3 right-3 mt-1 bg-surface border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50">
+            <div className="absolute left-3 right-3 mt-1 bg-surface border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-[100]">
               {players.map(p => (
                 <button
+                  type="button"
                   key={p.id}
-                  onClick={() => {
-                    console.log('Clicked player:', p);
-                    setSelectedPlayerId(String(p.id));
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const newId = String(p.id);
+                    console.log('Setting player ID to:', newId);
+                    setSelectedPlayerId(newId);
                     setShowPlayerList(false);
                   }}
                   className={`w-full px-4 py-3 text-left text-sm hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
@@ -235,7 +244,7 @@ export default function ChatSystem() {
           )}
 
           {/* Selected Player Confirmation */}
-          {selectedPlayer && (
+          {selectedPlayerId && selectedPlayer && (
             <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded-lg">
               <div className="text-xs text-accent flex items-center gap-2">
                 ✓ Chateando con: <span className="font-black">{selectedPlayer.name} {selectedPlayer.surname}</span>
@@ -243,7 +252,7 @@ export default function ChatSystem() {
             </div>
           )}
 
-          {!selectedPlayer && (
+          {!selectedPlayerId && (
             <p className="text-xs text-muted mt-2">👆 Selecciona un jugador para empezar a chatear</p>
           )}
         </div>
