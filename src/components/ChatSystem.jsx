@@ -9,9 +9,11 @@ export default function ChatSystem() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [players, setPlayers] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  const selectedPlayer = players.find(p => p.id === parseInt(selectedPlayerId));
 
   useEffect(() => {
     if (isRealAdmin) {
@@ -27,7 +29,7 @@ export default function ChatSystem() {
         subscription?.unsubscribe();
       };
     }
-  }, [isOpen, selectedPlayer, user]);
+  }, [isOpen, selectedPlayerId, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -185,16 +187,10 @@ export default function ChatSystem() {
         <div className="p-3 border-b border-white/10">
           <select
             className="input-field text-sm"
-            value={selectedPlayer?.id || ''}
+            value={selectedPlayerId}
             onChange={(e) => {
-              const playerId = parseInt(e.target.value);
-              if (playerId) {
-                const player = players.find(p => p.id === playerId);
-                console.log('Selected player:', player);
-                setSelectedPlayer(player);
-              } else {
-                setSelectedPlayer(null);
-              }
+              console.log('Selecting player ID:', e.target.value);
+              setSelectedPlayerId(e.target.value);
             }}
           >
             <option value="">Selecciona un jugador... ({players.length} disponibles)</option>
