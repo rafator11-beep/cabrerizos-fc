@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MessageCircle, Send, X, User, ChevronDown } from 'lucide-react';
+import { MessageCircle, Send, X, User, ChevronDown, Plus } from 'lucide-react';
 
 export default function ChatSystem() {
   const { user, profile, isRealAdmin } = useAuth();
@@ -12,6 +12,7 @@ export default function ChatSystem() {
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversations, setConversations] = useState([]);
+  const [showAllPlayers, setShowAllPlayers] = useState(false);
   const messagesEndRef = useRef(null);
 
   const selectedPlayer = players.find(p => p.id === parseInt(selectedPlayerId));
@@ -240,24 +241,88 @@ export default function ChatSystem() {
             )}
           </div>
         </div>
-        <button
-          onClick={() => setIsOpen(false)}
-          className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"
-        >
-          <X size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Botón para nueva conversación */}
+          {isRealAdmin && !selectedPlayerId && (
+            <button
+              onClick={() => setShowAllPlayers(!showAllPlayers)}
+              className="w-8 h-8 rounded-lg bg-accent/20 text-accent flex items-center justify-center hover:bg-accent/30 transition-all"
+              title="Nueva conversación"
+            >
+              <Plus size={16} />
+            </button>
+          )}
+          <button
+            onClick={() => setIsOpen(false)}
+            className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
-      {/* Lista de conversaciones (estilo WhatsApp) */}
+      {/* Lista de conversaciones O lista de todos los jugadores */}
       {isRealAdmin && !selectedPlayerId && (
         <div className="flex-1 overflow-y-auto">
-          {conversations.length === 0 ? (
+          {showAllPlayers ? (
+            /* Lista de TODOS los jugadores para iniciar conversación */
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-muted">Selecciona un jugador ({players.length} disponibles)</p>
+                <button 
+                  onClick={() => setShowAllPlayers(false)}
+                  className="text-xs text-accent hover:underline"
+                >
+                  Ver conversaciones
+                </button>
+              </div>
+              <div className="space-y-2">
+                {players.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPlayerId(String(p.id));
+                      setShowAllPlayers(false);
+                    }}
+                    className="w-full p-3 bg-white/5 hover:bg-accent/10 border border-white/10 hover:border-accent/40 rounded-xl text-left transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      {p.photo_url ? (
+                        <img 
+                          src={p.photo_url} 
+                          alt={p.name}
+                          className="w-10 h-10 rounded-full object-cover bg-transparent"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">
+                          {p.number}
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <div className="text-sm font-bold text-white">{p.name}</div>
+                        <div className="text-xs text-muted">{p.surname}</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : conversations.length === 0 ? (
+            /* Sin conversaciones */
             <div className="flex flex-col items-center justify-center h-full text-center p-4">
               <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
-              <p className="text-sm text-muted">No hay conversaciones aún</p>
-              <p className="text-xs text-muted mt-1">Los mensajes aparecerán aquí</p>
+              <p className="text-sm text-muted mb-2">No hay conversaciones aún</p>
+              <p className="text-xs text-muted mb-4">Haz clic en el botón + arriba para iniciar una conversación</p>
+              <button
+                onClick={() => setShowAllPlayers(true)}
+                className="px-4 py-2 bg-accent text-bg rounded-xl text-sm font-black hover:scale-105 transition-all"
+              >
+                Nueva conversación
+              </button>
             </div>
           ) : (
+            /* Lista de conversaciones existentes */
             <div className="divide-y divide-white/5">
               {conversations.map((conv) => (
                 <button
