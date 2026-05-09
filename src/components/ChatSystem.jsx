@@ -15,6 +15,13 @@ export default function ChatSystem() {
   const messagesEndRef = useRef(null);
 
   const selectedPlayer = players.find(p => p.id === parseInt(selectedPlayerId));
+  
+  // Debug
+  useEffect(() => {
+    console.log('selectedPlayerId:', selectedPlayerId);
+    console.log('selectedPlayer:', selectedPlayer);
+    console.log('isRealAdmin:', isRealAdmin);
+  }, [selectedPlayerId, selectedPlayer, isRealAdmin]);
 
   useEffect(() => {
     if (isRealAdmin) {
@@ -286,7 +293,7 @@ export default function ChatSystem() {
       </div>
 
       {/* Input */}
-      {(!isRealAdmin || selectedPlayer) && (
+      {(!isRealAdmin || (isRealAdmin && selectedPlayer)) && (
         <div className="p-4 border-t border-white/10">
           <div className="flex gap-2">
             <input
