@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MessageCircle, Send, X, User } from 'lucide-react';
+import { MessageCircle, Send, X, User, ChevronDown } from 'lucide-react';
 
 export default function ChatSystem() {
   const { user, profile, isRealAdmin } = useAuth();
@@ -11,6 +11,7 @@ export default function ChatSystem() {
   const [players, setPlayers] = useState([]);
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPlayerList, setShowPlayerList] = useState(false);
   const messagesEndRef = useRef(null);
 
   const selectedPlayer = players.find(p => p.id === parseInt(selectedPlayerId));
@@ -182,42 +183,61 @@ export default function ChatSystem() {
         </button>
       </div>
 
-      {/* Player Selector (Admin only) */}
+      {/* Player Selector (Admin only) - CUSTOM DROPDOWN */}
       {isRealAdmin && (
         <div className="p-3 border-b border-white/10">
-          <select
-            key={`player-select-${players.length}`}
-            className="input-field text-sm"
-            value={selectedPlayerId}
-            onChange={(e) => {
-              const value = e.target.value;
-              console.log('Selecting player ID:', value);
-              setSelectedPlayerId(value);
-              if (value) {
-                const player = players.find(p => p.id === parseInt(value));
-                console.log('Found player:', player);
-              }
-            }}
+          {/* Selected Player Display / Trigger */}
+          <button
+            onClick={() => setShowPlayerList(!showPlayerList)}
+            className="w-full input-field text-sm flex items-center justify-between cursor-pointer hover:border-accent/40"
           >
-            <option value="">Selecciona un jugador... ({players.length} disponibles)</option>
-            {players.map(p => (
-              <option key={p.id} value={p.id}>
-                #{p.number} {p.name} {p.surname}
-              </option>
-            ))}
-          </select>
-          {selectedPlayerId && selectedPlayer && (
+            {selectedPlayer ? (
+              <span className="text-white">
+                #{selectedPlayer.number} {selectedPlayer.name} {selectedPlayer.surname}
+              </span>
+            ) : (
+              <span className="text-muted">
+                Selecciona un jugador... ({players.length} disponibles)
+              </span>
+            )}
+            <ChevronDown size={16} className={`transition-transform ${showPlayerList ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Dropdown List */}
+          {showPlayerList && (
+            <div className="absolute left-3 right-3 mt-1 bg-surface border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50">
+              {players.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    console.log('Clicked player:', p);
+                    setSelectedPlayerId(String(p.id));
+                    setShowPlayerList(false);
+                  }}
+                  className={`w-full px-4 py-3 text-left text-sm hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
+                    selectedPlayerId === String(p.id) ? 'bg-accent/10 text-accent' : 'text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-black">#{p.number}</span>
+                    <span>{p.name} {p.surname}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Selected Player Confirmation */}
+          {selectedPlayer && (
             <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded-lg">
               <div className="text-xs text-accent flex items-center gap-2">
                 ✓ Chateando con: <span className="font-black">{selectedPlayer.name} {selectedPlayer.surname}</span>
               </div>
             </div>
           )}
-          {!selectedPlayerId && (
-            <p className="text-xs text-muted mt-2">👆 Selecciona un jugador del menú para empezar a chatear</p>
-          )}
-          {players.length === 0 && (
-            <p className="text-xs text-red-400 mt-2">⚠️ No se encontraron jugadores en la base de datos</p>
+
+          {!selectedPlayer && (
+            <p className="text-xs text-muted mt-2">👆 Selecciona un jugador para empezar a chatear</p>
           )}
         </div>
       )}
