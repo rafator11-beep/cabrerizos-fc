@@ -17,19 +17,29 @@ export default function ChatSystem() {
 
   const selectedPlayer = players.find(p => p.id === parseInt(selectedPlayerId));
   
-  // Debug
+  // Debug mejorado
   useEffect(() => {
-    console.log('selectedPlayerId:', selectedPlayerId);
-    console.log('selectedPlayer:', selectedPlayer);
-    console.log('isRealAdmin:', isRealAdmin);
-  }, [selectedPlayerId, selectedPlayer, isRealAdmin]);
+    if (selectedPlayerId) {
+      console.log('=== DEBUG CHAT ===');
+      console.log('selectedPlayerId:', selectedPlayerId, typeof selectedPlayerId);
+      console.log('players:', players);
+      console.log('selectedPlayer:', selectedPlayer);
+      console.log('isRealAdmin:', isRealAdmin);
+      console.log('==================');
+    }
+  }, [selectedPlayerId, selectedPlayer, isRealAdmin, players]);
 
   useEffect(() => {
     if (isRealAdmin) {
       loadPlayers();
-      loadConversations();
     }
   }, [isRealAdmin]);
+
+  useEffect(() => {
+    if (isRealAdmin && players.length > 0) {
+      loadConversations();
+    }
+  }, [isRealAdmin, players]);
 
   useEffect(() => {
     if (isOpen) {
