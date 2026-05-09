@@ -1,0 +1,142 @@
+CREDENCIALES DE ACCESO - CABRERIZOS F.C. JUVENIL B
+============================================================
+
+JUGADOR: Alejandro García (#1)
+EMAIL: alejandro.garcía.1@cabrerizosfc.com
+CONTRASEÑA: CFCalejandro12026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Carlos Rodríguez (#2)
+EMAIL: carlos.rodríguez.2@cabrerizosfc.com
+CONTRASEÑA: CFCcarlos22026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: David López (#3)
+EMAIL: david.lópez.3@cabrerizosfc.com
+CONTRASEÑA: CFCdavid32026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Fernando Martín (#4)
+EMAIL: fernando.martín.4@cabrerizosfc.com
+CONTRASEÑA: CFCfernando42026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Gabriel Sánchez (#5)
+EMAIL: gabriel.sánchez.5@cabrerizosfc.com
+CONTRASEÑA: CFCgabriel52026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Hugo Fernández (#6)
+EMAIL: hugo.fernández.6@cabrerizosfc.com
+CONTRASEÑA: CFChugo62026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Iván Pérez (#7)
+EMAIL: iván.pérez.7@cabrerizosfc.com
+CONTRASEÑA: CFCiván72026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Javier González (#8)
+EMAIL: javier.gonzález.8@cabrerizosfc.com
+CONTRASEÑA: CFCjavier82026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Kevin Ruiz (#9)
+EMAIL: kevin.ruiz.9@cabrerizosfc.com
+CONTRASEÑA: CFCkevin92026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Luis Jiménez (#10)
+EMAIL: luis.jiménez.10@cabrerizosfc.com
+CONTRASEÑA: CFCluis102026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Mario Moreno (#11)
+EMAIL: mario.moreno.11@cabrerizosfc.com
+CONTRASEÑA: CFCmario112026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Nicolás Herrera (#12)
+EMAIL: nicolás.herrera.12@cabrerizosfc.com
+CONTRASEÑA: CFCnicolás122026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Óscar Romero (#13)
+EMAIL: óscar.romero.13@cabrerizosfc.com
+CONTRASEÑA: CFCóscar132026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Pablo Torres (#14)
+EMAIL: pablo.torres.14@cabrerizosfc.com
+CONTRASEÑA: CFCpablo142026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Raúl Vargas (#15)
+EMAIL: raúl.vargas.15@cabrerizosfc.com
+CONTRASEÑA: CFCraúl152026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Sergio Castro (#16)
+EMAIL: sergio.castro.16@cabrerizosfc.com
+CONTRASEÑA: CFCsergio162026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Tomás Ortega (#17)
+EMAIL: tomás.ortega.17@cabrerizosfc.com
+CONTRASEÑA: CFCtomás172026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Víctor Ramos (#18)
+EMAIL: víctor.ramos.18@cabrerizosfc.com
+CONTRASEÑA: CFCvíctor182026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: William Delgado (#19)
+EMAIL: william.delgado.19@cabrerizosfc.com
+CONTRASEÑA: CFCwilliam192026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+JUGADOR: Xavier Mendoza (#20)
+EMAIL: xavier.mendoza.20@cabrerizosfc.com
+CONTRASEÑA: CFCxavier202026
+URL: https://rafator11-beep.github.io/cabrerizos-fc/
+----------------------------------------
+
+
+INSTRUCCIONES PARA JUGADORES:
+==============================
+1. Ir a: https://rafator11-beep.github.io/cabrerizos-fc/
+2. Hacer clic en "Iniciar Sesión"
+3. Usar tu email y contraseña personal
+4. Una vez dentro, podrás ver:
+   - Tus entrenamientos personalizados
+   - Alineaciones y convocatorias
+   - Comentarios del entrenador
+   - Tu progreso y estadísticas
+5. Puedes cambiar tu contraseña en el perfil
+
+FORMATO DE CONTRASEÑAS:
+CFC + tu_nombre + tu_numero + 2026
+Ejemplo: CFCalejandro12026
+
+SOPORTE TÉCNICO:
+Si tienes problemas para acceder, contacta al entrenador.

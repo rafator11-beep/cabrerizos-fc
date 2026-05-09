@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Save, Trash2, X, ChevronRight, Download, Share2 } from 'lucide-react';
+import { Plus, Save, Trash2, X, ChevronRight, Download, Share2, Crown, MessageSquare, Bell } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { exportSvgAsImage } from '../utils/ExportHelper';
 import Convocatoria from '../components/Convocatoria';
@@ -83,6 +83,9 @@ export default function Alineacion() {
   const svgRef = useRef(null);
   const [dragging, setDragging] = useState(null);
   const [showConvocatoria, setShowConvocatoria] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [playerComment, setPlayerComment] = useState('');
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -102,10 +105,50 @@ export default function Alineacion() {
 
   const saveLineup = async () => {
     if (isPlayerMode || !activeLineup) return;
-    await supabase.from('lineups').update({
-      starters: activeLineup.starters || [],
-      substitutes: activeLineup.substitutes || []
-    }).eq('id', activeLineup.id);
+    
+    try {
+      await supabase.from('lineups').update({
+        starters: activeLineup.starters || [],
+        substitutes: activeLineup.substitutes || [],
+        captain_id: activeLineup.captain_id || null,
+        player_comments: activeLineup.player_comments || {}
+      }).eq('id', activeLineup.id);
+
+      // Enviar notificaciones a los jugadores convocados
+      await sendLineupNotifications();
+      
+      alert('✅ Alineación guardada y notificaciones enviadas a los jugadores');
+    } catch (error) {
+      alert('❌ Error al guardar la alineación');
+    }
+  };
+
+  const sendLineupNotifications = async () => {
+    if (!activeLineup) return;
+    
+    const convocados = activeLineup.starters
+      .filter(s => s.player_id)
+      .map(s => s.player_id);
+    
+    if (convocados.length === 0) return;
+
+    // Crear notificación en la base de datos
+    const notification = {
+      title: `Nueva Alineación: ${activeLineup.name}`,
+      message: `Has sido convocado para el partido. Revisa tu posición y comentarios del entrenador.`,
+      type: 'lineup',
+      lineup_id: activeLineup.id,
+      created_at: new Date().toISOString()
+    };
+
+    // Insertar notificación para cada jugador convocado
+    const notifications = convocados.map(player_id => ({
+      ...notification,
+      player_id,
+      read: false
+    }));
+
+    await supabase.from('notifications').insert(notifications);
   };
 
   const createLineup = async () => {
@@ -174,6 +217,39 @@ export default function Alineacion() {
     setActiveLineup({ ...activeLineup, starters: next });
   };
 
+  const setCaptain = (playerId) => {
+    if (isPlayerMode || !activeLineup) return;
+    setActiveLineup({ 
+      ...activeLineup, 
+      captain_id: activeLineup.captain_id === playerId ? null : playerId 
+    });
+  };
+
+  const openPlayerComments = (player) => {
+    setSelectedPlayer(player);
+    const comments = activeLineup?.player_comments || {};
+    setPlayerComment(comments[player.id] || '');
+    setShowComments(true);
+  };
+
+  const savePlayerComment = () => {
+    if (!selectedPlayer || !activeLineup) return;
+    
+    const updatedComments = {
+      ...(activeLineup.player_comments || {}),
+      [selectedPlayer.id]: playerComment
+    };
+    
+    setActiveLineup({
+      ...activeLineup,
+      player_comments: updatedComments
+    });
+    
+    setShowComments(false);
+    setSelectedPlayer(null);
+    setPlayerComment('');
+  };
+
   const handleExport = () => {
     if (svgRef.current) exportSvgAsImage(svgRef.current, `alineacion-${activeLineup?.name || 'xi'}.png`);
   };
@@ -202,6 +278,32 @@ export default function Alineacion() {
       
       {/* Convocatoria Modal */}
       {showConvocatoria && <Convocatoria lineup={activeLineup} onClose={() => setShowConvocatoria(false)} />}
+
+      {/* Comments Modal */}
+      {showComments && selectedPlayer && (
+        <div className="modal-overlay animate-fade-in" onClick={() => setShowComments(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <MessageSquare size={20} className="text-accent" />
+              <div>
+                <h2 className="text-lg font-black text-white">Comentarios para {selectedPlayer.name}</h2>
+                <p className="text-xs text-muted">Instrucciones específicas para el partido</p>
+              </div>
+            </div>
+            <textarea 
+              className="w-full h-32 p-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-muted resize-none outline-none focus:border-accent"
+              placeholder="Ej: Mantente pegado a la banda, busca el desmarque por detrás de la defensa..."
+              value={playerComment}
+              onChange={(e) => setPlayerComment(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setShowComments(false)} className="flex-1 py-3 rounded-xl bg-white/5 text-white font-black uppercase tracking-widest text-[10px]">Cancelar</button>
+              <button onClick={savePlayerComment} className="flex-1 py-3 rounded-xl bg-accent text-bg font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Modal */}
       {showForm && (
@@ -288,6 +390,8 @@ export default function Alineacion() {
               const p = players.find(player => player.id === s.player_id);
               const posColor = POS_COLORS[s.pos] || POS_COLORS.MED;
               const isEmpty = !s.player_id;
+              const isCaptain = activeLineup?.captain_id === s.player_id;
+              const hasComments = activeLineup?.player_comments?.[s.player_id];
 
               return (
                 <g key={i} transform={`translate(${s.x}, ${s.y})`} 
@@ -303,6 +407,22 @@ export default function Alineacion() {
                       </>
                     ) : (
                       <>
+                        {/* Captain Crown */}
+                        {isCaptain && (
+                          <g transform="translate(0, -35)">
+                            <circle r={8} fill="#fbbf24" stroke="white" strokeWidth="1" />
+                            <text textAnchor="middle" dy="3" fontSize="8" fill="white">👑</text>
+                          </g>
+                        )}
+                        
+                        {/* Comments Indicator */}
+                        {hasComments && (
+                          <g transform="translate(15, -15)">
+                            <circle r={6} fill="#3b82f6" stroke="white" strokeWidth="1" />
+                            <text textAnchor="middle" dy="2" fontSize="6" fill="white">💬</text>
+                          </g>
+                        )}
+
                         {p?.photo_url ? (
                           <foreignObject x={-25} y={-25} width={50} height={50}>
                             <div className="bg-transparent" style={{
@@ -328,6 +448,23 @@ export default function Alineacion() {
                           </>
                         )}
                         {p && <text textAnchor="middle" dy={p?.photo_url ? 32 : 28} fontSize="9" fontWeight="900" fill="white" style={{ textShadow: '0 2px 4px rgba(0,0,0,1)' }}>{(p.name || '').split(' ')[0]}</text>}
+                        
+                        {/* Admin Controls */}
+                        {!isPlayerMode && p && (
+                          <g transform="translate(20, 0)">
+                            {/* Captain Button */}
+                            <circle r={8} fill={isCaptain ? "#fbbf24" : "rgba(255,255,255,0.1)"} stroke="white" strokeWidth="1" className="cursor-pointer"
+                              onClick={(e) => { e.stopPropagation(); setCaptain(p.id); }} />
+                            <text textAnchor="middle" dy="3" fontSize="8" fill="white" className="cursor-pointer pointer-events-none">👑</text>
+                            
+                            {/* Comments Button */}
+                            <g transform="translate(0, 18)">
+                              <circle r={8} fill={hasComments ? "#3b82f6" : "rgba(255,255,255,0.1)"} stroke="white" strokeWidth="1" className="cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); openPlayerComments(p); }} />
+                              <text textAnchor="middle" dy="3" fontSize="8" fill="white" className="cursor-pointer pointer-events-none">💬</text>
+                            </g>
+                          </g>
+                        )}
                       </>
                     )}
                 </g>
@@ -344,23 +481,23 @@ export default function Alineacion() {
           )}
         </div>
 
-        {/* Players Panel */}
+        {/* Players Panel - COMPACTO */}
         <div className={`bg-surface/95 backdrop-blur-2xl border-t border-white/10 transition-all ${
           isMobile && mobileTab !== 'players' ? 'h-0 opacity-0 overflow-hidden' : 
-          isMobile ? 'h-[45vh] opacity-100' : 'h-[240px] opacity-100'
+          isMobile ? 'h-[35vh] opacity-100' : 'h-[180px] opacity-100'
         }`}>
-          <div className="p-3 flex items-center justify-between border-b border-white/10">
-            <h3 className="text-[9px] font-black text-accent uppercase tracking-widest">Jugadores Disponibles</h3>
-            {isMobile && <button onClick={() => setMobileTab('field')} className="text-muted"><ChevronRight size={16} /></button>}
+          <div className="p-2 flex items-center justify-between border-b border-white/10">
+            <h3 className="text-[8px] font-black text-accent uppercase tracking-widest">Jugadores Disponibles</h3>
+            {isMobile && <button onClick={() => setMobileTab('field')} className="text-muted"><ChevronRight size={14} /></button>}
           </div>
-          <div className="p-3 grid grid-cols-5 md:grid-cols-8 gap-2 overflow-y-auto no-scrollbar" style={{ maxHeight: isMobile ? 'calc(45vh - 44px)' : '196px' }}>
+          <div className="p-2 grid grid-cols-6 md:grid-cols-10 gap-1.5 overflow-y-auto no-scrollbar" style={{ maxHeight: isMobile ? 'calc(35vh - 36px)' : '144px' }}>
             {players.map(p => {
               const isUsed = activeLineup?.starters?.some(s => s.player_id === p.id);
               return (
                 <button key={p.id} onClick={() => assignPlayer(p)} disabled={isUsed}
-                  className={`aspect-square rounded-xl flex flex-col items-center justify-center border transition-all ${isUsed ? 'bg-white/5 opacity-20 border-transparent' : 'bg-white/5 border-white/5 hover:border-accent active:scale-90'}`}>
-                  <span className="text-sm font-black text-white">{p.number}</span>
-                  <span className="text-[7px] font-bold text-muted truncate w-full px-1 text-center">{(p.name || '').split(' ')[0]}</span>
+                  className={`aspect-square rounded-lg flex flex-col items-center justify-center border transition-all text-center ${isUsed ? 'bg-white/5 opacity-20 border-transparent' : 'bg-white/5 border-white/5 hover:border-accent active:scale-90'}`}>
+                  <span className="text-xs font-black text-white">{p.number}</span>
+                  <span className="text-[6px] font-bold text-muted truncate w-full px-0.5">{(p.name || '').split(' ')[0]}</span>
                 </button>
               );
             })}
