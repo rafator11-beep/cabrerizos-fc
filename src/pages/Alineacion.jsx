@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Save, Trash2, X, ChevronRight, Download, Share2, Crown, MessageSquare, Bell } from 'lucide-react';
+import { Plus, Save, Trash2, X, ChevronRight, Download, Share2, Crown, MessageSquare, Bell, MoreVertical, Edit3, Copy } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { exportSvgAsImage } from '../utils/ExportHelper';
 import Convocatoria from '../components/Convocatoria';
@@ -86,6 +86,9 @@ export default function Alineacion() {
   const [showComments, setShowComments] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [playerComment, setPlayerComment] = useState('');
+  const [contextMenu, setContextMenu] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingLineup, setEditingLineup] = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -150,6 +153,106 @@ export default function Alineacion() {
 
     await supabase.from('notifications').insert(notifications);
   };
+
+  const deleteLineup = async (lineupId) => {
+    if (isPlayerMode || !lineupId) return;
+    
+    const confirmed = confirm('¿Estás seguro de que quieres eliminar esta alineación? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
+
+    try {
+      await supabase.from('lineups').delete().eq('id', lineupId);
+      
+      const updatedLineups = lineups.filter(l => l.id !== lineupId);
+      setLineups(updatedLineups);
+      
+      if (activeLineup?.id === lineupId) {
+        setActiveLineup(updatedLineups.length > 0 ? updatedLineups[0] : null);
+      }
+      
+      alert('✅ Alineación eliminada correctamente');
+    } catch (error) {
+      console.error('Error deleting lineup:', error);
+      alert('❌ Error al eliminar la alineación');
+    }
+  };
+
+  const editLineup = async (lineupId, newData) => {
+    if (isPlayerMode || !lineupId) return;
+
+    try {
+      await supabase.from('lineups').update(newData).eq('id', lineupId);
+      
+      const updatedLineups = lineups.map(l => 
+        l.id === lineupId ? { ...l, ...newData } : l
+      );
+      setLineups(updatedLineups);
+      
+      if (activeLineup?.id === lineupId) {
+        setActiveLineup({ ...activeLineup, ...newData });
+      }
+      
+      alert('✅ Alineación actualizada correctamente');
+    } catch (error) {
+      console.error('Error updating lineup:', error);
+      alert('❌ Error al actualizar la alineación');
+    }
+  };
+
+  const duplicateLineup = async (lineup) => {
+    if (isPlayerMode || !lineup) return;
+
+    try {
+      const newLineup = {
+        name: `${lineup.name} (Copia)`,
+        formation: lineup.formation,
+        match_date: lineup.match_date,
+        starters: lineup.starters || [],
+        substitutes: lineup.substitutes || [],
+        captain_id: lineup.captain_id,
+        player_comments: lineup.player_comments || {},
+        notes: lineup.notes || ''
+      };
+
+      const { data, error } = await supabase
+        .from('lineups')
+        .insert([newLineup])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedLineups = [data, ...lineups];
+      setLineups(updatedLineups);
+      setActiveLineup(data);
+      
+      alert('✅ Alineación duplicada correctamente');
+    } catch (error) {
+      console.error('Error duplicating lineup:', error);
+      alert('❌ Error al duplicar la alineación');
+    }
+  };
+
+  const handleContextMenu = (e, lineup) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, lineup });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu) {
+        setContextMenu(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [contextMenu]);
 
   const createLineup = async () => {
     if (!form.name) return;
@@ -273,9 +376,144 @@ export default function Alineacion() {
 
   if (loading) return <div className="flex items-center justify-center h-full"><div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>;
 
+  // Componente de menú contextual
+  const LineupContextMenu = () => {
+    if (!contextMenu) return null;
+
+    return (
+      <div 
+        className="fixed bg-surface border border-white/10 rounded-lg shadow-xl z-50 py-2 min-w-[160px]"
+        style={{ 
+          left: contextMenu.x, 
+          top: contextMenu.y,
+          transform: 'translate(-50%, -10px)'
+        }}
+      >
+        <button
+          onClick={() => { setEditingLineup(contextMenu.lineup); setShowEditModal(true); closeContextMenu(); }}
+          className="w-full px-4 py-2 text-left text-sm hover:bg-white/5 flex items-center gap-2 text-white"
+        >
+          <Edit3 size={14} />
+          Editar
+        </button>
+        <button
+          onClick={() => { duplicateLineup(contextMenu.lineup); closeContextMenu(); }}
+          className="w-full px-4 py-2 text-left text-sm hover:bg-white/5 flex items-center gap-2 text-white"
+        >
+          <Copy size={14} />
+          Duplicar
+        </button>
+        <hr className="my-1 border-white/10" />
+        <button
+          onClick={() => { deleteLineup(contextMenu.lineup.id); closeContextMenu(); }}
+          className="w-full px-4 py-2 text-left text-sm hover:bg-red-500/10 text-red-500 flex items-center gap-2"
+        >
+          <Trash2 size={14} />
+          Eliminar
+        </button>
+      </div>
+    );
+  };
+
+  // Componente de modal para editar
+  const EditLineupModal = () => {
+    const [editForm, setEditForm] = useState({
+      name: editingLineup?.name || '',
+      formation: editingLineup?.formation || '4-3-3',
+      match_date: editingLineup?.match_date || '',
+      notes: editingLineup?.notes || ''
+    });
+
+    const handleSave = () => {
+      if (!editForm.name.trim()) {
+        alert('El nombre es obligatorio');
+        return;
+      }
+      editLineup(editingLineup.id, editForm);
+      setShowEditModal(false);
+      setEditingLineup(null);
+    };
+
+    if (!editingLineup) return null;
+
+    return (
+      <div className="modal-overlay animate-fade-in" onClick={() => { setShowEditModal(false); setEditingLineup(null); }}>
+        <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-black text-white">Editar Alineación</h3>
+            <button onClick={() => { setShowEditModal(false); setEditingLineup(null); }} className="text-muted hover:text-white">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-muted mb-2 block">Nombre</label>
+              <input
+                className="input-field"
+                value={editForm.name}
+                onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ej: Jornada 12 vs Villamayor"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted mb-2 block">Formación</label>
+              <select
+                className="input-field"
+                value={editForm.formation}
+                onChange={e => setEditForm(prev => ({ ...prev, formation: e.target.value }))}
+              >
+                {FORMATIONS.map(f => (
+                  <option key={f} value={f} className="bg-bg">{f}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted mb-2 block">Fecha del partido</label>
+              <input
+                type="date"
+                className="input-field"
+                value={editForm.match_date}
+                onChange={e => setEditForm(prev => ({ ...prev, match_date: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted mb-2 block">Notas</label>
+              <textarea
+                className="input-field resize-none"
+                rows={3}
+                value={editForm.notes}
+                onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Notas adicionales sobre la alineación..."
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button onClick={() => { setShowEditModal(false); setEditingLineup(null); }} className="flex-1 py-4 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest text-[10px]">
+              Cancelar
+            </button>
+            <button onClick={handleSave} className="flex-1 py-4 rounded-2xl bg-accent text-bg font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all">
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full bg-bg overflow-hidden md:flex-row">
       
+      {/* Context Menu */}
+      <LineupContextMenu />
+
+      {/* Edit Modal */}
+      {showEditModal && <EditLineupModal />}
+
       {/* Convocatoria Modal */}
       {showConvocatoria && <Convocatoria lineup={activeLineup} onClose={() => setShowConvocatoria(false)} />}
 
@@ -331,11 +569,26 @@ export default function Alineacion() {
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2">
           {lineups.map(l => (
-            <button key={l.id} onClick={() => { setActiveLineup(l); if(isMobile) setMobileTab('field'); }}
-              className={`w-full p-3 rounded-2xl text-left border transition-all ${activeLineup?.id === l.id ? 'bg-accent/10 border-accent/40 text-white' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
-              <div className="text-[10px] font-black uppercase tracking-widest">{l.name}</div>
-              <div className="text-[9px] font-bold mt-0.5 opacity-40">{l.match_date} · {l.formation}</div>
-            </button>
+            <div key={l.id} className="relative">
+              <button onClick={() => { setActiveLineup(l); if(isMobile) setMobileTab('field'); }}
+                onContextMenu={(e) => !isPlayerMode && handleContextMenu(e, l)}
+                className={`w-full p-3 rounded-2xl text-left border transition-all ${activeLineup?.id === l.id ? 'bg-accent/10 border-accent/40 text-white' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="text-[10px] font-black uppercase tracking-widest">{l.name}</div>
+                    <div className="text-[9px] font-bold mt-0.5 opacity-40">{l.match_date} · {l.formation}</div>
+                  </div>
+                  {!isPlayerMode && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleContextMenu(e, l); }}
+                      className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center ml-2"
+                    >
+                      <MoreVertical size={14} />
+                    </button>
+                  )}
+                </div>
+              </button>
+            </div>
           ))}
         </div>
       </div>

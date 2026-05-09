@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import ChatSystem from './components/ChatSystem';
 import Login from './pages/Login';
 import DashboardLayout from './pages/DashboardLayout';
 import Home from './pages/Home';
@@ -43,6 +44,8 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
+  const { user } = useAuth();
+
   return (
     <ErrorBoundary boundary="App">
       <Routes>
@@ -69,6 +72,9 @@ export default function App() {
         {/* Catch-all: redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      
+      {/* Chat System - disponible para todos los usuarios autenticados */}
+      {user && <ChatSystem />}
     </ErrorBoundary>
   );
 }
