@@ -16,11 +16,21 @@ export default function ChatSystem() {
   const messagesEndRef = useRef(null);
 
   const selectedPlayer = players.find(p => {
-    const match = p.id === parseInt(selectedPlayerId);
-    if (selectedPlayerId && !match) {
-      console.log('Player not found. Looking for ID:', selectedPlayerId, 'Type:', typeof selectedPlayerId);
-      console.log('Available players:', players.map(p => ({ id: p.id, name: p.name })));
+    const playerId = parseInt(selectedPlayerId);
+    const match = p.id === playerId;
+    
+    if (selectedPlayerId) {
+      console.log('=== FINDING PLAYER ===');
+      console.log('Looking for ID:', selectedPlayerId, '(parsed:', playerId, ')');
+      console.log('Players available:', players.length);
+      console.log('First 3 players:', players.slice(0, 3).map(p => ({ id: p.id, name: p.name, auth_profile_id: p.auth_profile_id })));
+      console.log('Match found:', match);
+      if (match) {
+        console.log('Selected player:', p);
+      }
+      console.log('=====================');
     }
+    
     return match;
   });
   
@@ -334,11 +344,13 @@ export default function ChatSystem() {
                     key={p.id}
                     type="button"
                     onClick={() => {
-                      console.log('Clicking player:', p, 'ID:', p.id);
-                      const playerId = String(p.id);
-                      console.log('Setting playerId to:', playerId);
-                      setSelectedPlayerId(playerId);
+                      console.log('Clicking player:', p);
+                      console.log('Player ID (roster):', p.id);
+                      console.log('Player auth_profile_id:', p.auth_profile_id);
+                      setSelectedPlayerId(String(p.id));
                       setShowAllPlayers(false);
+                      // Cargar mensajes inmediatamente
+                      setTimeout(() => loadMessages(), 100);
                     }}
                     className="w-full p-3 bg-white/5 hover:bg-accent/10 border border-white/10 hover:border-accent/40 rounded-xl text-left transition-all"
                   >
@@ -383,7 +395,11 @@ export default function ChatSystem() {
                 <button
                   key={conv.player.id}
                   type="button"
-                  onClick={() => setSelectedPlayerId(String(conv.player.id))}
+                  onClick={() => {
+                    console.log('Selecting player from conversation:', conv.player);
+                    setSelectedPlayerId(String(conv.player.id));
+                    setTimeout(() => loadMessages(), 100);
+                  }}
                   className="w-full p-4 hover:bg-white/5 transition-colors flex items-center gap-3 text-left"
                 >
                   {/* Foto del jugador */}
