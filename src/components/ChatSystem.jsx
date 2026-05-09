@@ -221,7 +221,7 @@ export default function ChatSystem() {
       )}
 
       {/* Chat activo con jugador seleccionado */}
-      {isRealAdmin && selectedPlayerId && selectedPlayer && (
+      {isRealAdmin && selectedPlayerId && selectedPlayer ? (
         <>
           {/* Header del jugador seleccionado */}
           <div className="p-3 border-b border-white/10 bg-accent/5">
@@ -244,56 +244,90 @@ export default function ChatSystem() {
               </button>
             </div>
           </div>
-        </>
-      )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {isRealAdmin && !selectedPlayerId ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
-            <p className="text-sm text-muted">Selecciona un jugador arriba</p>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
+                <p className="text-sm text-muted">No hay mensajes aún</p>
+                <p className="text-xs text-muted mt-1">Envía el primer mensaje</p>
+              </div>
+            ) : (
+              <>
+                {messages.map((msg) => {
+                  const isMine = msg.sender_id === user.id;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+                          isMine
+                            ? 'bg-accent text-bg'
+                            : 'bg-white/5 text-white'
+                        }`}
+                      >
+                        <p className="text-sm">{msg.message}</p>
+                        <p className={`text-[10px] mt-1 ${isMine ? 'text-bg/60' : 'text-muted'}`}>
+                          {formatTime(msg.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </>
+            )}
           </div>
-        ) : loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
-            <p className="text-sm text-muted">No hay mensajes aún</p>
-            <p className="text-xs text-muted mt-1">
-              {isRealAdmin ? 'Selecciona un jugador para empezar' : 'Envía un mensaje al entrenador'}
-            </p>
-          </div>
-        ) : (
-          <>
-            {messages.map((msg) => {
-              const isMine = msg.sender_id === user.id;
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                >
+        </>
+      ) : !isRealAdmin ? (
+        /* Messages para jugadores */
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
+              <p className="text-sm text-muted">No hay mensajes aún</p>
+              <p className="text-xs text-muted mt-1">Envía un mensaje al entrenador</p>
+            </div>
+          ) : (
+            <>
+              {messages.map((msg) => {
+                const isMine = msg.sender_id === user.id;
+                return (
                   <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-                      isMine
-                        ? 'bg-accent text-bg'
-                        : 'bg-white/5 text-white'
-                    }`}
+                    key={msg.id}
+                    className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                   >
-                    <p className="text-sm">{msg.message}</p>
-                    <p className={`text-[10px] mt-1 ${isMine ? 'text-bg/60' : 'text-muted'}`}>
-                      {formatTime(msg.created_at)}
-                    </p>
+                    <div
+                      className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+                        isMine
+                          ? 'bg-accent text-bg'
+                          : 'bg-white/5 text-white'
+                      }`}
+                    >
+                      <p className="text-sm">{msg.message}</p>
+                      <p className={`text-[10px] mt-1 ${isMine ? 'text-bg/60' : 'text-muted'}`}>
+                        {formatTime(msg.created_at)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+      ) : null}
 
       {/* Input */}
       {((!isRealAdmin) || (isRealAdmin && selectedPlayerId && selectedPlayer)) && (
