@@ -152,7 +152,7 @@ export default function ChatSystem() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-accent text-bg rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50"
+        className="fixed bottom-20 right-20 md:bottom-8 md:right-24 w-14 h-14 bg-accent text-bg rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50"
       >
         <MessageCircle size={24} />
       </button>
@@ -160,7 +160,7 @@ export default function ChatSystem() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-surface border border-white/10 rounded-2xl shadow-2xl flex flex-col z-50 animate-fade-in">
+    <div className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-96 h-[600px] bg-surface border border-white/10 rounded-2xl shadow-2xl flex flex-col z-50 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -186,11 +186,17 @@ export default function ChatSystem() {
       {isRealAdmin && (
         <div className="p-3 border-b border-white/10">
           <select
+            key={`player-select-${players.length}`}
             className="input-field text-sm"
             value={selectedPlayerId}
             onChange={(e) => {
-              console.log('Selecting player ID:', e.target.value);
-              setSelectedPlayerId(e.target.value);
+              const value = e.target.value;
+              console.log('Selecting player ID:', value);
+              setSelectedPlayerId(value);
+              if (value) {
+                const player = players.find(p => p.id === parseInt(value));
+                console.log('Found player:', player);
+              }
             }}
           >
             <option value="">Selecciona un jugador... ({players.length} disponibles)</option>
@@ -200,10 +206,15 @@ export default function ChatSystem() {
               </option>
             ))}
           </select>
-          {selectedPlayer && (
-            <div className="mt-2 text-xs text-accent flex items-center gap-2">
-              ✓ Chateando con: {selectedPlayer.name} {selectedPlayer.surname}
+          {selectedPlayerId && selectedPlayer && (
+            <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded-lg">
+              <div className="text-xs text-accent flex items-center gap-2">
+                ✓ Chateando con: <span className="font-black">{selectedPlayer.name} {selectedPlayer.surname}</span>
+              </div>
             </div>
+          )}
+          {!selectedPlayerId && (
+            <p className="text-xs text-muted mt-2">👆 Selecciona un jugador del menú para empezar a chatear</p>
           )}
           {players.length === 0 && (
             <p className="text-xs text-red-400 mt-2">⚠️ No se encontraron jugadores en la base de datos</p>
