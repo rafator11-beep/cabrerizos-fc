@@ -7,6 +7,7 @@ export default function Feedback() {
   const { profile, isAdmin } = useAuth();
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
   
   // Form state
   const [type, setType] = useState('exercise_suggestion');
@@ -139,52 +140,70 @@ export default function Feedback() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {feedbacks.map(f => (
-            <div key={f.id} className="card" style={{ padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#f5f6f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>
-                    #{f.profiles?.number || '-'}
+          {feedbacks.map(f => {
+            const isExpanded = expandedId === f.id;
+            return (
+              <div key={f.id} className="card" style={{ padding: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#f5f6f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>
+                      #{f.profiles?.number || '-'}
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>{f.profiles?.name} {f.profiles?.surname}</span>
+                    <span style={{ fontSize: 10, color: '#96a0b5' }}>{new Date(f.created_at).toLocaleDateString()}</span>
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>{f.profiles?.name} {f.profiles?.surname}</span>
-                  <span style={{ fontSize: 10, color: '#96a0b5' }}>{new Date(f.created_at).toLocaleDateString()}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ 
+                      display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700,
+                      background: f.type === 'exercise_suggestion' ? '#eef3ff' : f.type === 'training_proposal' ? '#fef3c7' : '#ecfdf5',
+                      color: f.type === 'exercise_suggestion' ? '#0057ff' : f.type === 'training_proposal' ? '#d97706' : '#059669'
+                    }}>
+                      {f.type === 'exercise_suggestion' ? <><Dumbbell size={10}/> Sugerencia</> : f.type === 'training_proposal' ? <><Calendar size={10}/> Sesión Propuesta</> : <><MessageSquare size={10}/> Comentario</>}
+                    </span>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : f.id)}
+                        className="btn btn-primary"
+                        style={{ fontSize: 11, padding: '4px 12px' }}
+                      >
+                        {isExpanded ? 'Ocultar' : 'Ver comentario'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <span style={{ 
-                  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                  background: f.type === 'exercise_suggestion' ? '#eef3ff' : f.type === 'training_proposal' ? '#fef3c7' : '#ecfdf5',
-                  color: f.type === 'exercise_suggestion' ? '#0057ff' : f.type === 'training_proposal' ? '#d97706' : '#059669'
-                }}>
-                  {f.type === 'exercise_suggestion' ? <><Dumbbell size={10}/> Sugerencia</> : f.type === 'training_proposal' ? <><Calendar size={10}/> Sesión Propuesta</> : <><MessageSquare size={10}/> Comentario</>}
-                </span>
-              </div>
-              <div style={{ color: '#111', fontSize: 13, lineHeight: '1.5' }}>
-                {f.type === 'training_proposal' ? (
-                  <div style={{ background: '#f8f9fb', padding: 12, borderRadius: 8, border: '1px solid #e2e6ed' }}>
-                    {(() => {
-                      try {
-                        const parsed = JSON.parse(f.content);
-                        return (
-                          <>
-                            <div style={{ fontWeight: 800, color: '#0057ff', marginBottom: 2 }}>{parsed.title} ({parsed.duration} min)</div>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Intensidad: {parsed.intensity.toUpperCase()}</div>
-                            {parsed.objective && <div style={{ fontSize: 12, marginBottom: 8, fontStyle: 'italic' }}>"{parsed.objective}"</div>}
-                            <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}>Ejercicios propuestos ({parsed.exercises?.length}):</div>
-                            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: '#4a5568' }}>
-                              {parsed.exercises?.map((ex, i) => <li key={i}>{ex.name} ({ex.duration} min)</li>)}
-                            </ul>
-                          </>
-                        );
-                      } catch {
-                        return f.content;
-                      }
-                    })()}
+                
+                {/* Mostrar contenido siempre para jugadores, solo cuando expandido para admin */}
+                {(!isAdmin || isExpanded) && (
+                  <div style={{ color: '#111', fontSize: 13, lineHeight: '1.5', marginTop: 12, padding: 12, background: '#f8f9fb', borderRadius: 8, border: '1px solid #e2e6ed' }}>
+                    {f.type === 'training_proposal' ? (
+                      <div>
+                        {(() => {
+                          try {
+                            const parsed = JSON.parse(f.content);
+                            return (
+                              <>
+                                <div style={{ fontWeight: 800, color: '#0057ff', marginBottom: 2 }}>{parsed.title} ({parsed.duration} min)</div>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Intensidad: {parsed.intensity.toUpperCase()}</div>
+                                {parsed.objective && <div style={{ fontSize: 12, marginBottom: 8, fontStyle: 'italic' }}>"{parsed.objective}"</div>}
+                                <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}>Ejercicios propuestos ({parsed.exercises?.length}):</div>
+                                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: '#4a5568' }}>
+                                  {parsed.exercises?.map((ex, i) => <li key={i}>{ex.name} ({ex.duration} min)</li>)}
+                                </ul>
+                              </>
+                            );
+                          } catch {
+                            return f.content;
+                          }
+                        })()}
+                      </div>
+                    ) : (
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{f.content}</div>
+                    )}
                   </div>
-                ) : (
-                  f.content
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
