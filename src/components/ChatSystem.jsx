@@ -15,7 +15,14 @@ export default function ChatSystem() {
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const selectedPlayer = players.find(p => p.id === parseInt(selectedPlayerId));
+  const selectedPlayer = players.find(p => {
+    const match = p.id === parseInt(selectedPlayerId);
+    if (selectedPlayerId && !match) {
+      console.log('Player not found. Looking for ID:', selectedPlayerId, 'Type:', typeof selectedPlayerId);
+      console.log('Available players:', players.map(p => ({ id: p.id, name: p.name })));
+    }
+    return match;
+  });
   
   // Debug mejorado
   useEffect(() => {
@@ -128,6 +135,13 @@ export default function ChatSystem() {
   const loadMessages = async () => {
     setLoading(true);
     try {
+      if (isRealAdmin && !selectedPlayer) {
+        // Admin sin jugador seleccionado - no cargar mensajes
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+
       let query = supabase
         .from('messages')
         .select('*')
@@ -135,31 +149,41 @@ export default function ChatSystem() {
 
       if (isRealAdmin && selectedPlayer) {
         // Admin ve mensajes con un jugador específico
-        query = query.or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-          .or(`sender_id.eq.${selectedPlayer.auth_profile_id},receiver_id.eq.${selectedPlayer.auth_profile_id}`);
+        // Mensajes donde el admin es sender Y el jugador es receiver
+        // O donde el jugador es sender Y el admin es receiver
+        query = query.or(
+          `and(sender_id.eq.${user.id},receiver_id.eq.${selectedPlayer.auth_profile_id}),and(sender_id.eq.${selectedPlayer.auth_profile_id},receiver_id.eq.${user.id})`
+        );
       } else if (!isRealAdmin) {
-        // Jugador ve sus mensajes con el admin
+        // Jugador ve sus mensajes con cualquier admin
         query = query.or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
       }
 
-      const { data } = await query;
-      setMessages(data || []);
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error loading messages:', error);
+        setMessages([]);
+      } else {
+        setMessages(data || []);
 
-      // Marcar mensajes como leídos
-      if (data && data.length > 0) {
-        const unreadIds = data
-          .filter(m => m.receiver_id === user.id && !m.read)
-          .map(m => m.id);
-        
-        if (unreadIds.length > 0) {
-          await supabase
-            .from('messages')
-            .update({ read: true })
-            .in('id', unreadIds);
+        // Marcar mensajes como leídos
+        if (data && data.length > 0) {
+          const unreadIds = data
+            .filter(m => m.receiver_id === user.id && !m.read)
+            .map(m => m.id);
+          
+          if (unreadIds.length > 0) {
+            await supabase
+              .from('messages')
+              .update({ read: true })
+              .in('id', unreadIds);
+          }
         }
       }
     } catch (error) {
       console.error('Error loading messages:', error);
+      setMessages([]);
     }
     setLoading(false);
   };
@@ -188,20 +212,36 @@ export default function ChatSystem() {
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
+    
+    // Validar que hay un receptor
+    if (isRealAdmin && !selectedPlayer?.auth_profile_id) {
+      alert('❌ Debes seleccionar un jugador primero');
+      return;
+    }
 
     try {
       const messageData = {
         sender_id: user.id,
-        receiver_id: isRealAdmin ? selectedPlayer?.auth_profile_id : null,
+        receiver_id: isRealAdmin ? selectedPlayer.auth_profile_id : null,
         message: newMessage.trim(),
-        read: false,
-        created_at: new Date().toISOString()
+        read: false
       };
 
-      await supabase.from('messages').insert([messageData]);
+      console.log('Sending message:', messageData);
+
+      const { data, error } = await supabase.from('messages').insert([messageData]).select();
+      
+      if (error) {
+        console.error('Error sending message:', error);
+        alert('❌ Error al enviar el mensaje: ' + error.message);
+        return;
+      }
+
+      console.log('Message sent successfully:', data);
       setNewMessage('');
       
-      // Recargar conversaciones para actualizar la lista
+      // Recargar mensajes y conversaciones
+      loadMessages();
       if (isRealAdmin) {
         loadConversations();
       }
@@ -389,71 +429,97 @@ export default function ChatSystem() {
       )}
 
       {/* Chat activo con jugador seleccionado */}
-      {isRealAdmin && selectedPlayerId && selectedPlayer ? (
-        <>
-          {/* Header del jugador seleccionado */}
-          <div className="p-3 border-b border-white/10 bg-accent/5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">
-                  {selectedPlayer.number}
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">{selectedPlayer.name} {selectedPlayer.surname}</div>
-                  <div className="text-xs text-accent">✓ Conectado</div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedPlayerId('')}
-                className="text-muted hover:text-white text-xs"
-              >
-                Cambiar
-              </button>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
-                <p className="text-sm text-muted">No hay mensajes aún</p>
-                <p className="text-xs text-muted mt-1">Envía el primer mensaje</p>
-              </div>
-            ) : (
-              <>
-                {messages.map((msg) => {
-                  const isMine = msg.sender_id === user.id;
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-                          isMine
-                            ? 'bg-accent text-bg'
-                            : 'bg-white/5 text-white'
-                        }`}
-                      >
-                        <p className="text-sm">{msg.message}</p>
-                        <p className={`text-[10px] mt-1 ${isMine ? 'text-bg/60' : 'text-muted'}`}>
-                          {formatTime(msg.created_at)}
-                        </p>
-                      </div>
+      {isRealAdmin && selectedPlayerId ? (
+        selectedPlayer ? (
+          <>
+            {/* Header del jugador seleccionado */}
+            <div className="p-3 border-b border-white/10 bg-accent/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {selectedPlayer.photo_url ? (
+                    <img 
+                      src={selectedPlayer.photo_url} 
+                      alt={selectedPlayer.name}
+                      className="w-10 h-10 rounded-full object-cover bg-transparent"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">
+                      {selectedPlayer.number}
                     </div>
-                  );
-                })}
-                <div ref={messagesEndRef} />
-              </>
-            )}
+                  )}
+                  <div>
+                    <div className="text-sm font-bold text-white">{selectedPlayer.name} {selectedPlayer.surname}</div>
+                    <div className="text-xs text-accent">✓ Conectado</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlayerId('');
+                    setMessages([]);
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold text-white transition-all"
+                >
+                  ← Volver
+                </button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
+                  <p className="text-sm text-muted">No hay mensajes aún</p>
+                  <p className="text-xs text-muted mt-1">Envía el primer mensaje</p>
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg) => {
+                    const isMine = msg.sender_id === user.id;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+                            isMine
+                              ? 'bg-accent text-bg'
+                              : 'bg-white/5 text-white'
+                          }`}
+                        >
+                          <p className="text-sm">{msg.message}</p>
+                          <p className={`text-[10px] mt-1 ${isMine ? 'text-bg/60' : 'text-muted'}`}>
+                            {formatTime(msg.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
+            </div>
+          </>
+        ) : (
+          /* Jugador no encontrado */
+          <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+            <User size={40} className="text-muted opacity-20 mb-3" />
+            <p className="text-sm text-muted mb-2">Jugador no encontrado</p>
+            <p className="text-xs text-muted mb-4">ID: {selectedPlayerId}</p>
+            <button
+              onClick={() => setSelectedPlayerId('')}
+              className="px-4 py-2 bg-accent text-bg rounded-xl text-sm font-black hover:scale-105 transition-all"
+            >
+              Volver a la lista
+            </button>
           </div>
-        </>
+        )
       ) : !isRealAdmin ? (
         /* Messages para jugadores */
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
