@@ -117,7 +117,7 @@ export default function DashboardLayout() {
       {/* MAIN CONTAINER */}
       <div className={`${isRealAdmin && !isMobile ? 'flex flex-col h-full overflow-hidden' : 'flex-1 flex flex-col min-w-0 relative h-full'}`}>
         
-        {/* HEADER — Desktop-optimized with breadcrumb + command trigger */}
+        {/* HEADER — Mobile-optimized for admin */}
         <header className="flex-shrink-0 glass border-b border-white/5 flex items-center justify-between px-4 md:px-6 z-40" style={{ height: 'var(--header-h)' }}>
           <div className="flex items-center gap-3">
             <button 
@@ -139,6 +139,33 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Mobile Admin Quick Actions */}
+            {isMobile && isRealAdmin && !viewAsPlayer && (
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => navigate('/tactica')}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${location.pathname === '/tactica' ? 'bg-accent/20 text-accent' : 'bg-white/5 text-white/60 hover:text-white'}`}
+                  title="Pizarra Táctica"
+                >
+                  <PenTool size={16} />
+                </button>
+                <button 
+                  onClick={() => navigate('/plantilla')}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${location.pathname === '/plantilla' ? 'bg-accent/20 text-accent' : 'bg-white/5 text-white/60 hover:text-white'}`}
+                  title="Gestionar Equipo"
+                >
+                  <Users size={16} />
+                </button>
+                <button 
+                  onClick={() => navigate('/alineacion')}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${location.pathname === '/alineacion' ? 'bg-accent/20 text-accent' : 'bg-white/5 text-white/60 hover:text-white'}`}
+                  title="Alineación"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+              </div>
+            )}
+
             {/* Desktop Command Palette Trigger */}
             <button onClick={() => setCmdOpen(true)} className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all group">
               <Search size={14} className="text-muted group-hover:text-white transition-colors" />
@@ -187,36 +214,49 @@ export default function DashboardLayout() {
         {/* Floating Training Timer */}
         <FloatingTimer />
 
-        {/* MOBILE BOTTOM NAV */}
+        {/* MOBILE BOTTOM NAV - IMPROVED FOR ADMIN */}
         <nav 
           className={`${isRealAdmin && !isMobile ? 'hidden' : 'md:hidden'} fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-1 z-50`}
           style={{ height: 'var(--nav-h)', paddingBottom: 'var(--safe-bottom, 0px)' }}
         >
-          {bottomNav.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) => `
-                flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1 transition-all duration-200
-                ${isActive ? 'text-accent' : 'text-muted/50'}
-              `}
-            >
-              {({ isActive }) => (
-                <>
-                  <div className={`
-                    p-1.5 rounded-xl transition-all duration-200
-                    ${isActive ? 'bg-accent/15 shadow-[0_0_12px_rgba(0,255,135,0.08)]' : ''}
-                  `}>
-                    {item.icon}
-                  </div>
-                  <span className={`text-[7px] font-black uppercase tracking-tight leading-none ${isActive ? 'opacity-100' : 'opacity-60'}`}>
-                    {item.label}
-                  </span>
-                </>
-              )}
-            </NavLink>
-          ))}
+          {/* Admin gets different navigation */}
+          {isRealAdmin && !viewAsPlayer ? (
+            <>
+              <NavLink to="/" end className={({ isActive }) => `flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${isActive ? 'text-accent bg-accent/10' : 'text-muted hover:text-white'}`}>
+                <HomeIcon size={20} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Panel</span>
+              </NavLink>
+              <NavLink to="/tactica" className={({ isActive }) => `flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${isActive ? 'text-accent bg-accent/10' : 'text-muted hover:text-white'}`}>
+                <PenTool size={20} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Táctica</span>
+              </NavLink>
+              <NavLink to="/plantilla" className={({ isActive }) => `flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${isActive ? 'text-accent bg-accent/10' : 'text-muted hover:text-white'}`}>
+                <Users size={20} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Equipo</span>
+              </NavLink>
+              <NavLink to="/alineacion" className={({ isActive }) => `flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${isActive ? 'text-accent bg-accent/10' : 'text-muted hover:text-white'}`}>
+                <LayoutGrid size={20} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Alineación</span>
+              </NavLink>
+              <NavLink to="/entrenamientos" className={({ isActive }) => `flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${isActive ? 'text-accent bg-accent/10' : 'text-muted hover:text-white'}`}>
+                <Dumbbell size={20} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Entrenos</span>
+              </NavLink>
+            </>
+          ) : (
+            /* Player navigation */
+            bottomNav.map(item => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                className={({ isActive }) => `flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${isActive ? 'text-accent bg-accent/10' : 'text-muted hover:text-white'}`}
+              >
+                {item.icon}
+                <span className="text-[9px] font-black uppercase tracking-widest">{item.label}</span>
+              </NavLink>
+            ))
+          )}
         </nav>
       </div>
     </div>

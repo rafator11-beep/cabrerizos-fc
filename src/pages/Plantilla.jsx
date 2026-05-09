@@ -588,41 +588,81 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
         </div>
       )}
 
-      {/* AI Assistant Panel */}
+      {/* AI Assistant Panel - REDESIGNED WITH PLAYER PHOTO */}
       {showAI === p.id && (
-        <div style={{ marginTop: 8, padding: 12, background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)', borderRadius: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 16 }}>🤖</span>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#a855f7' }}>Asistente IA Personal</div>
-              <div style={{ fontSize: 9, color: '#8a99ae' }}>Análisis y recomendaciones para {p.name}</div>
+        <div className="mt-3 p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-400/20 rounded-2xl backdrop-blur-sm">
+          {/* AI Header with Player Photo */}
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative">
+              {/* Player Photo as AI Avatar */}
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-purple-400/40 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
+                {p.photo_url ? (
+                  <img 
+                    src={p.photo_url} 
+                    alt={p.name}
+                    className="w-full h-full object-cover bg-transparent"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-purple-400 text-2xl font-black">
+                    {p.number || '?'}
+                  </div>
+                )}
+              </div>
+              {/* AI Indicator */}
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-bg">
+                <span className="text-xs">🤖</span>
+              </div>
+              {/* Speaking Animation */}
+              <div className="absolute inset-0 rounded-full border-2 border-purple-400/60 animate-pulse" />
+            </div>
+            
+            <div className="flex-1">
+              <div className="text-sm font-black text-purple-400 uppercase tracking-widest">
+                IA Personal de {p.name}
+              </div>
+              <div className="text-xs text-white/60 font-medium">
+                Asistente especializado en {p.position || 'desarrollo futbolístico'}
+              </div>
             </div>
           </div>
-          
-          <div style={{ space: '8px 0' }}>
+
+          {/* AI Recommendations */}
+          <div className="space-y-3">
             <AIRecommendation 
-              title="Área de Mejora Principal"
+              title="🎯 Área de Mejora Principal"
               content={getMainImprovement(p)}
-              icon="🎯"
+              bgColor="from-red-500/10 to-orange-500/10"
+              borderColor="border-red-400/20"
             />
             <AIRecommendation 
-              title="Ejercicio Recomendado"
+              title="💪 Ejercicio Recomendado"
               content={getRecommendedExercise(p)}
-              icon="💪"
+              bgColor="from-green-500/10 to-emerald-500/10"
+              borderColor="border-green-400/20"
             />
             <AIRecommendation 
-              title="Fortaleza Destacada"
+              title="⭐ Fortaleza Destacada"
               content={getMainStrength(p)}
-              icon="⭐"
+              bgColor="from-blue-500/10 to-cyan-500/10"
+              borderColor="border-blue-400/20"
             />
           </div>
           
-          <button 
-            onClick={() => generateDetailedAnalysis(p)}
-            className="w-full mt-3 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-purple-500/30 transition-all"
-          >
-            Análisis Completo IA
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-2 mt-4">
+            <button 
+              onClick={() => generateDetailedAnalysis(p)}
+              className="flex-1 py-2.5 bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-400 rounded-xl text-xs font-black uppercase tracking-widest hover:from-purple-500/30 hover:to-blue-500/30 transition-all border border-purple-400/20"
+            >
+              📊 Análisis Completo
+            </button>
+            <button 
+              onClick={() => setShowAI(null)}
+              className="px-4 py-2.5 bg-white/5 text-white/60 rounded-xl text-xs font-black hover:bg-white/10 transition-all"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -668,14 +708,15 @@ function StatInput({ label, value, onChange }) {
   );
 }
 
-function AIRecommendation({ title, content, icon }) {
+function AIRecommendation({ title, content, bgColor, borderColor }) {
   return (
-    <div style={{ marginBottom: 8, padding: 8, background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-        <span style={{ fontSize: 12 }}>{icon}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#a855f7' }}>{title}</span>
+    <div className={`p-3 bg-gradient-to-r ${bgColor} border ${borderColor} rounded-xl backdrop-blur-sm`}>
+      <div className="text-xs font-black text-white uppercase tracking-widest mb-2">
+        {title}
       </div>
-      <p style={{ fontSize: 9, color: '#8a99ae', lineHeight: 1.4, margin: 0 }}>{content}</p>
+      <p className="text-xs text-white/80 leading-relaxed">
+        {content}
+      </p>
     </div>
   );
 }
