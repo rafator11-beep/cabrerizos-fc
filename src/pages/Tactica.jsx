@@ -737,7 +737,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                     {activePlay?.name || 'Pizarra Táctica'}
                   </h1>
                   <p className="text-accent text-base font-bold uppercase tracking-[0.3em]">
-                    Cabrerizos F.C. • Presentación Profesional
+                    Cabrerizos F.C. • Presentación Profesional v2.1
                   </p>
                 </div>
               </div>
