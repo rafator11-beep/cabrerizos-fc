@@ -533,13 +533,30 @@ function PlayerCard({ player: p, isAdmin, isEditing, editForm, setEditForm, onSt
           </div>
         </div>
 
-        {/* AI Assistant Button */}
+        {/* AI Assistant Button with Player Photo */}
         <button 
           onClick={() => setShowAI(showAI === p.id ? null : p.id)}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${showAI === p.id ? 'bg-purple-500/20 text-purple-400' : 'bg-white/5 text-white/40 hover:text-purple-400 hover:bg-purple-500/10'}`}
-          title="Asistente IA"
+          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+            showAI === p.id ? 'bg-purple-500/20 text-purple-400 scale-110' : 'bg-white/5 text-white/40 hover:text-purple-400 hover:bg-purple-500/10'
+          }`}
+          title="Asistente IA Personal"
         >
-          🤖
+          {p.photo_url ? (
+            <div className="relative w-8 h-8 rounded-lg overflow-hidden">
+              <img 
+                src={p.photo_url} 
+                alt="" 
+                className={`w-full h-full object-cover bg-transparent ${showAI === p.id ? 'animate-pulse' : ''}`}
+              />
+              {showAI === p.id && (
+                <div className="absolute inset-0 bg-purple-500/30 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-ping" />
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-lg">🤖</span>
+          )}
         </button>
 
         {/* Rating badge */}

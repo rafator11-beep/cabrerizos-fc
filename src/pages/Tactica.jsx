@@ -476,6 +476,161 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           </div>
         </div>
 
+        {/* TV PRESENTATION MODE OVERLAY - PROPERLY STRUCTURED */}
+        {presentationMode && (
+          <div className="fixed inset-0 z-[9999] bg-black flex flex-col animate-in fade-in duration-500" style={{ isolation: 'isolate' }}>
+            {/* Header */}
+            <div className="h-20 flex-shrink-0 flex items-center justify-between px-8 bg-gradient-to-r from-accent/10 to-blue-500/10 border-b border-white/10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">⚽</span>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-black text-white uppercase tracking-widest">
+                    {activePlay?.name || 'Jugada Táctica'}
+                  </h1>
+                  <p className="text-sm font-bold text-muted uppercase tracking-wider">
+                    Cabrerizos F.C. · Juvenil B · Paso {activeStepIndex + 1} de {steps.length}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setPresentationMode(false)}
+                className="w-12 h-12 rounded-xl bg-white/10 text-white hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Field Area */}
+              <div className="flex-1 flex items-center justify-center p-8">
+                <div className="w-full h-full max-w-4xl max-h-full bg-surface rounded-3xl shadow-2xl border border-white/10 relative overflow-hidden">
+                  <FieldCanvas
+                    tokens={currentStep.tokens || []}
+                    arrows={currentStep.arrows || []}
+                    zones={currentStep.zones || []}
+                    tool="move"
+                    arrowType={arrowType}
+                    zoomPreset={overridePreset || zoomPreset}
+                    animating={false}
+                    presentationMode={true}
+                    onMove={() => {}}
+                    onArrow={() => {}}
+                    onPlace={() => {}}
+                    onDelete={() => {}}
+                  />
+                </div>
+              </div>
+
+              {/* Legends Panel */}
+              <div className="w-80 flex-shrink-0 bg-surface/50 backdrop-blur-xl border-l border-white/10 p-6 overflow-y-auto">
+                {/* Ball Actions Legend */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                    ⚽ Acciones con Balón
+                  </h3>
+                  <div className="space-y-3">
+                    {LEGEND.map(item => (
+                      <div key={item.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                        <div 
+                          className="w-8 h-1 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-sm font-bold text-white">{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Player Movement Legend */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                    🏃 Movimientos de Jugadores
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                      <div className="w-6 h-6 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center text-xs font-black text-white">
+                        11
+                      </div>
+                      <span className="text-sm font-bold text-white">Jugador Cabrerizos</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                      <div className="w-6 h-6 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-xs font-black text-white">
+                        9
+                      </div>
+                      <span className="text-sm font-bold text-white">Jugador Rival</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                      <div className="w-6 h-6 bg-white rounded-full border-2 border-gray-400 flex items-center justify-center">
+                        ⚽
+                      </div>
+                      <span className="text-sm font-bold text-white">Balón</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Elements Legend */}
+                <div>
+                  <h3 className="text-lg font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                    🎯 Elementos
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                      <span className="text-xl">🚧</span>
+                      <span className="text-sm font-bold text-white">Cono</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                      <span className="text-xl">👤</span>
+                      <span className="text-sm font-bold text-white">Barrera/Maniquí</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                      <span className="text-xl">🥅</span>
+                      <span className="text-sm font-bold text-white">Portería</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Controls */}
+            <div className="h-16 flex-shrink-0 flex items-center justify-center px-8 bg-surface/30 backdrop-blur-xl border-t border-white/10">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setActiveStepIndex(Math.max(0, activeStepIndex - 1))}
+                  disabled={activeStepIndex === 0}
+                  className="w-12 h-12 rounded-xl bg-white/10 text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                
+                <div className="flex items-center gap-2 px-6 py-3 bg-black/30 rounded-2xl">
+                  {steps.map((_, idx) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => setActiveStepIndex(idx)}
+                      className={`h-3 rounded-full transition-all duration-300 ${
+                        activeStepIndex === idx 
+                          ? 'w-12 bg-accent shadow-lg shadow-accent/30' 
+                          : 'w-3 bg-white/20 hover:bg-white/40'
+                      }`} 
+                    />
+                  ))}
+                </div>
+
+                <button 
+                  onClick={() => setActiveStepIndex(Math.min(steps.length - 1, activeStepIndex + 1))}
+                  disabled={activeStepIndex === steps.length - 1}
+                  className="w-12 h-12 rounded-xl bg-white/10 text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* MOBILE: TOOLS BOTTOM BUTTON */}
         {isMobile && !isPlayerMode && (
           <button 

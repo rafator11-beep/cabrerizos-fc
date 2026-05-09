@@ -1,4 +1,4 @@
-import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } from 'react';
+import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ProfessionalToken from './ProfessionalToken';
 
@@ -13,6 +13,35 @@ const ZOOM_PRESETS = {
   corner_left_bottom:  { vx: 0,   vy: 166, vw: 300, vh: 200 },
   penalty_right:       { vx: 250, vy: 0,   vw: 300, vh: 366 },
   penalty_left:        { vx: 0,   vy: 0,   vw: 300, vh: 366 },
+};
+
+// Throttle function for performance - improved
+const throttle = (func, delay) => {
+  let timeoutId;
+  let lastExecTime = 0;
+  return function (...args) {
+    const currentTime = Date.now();
+    
+    if (currentTime - lastExecTime > delay) {
+      func.apply(this, args);
+      lastExecTime = currentTime;
+    } else {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func.apply(this, args);
+        lastExecTime = Date.now();
+      }, delay - (currentTime - lastExecTime));
+    }
+  };
+};
+
+// Debounce function for final position updates
+const debounce = (func, delay) => {
+  let timeoutId;
+  return function (...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
 };
 
 const FieldCanvas = forwardRef(({ 
@@ -41,6 +70,21 @@ const FieldCanvas = forwardRef(({
   const [dragId, setDragId] = useState(null);
   const [drawingArrow, setDrawingArrow] = useState(null);
   const [drawingZone, setDrawingZone] = useState(null);
+  
+  // Optimized move handlers for better performance
+  const throttledMove = useCallback(
+    throttle((id, x, y) => {
+      onMove?.(id, x, y);
+    }, 8), // Increased to ~120fps for smoother movement
+    [onMove]
+  );
+
+  const debouncedFinalMove = useCallback(
+    debounce((id, x, y) => {
+      onMove?.(id, x, y);
+    }, 100), // Final position update after movement stops
+    [onMove]
+  );
 
   // Quick-Action Keyboard Shortcuts
   useEffect(() => {
@@ -50,13 +94,7 @@ const FieldCanvas = forwardRef(({
         if (selectedTokenId) onDelete?.(selectedTokenId);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        // undo handled in parent ideally, but we can trigger a custom event or callback if passed. 
-        // Here we just prevent default for now as an example of Quick-Action Ctrl+Z capture
         e.preventDefault();
-      }
-      if (e.key === 'c' || e.key === 'C') {
-        // Switch to corner mode via prop callback or generic event
-        // (Just demonstrating the shortcut capture as requested)
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -72,7 +110,7 @@ const FieldCanvas = forwardRef(({
     ? `${ZOOM_PRESETS[zoomPreset].vx} ${ZOOM_PRESETS[zoomPreset].vy} ${ZOOM_PRESETS[zoomPreset].vw} ${ZOOM_PRESETS[zoomPreset].vh}`
     : `0 0 ${FW} ${FH}`;
 
-  const toSVG = (e) => {
+  const toSVG = useCallback((e) => {
     if (!svgRef.current) return { x: 0, y: 0 };
     const ctm = svgRef.current.getScreenCTM();
     if (!ctm) return { x: 0, y: 0 };
@@ -81,9 +119,9 @@ const FieldCanvas = forwardRef(({
     pt.y = e.clientY ?? 0;
     const transformed = pt.matrixTransform(ctm.inverse());
     return { x: transformed.x, y: transformed.y };
-  };
+  }, []);
 
-  const handlePointerDown = (e) => {
+  const handlePointerDown = useCallback((e) => {
     if (isPlayerMode && !presentationMode) return;
     e.preventDefault();
     const { x, y } = toSVG(e);
@@ -95,23 +133,26 @@ const FieldCanvas = forwardRef(({
     } else if (tool !== 'move') {
       onPlace?.(tool, x, y);
     }
-  };
+  }, [isPlayerMode, presentationMode, tool, arrowType, zoneColor, toSVG, onPlace]);
 
-  const handlePointerMove = (e) => {
+  const handlePointerMove = useCallback((e) => {
     if (isPlayerMode && !presentationMode) return;
     e.preventDefault();
     const { x, y } = toSVG(e);
 
     if (dragId) {
-      onMove?.(dragId, x, y);
+      // Use requestAnimationFrame for smoother visual updates
+      requestAnimationFrame(() => {
+        throttledMove(dragId, x, y);
+      });
     } else if (drawingArrow) {
-      setDrawingArrow({ ...drawingArrow, to: { x, y } });
+      setDrawingArrow(prev => prev ? { ...prev, to: { x, y } } : null);
     } else if (drawingZone) {
-      setDrawingZone({ ...drawingZone, w: x - drawingZone.x, h: y - drawingZone.y });
+      setDrawingZone(prev => prev ? { ...prev, w: x - prev.x, h: y - prev.y } : null);
     }
-  };
+  }, [isPlayerMode, presentationMode, dragId, drawingArrow, drawingZone, toSVG, throttledMove]);
 
-  const handlePointerUp = (e) => {
+  const handlePointerUp = useCallback((e) => {
     if (drawingArrow) {
       if (Math.hypot(drawingArrow.to.x - drawingArrow.from.x, drawingArrow.to.y - drawingArrow.from.y) > 10) {
         onArrow?.(drawingArrow);
@@ -124,8 +165,13 @@ const FieldCanvas = forwardRef(({
       }
       setDrawingZone(null);
     }
+    if (dragId) {
+      // Send final position update
+      const { x, y } = toSVG(e);
+      debouncedFinalMove(dragId, x, y);
+    }
     setDragId(null);
-  };
+  }, [drawingArrow, drawingZone, dragId, onArrow, onZoneAdd, toSVG, debouncedFinalMove]);
 
   const renderArrow = (a, isGhost = false) => {
     if (!a?.from || !a?.to) return null;
@@ -211,34 +257,40 @@ const FieldCanvas = forwardRef(({
     );
   };
 
-  const renderToken = (t) => {
+  const renderToken = useCallback((t) => {
     const isSelected = selectedTokenId === t.id;
     const ev = {
       onPointerDown: (e) => { 
         e.stopPropagation(); 
         e.preventDefault();
-        if (tool === 'move') {
+        if (tool === 'move' && !presentationMode) {
           // Capture pointer for fluid cross-element dragging
-          e.target.setPointerCapture(e.pointerId);
+          e.target.setPointerCapture?.(e.pointerId);
           setDragId(t.id);
           onSelectToken?.(t.id);
         }
       },
       onPointerMove: (e) => {
-        if (dragId === t.id) {
+        if (dragId === t.id && !presentationMode) {
           e.stopPropagation();
           e.preventDefault();
           const { x, y } = toSVG(e);
-          onMove?.(t.id, x, y);
+          // Use requestAnimationFrame for smoother visual feedback
+          requestAnimationFrame(() => {
+            throttledMove(t.id, x, y);
+          });
         }
       },
       onPointerUp: (e) => {
         if (dragId === t.id) {
-          e.target.releasePointerCapture(e.pointerId);
+          e.target.releasePointerCapture?.(e.pointerId);
           setDragId(null);
         }
       },
-      onDoubleClick: (e) => { e.stopPropagation(); onDelete?.(t.id); }
+      onDoubleClick: (e) => { 
+        e.stopPropagation(); 
+        if (!presentationMode) onDelete?.(t.id); 
+      }
     };
 
     const posX = t.x || 0;
@@ -246,26 +298,26 @@ const FieldCanvas = forwardRef(({
 
     switch(t.kind) {
       case 'ball': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className={presentationMode ? "" : "cursor-grab active:cursor-grabbing"} style={{ touchAction: 'none' }}>
           <circle r={10} fill="white" stroke="#555" strokeWidth="1" />
           <path d="M -5 -5 L 5 5 M -5 5 L 5 -5 M 0 -7 L 0 7 M -7 0 L 7 0" stroke="#777" strokeWidth="0.5" opacity={0.4} />
           {isSelected && <circle r={14} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'cone': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className={presentationMode ? "" : "cursor-grab active:cursor-grabbing"} style={{ touchAction: 'none' }}>
           <path d="M -8 8 L 0 -10 L 8 8 Z" fill="#f59e0b" stroke="#fbbf24" strokeWidth="1" />
           {isSelected && <circle r={14} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'cone_blue': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className={presentationMode ? "" : "cursor-grab active:cursor-grabbing"} style={{ touchAction: 'none' }}>
           <path d="M -8 8 L 0 -10 L 8 8 Z" fill="#3b82f6" stroke="#60a5fa" strokeWidth="1" />
           {isSelected && <circle r={14} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'goal': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className={presentationMode ? "" : "cursor-grab active:cursor-grabbing"} style={{ touchAction: 'none' }}>
           <rect x={-14} y={-10} width={28} height={20} rx={2} fill="none" stroke="white" strokeWidth="2" />
           <line x1={-14} y1={-3} x2={14} y2={-3} stroke="white" strokeWidth="0.5" opacity={0.3} />
           <line x1={-14} y1={4} x2={14} y2={4} stroke="white" strokeWidth="0.5" opacity={0.3} />
@@ -275,28 +327,28 @@ const FieldCanvas = forwardRef(({
         </g>
       );
       case 'mannequin': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className={presentationMode ? "" : "cursor-grab active:cursor-grabbing"} style={{ touchAction: 'none' }}>
           <rect x={-5} y={-8} width={10} height={16} rx={3} fill="#8b5cf6" stroke="white" strokeWidth="1" />
           <circle cy={-12} r={4} fill="#8b5cf6" stroke="white" strokeWidth="1" />
           {isSelected && <circle r={18} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'pole': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className={presentationMode ? "" : "cursor-grab active:cursor-grabbing"} style={{ touchAction: 'none' }}>
           <line x1={0} y1={-12} x2={0} y2={12} stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
           <circle cy={-12} r={3} fill="#ef4444" />
           {isSelected && <circle r={16} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'ladder': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className={presentationMode ? "" : "cursor-grab active:cursor-grabbing"} style={{ touchAction: 'none' }}>
           <rect x={-12} y={-6} width={24} height={12} rx={2} fill="none" stroke="#facc15" strokeWidth="1.5" />
           {[-6, 0, 6].map(lx => <line key={lx} x1={lx} y1={-6} x2={lx} y2={6} stroke="#facc15" strokeWidth="1" />)}
           {isSelected && <rect x={-16} y={-10} width={32} height={20} rx={4} fill="none" stroke="#00ff87" strokeWidth="1.5" strokeDasharray="3,2" />}
         </g>
       );
       case 'hurdle': return (
-        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className="cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
+        <g key={t.id} transform={`translate(${posX}, ${posY})`} {...ev} className={presentationMode ? "" : "cursor-grab active:cursor-grabbing"} style={{ touchAction: 'none' }}>
           <line x1={-10} y1={4} x2={-10} y2={-6} stroke="#f97316" strokeWidth="2" />
           <line x1={10} y1={4} x2={10} y2={-6} stroke="#f97316" strokeWidth="2" />
           <line x1={-10} y1={-6} x2={10} y2={-6} stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
@@ -309,6 +361,7 @@ const FieldCanvas = forwardRef(({
             key={t.id} 
             token={{...t, x: posX, y: posY}} 
             isSelected={isSelected}
+            presentationMode={presentationMode}
             onPointerDown={ev.onPointerDown}
             onPointerMove={ev.onPointerMove}
             onPointerUp={ev.onPointerUp}
@@ -317,7 +370,7 @@ const FieldCanvas = forwardRef(({
         );
       default: return null;
     }
-  };
+  }, [selectedTokenId, tool, presentationMode, dragId, toSVG, throttledMove, onSelectToken, onDelete]);
 
   return (
     <svg 
