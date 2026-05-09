@@ -11,7 +11,7 @@ export default function ChatSystem() {
   const [players, setPlayers] = useState([]);
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPlayerList, setShowPlayerList] = useState(false);
+  const [conversations, setConversations] = useState([]);
   const messagesEndRef = useRef(null);
 
   const selectedPlayer = players.find(p => p.id === parseInt(selectedPlayerId));
@@ -26,11 +26,15 @@ export default function ChatSystem() {
   useEffect(() => {
     if (isRealAdmin) {
       loadPlayers();
+      loadConversations();
     }
   }, [isRealAdmin]);
 
   useEffect(() => {
     if (isOpen) {
+      if (isRealAdmin) {
+        loadConversations();
+      }
       loadMessages();
       const subscription = subscribeToMessages();
       return () => {
@@ -59,6 +63,52 @@ export default function ChatSystem() {
       setPlayers(data || []);
     } catch (error) {
       console.error('Error loading players:', error);
+    }
+  };
+
+  const loadConversations = async () => {
+    try {
+      // Obtener todos los mensajes donde el admin es sender o receiver
+      const { data: allMessages } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
+
+      if (!allMessages || allMessages.length === 0) {
+        setConversations([]);
+        return;
+      }
+
+      // Agrupar mensajes por jugador
+      const conversationsMap = {};
+      
+      for (const msg of allMessages) {
+        const otherUserId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
+        
+        if (!conversationsMap[otherUserId]) {
+          // Buscar el jugador en roster
+          const player = players.find(p => p.auth_profile_id === otherUserId);
+          
+          if (player) {
+            conversationsMap[otherUserId] = {
+              player,
+              lastMessage: msg.message,
+              lastMessageTime: msg.created_at,
+              unreadCount: 0
+            };
+          }
+        }
+        
+        // Contar mensajes no leídos
+        if (msg.receiver_id === user.id && !msg.read) {
+          conversationsMap[otherUserId].unreadCount++;
+        }
+      }
+
+      setConversations(Object.values(conversationsMap));
+    } catch (error) {
+      console.error('Error loading conversations:', error);
     }
   };
 
@@ -113,6 +163,9 @@ export default function ChatSystem() {
         },
         () => {
           loadMessages();
+          if (isRealAdmin) {
+            loadConversations();
+          }
         }
       )
       .subscribe();
@@ -134,6 +187,11 @@ export default function ChatSystem() {
 
       await supabase.from('messages').insert([messageData]);
       setNewMessage('');
+      
+      // Recargar conversaciones para actualizar la lista
+      if (isRealAdmin) {
+        loadConversations();
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       alert('❌ Error al enviar el mensaje');
@@ -190,33 +248,63 @@ export default function ChatSystem() {
         </button>
       </div>
 
-      {/* Player Selector (Admin only) - LISTA SIMPLE */}
+      {/* Lista de conversaciones (estilo WhatsApp) */}
       {isRealAdmin && !selectedPlayerId && (
-        <div className="flex-1 overflow-y-auto p-3">
-          <p className="text-xs text-muted mb-3 text-center">Selecciona un jugador para chatear ({players.length} disponibles)</p>
-          <div className="space-y-2">
-            {players.map(p => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => {
-                  console.log('Selecting player:', p);
-                  setSelectedPlayerId(String(p.id));
-                }}
-                className="w-full p-3 bg-white/5 hover:bg-accent/10 border border-white/10 hover:border-accent/40 rounded-xl text-left transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">
-                    {p.number}
+        <div className="flex-1 overflow-y-auto">
+          {conversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+              <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
+              <p className="text-sm text-muted">No hay conversaciones aún</p>
+              <p className="text-xs text-muted mt-1">Los mensajes aparecerán aquí</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {conversations.map((conv) => (
+                <button
+                  key={conv.player.id}
+                  type="button"
+                  onClick={() => setSelectedPlayerId(String(conv.player.id))}
+                  className="w-full p-4 hover:bg-white/5 transition-colors flex items-center gap-3 text-left"
+                >
+                  {/* Foto del jugador */}
+                  <div className="relative flex-shrink-0">
+                    {conv.player.photo_url ? (
+                      <img 
+                        src={conv.player.photo_url} 
+                        alt={conv.player.name}
+                        className="w-12 h-12 rounded-full object-cover bg-transparent"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">
+                        {conv.player.number}
+                      </div>
+                    )}
+                    {/* Badge de mensajes no leídos */}
+                    {conv.unreadCount > 0 && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
+                        <span className="text-[10px] font-black text-bg">{conv.unreadCount}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-bold text-white">{p.name}</div>
-                    <div className="text-xs text-muted">{p.surname}</div>
+
+                  {/* Info de la conversación */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between mb-1">
+                      <span className="text-sm font-bold text-white truncate">
+                        {conv.player.name} {conv.player.surname}
+                      </span>
+                      <span className="text-[10px] text-muted ml-2 flex-shrink-0">
+                        {formatTime(conv.lastMessageTime)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted truncate">
+                      {conv.lastMessage}
+                    </p>
                   </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
