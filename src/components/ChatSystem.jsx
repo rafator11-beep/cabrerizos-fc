@@ -190,77 +190,71 @@ export default function ChatSystem() {
         </button>
       </div>
 
-      {/* Player Selector (Admin only) - CUSTOM DROPDOWN */}
-      {isRealAdmin && (
-        <div className="p-3 border-b border-white/10 relative">
-          {/* Selected Player Display / Trigger */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowPlayerList(!showPlayerList);
-            }}
-            className="w-full input-field text-sm flex items-center justify-between cursor-pointer hover:border-accent/40"
-          >
-            {selectedPlayer ? (
-              <span className="text-white">
-                #{selectedPlayer.number} {selectedPlayer.name} {selectedPlayer.surname}
-              </span>
-            ) : (
-              <span className="text-muted">
-                Selecciona un jugador... ({players.length} disponibles)
-              </span>
-            )}
-            <ChevronDown size={16} className={`transition-transform ${showPlayerList ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Dropdown List */}
-          {showPlayerList && (
-            <div className="absolute left-3 right-3 mt-1 bg-surface border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-[100]">
-              {players.map(p => (
-                <button
-                  type="button"
-                  key={p.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const newId = String(p.id);
-                    console.log('Setting player ID to:', newId);
-                    setSelectedPlayerId(newId);
-                    setShowPlayerList(false);
-                  }}
-                  className={`w-full px-4 py-3 text-left text-sm hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
-                    selectedPlayerId === String(p.id) ? 'bg-accent/10 text-accent' : 'text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-black">#{p.number}</span>
-                    <span>{p.name} {p.surname}</span>
+      {/* Player Selector (Admin only) - LISTA SIMPLE */}
+      {isRealAdmin && !selectedPlayerId && (
+        <div className="flex-1 overflow-y-auto p-3">
+          <p className="text-xs text-muted mb-3 text-center">Selecciona un jugador para chatear ({players.length} disponibles)</p>
+          <div className="space-y-2">
+            {players.map(p => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  console.log('Selecting player:', p);
+                  setSelectedPlayerId(String(p.id));
+                }}
+                className="w-full p-3 bg-white/5 hover:bg-accent/10 border border-white/10 hover:border-accent/40 rounded-xl text-left transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">
+                    {p.number}
                   </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Selected Player Confirmation */}
-          {selectedPlayerId && selectedPlayer && (
-            <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded-lg">
-              <div className="text-xs text-accent flex items-center gap-2">
-                ✓ Chateando con: <span className="font-black">{selectedPlayer.name} {selectedPlayer.surname}</span>
-              </div>
-            </div>
-          )}
-
-          {!selectedPlayerId && (
-            <p className="text-xs text-muted mt-2">👆 Selecciona un jugador para empezar a chatear</p>
-          )}
+                  <div className="flex-1">
+                    <div className="text-sm font-bold text-white">{p.name}</div>
+                    <div className="text-xs text-muted">{p.surname}</div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* Chat activo con jugador seleccionado */}
+      {isRealAdmin && selectedPlayerId && selectedPlayer && (
+        <>
+          {/* Header del jugador seleccionado */}
+          <div className="p-3 border-b border-white/10 bg-accent/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">
+                  {selectedPlayer.number}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{selectedPlayer.name} {selectedPlayer.surname}</div>
+                  <div className="text-xs text-accent">✓ Conectado</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPlayerId('')}
+                className="text-muted hover:text-white text-xs"
+              >
+                Cambiar
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {loading ? (
+        {isRealAdmin && !selectedPlayerId ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <MessageCircle size={40} className="text-muted opacity-20 mb-3" />
+            <p className="text-sm text-muted">Selecciona un jugador arriba</p>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
@@ -302,7 +296,7 @@ export default function ChatSystem() {
       </div>
 
       {/* Input */}
-      {(!isRealAdmin || (isRealAdmin && selectedPlayer)) && (
+      {((!isRealAdmin) || (isRealAdmin && selectedPlayerId && selectedPlayer)) && (
         <div className="p-4 border-t border-white/10">
           <div className="flex gap-2">
             <input
@@ -311,9 +305,10 @@ export default function ChatSystem() {
               placeholder="Escribe un mensaje..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             />
             <button
+              type="button"
               onClick={sendMessage}
               disabled={!newMessage.trim()}
               className="w-10 h-10 bg-accent text-bg rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
