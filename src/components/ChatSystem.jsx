@@ -27,7 +27,7 @@ export default function ChatSystem() {
         subscription?.unsubscribe();
       };
     }
-  }, [isOpen, selectedPlayer]);
+  }, [isOpen, selectedPlayer, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -187,9 +187,14 @@ export default function ChatSystem() {
             className="input-field text-sm"
             value={selectedPlayer?.id || ''}
             onChange={(e) => {
-              const player = players.find(p => p.id === parseInt(e.target.value));
-              console.log('Selected player:', player);
-              setSelectedPlayer(player);
+              const playerId = parseInt(e.target.value);
+              if (playerId) {
+                const player = players.find(p => p.id === playerId);
+                console.log('Selected player:', player);
+                setSelectedPlayer(player);
+              } else {
+                setSelectedPlayer(null);
+              }
             }}
           >
             <option value="">Selecciona un jugador... ({players.length} disponibles)</option>
@@ -199,6 +204,11 @@ export default function ChatSystem() {
               </option>
             ))}
           </select>
+          {selectedPlayer && (
+            <div className="mt-2 text-xs text-accent flex items-center gap-2">
+              ✓ Chateando con: {selectedPlayer.name} {selectedPlayer.surname}
+            </div>
+          )}
           {players.length === 0 && (
             <p className="text-xs text-red-400 mt-2">⚠️ No se encontraron jugadores en la base de datos</p>
           )}
