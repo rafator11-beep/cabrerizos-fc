@@ -314,6 +314,8 @@ INSERT INTO roster (name, surname, number, is_starter, position, stats) VALUES
     '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":8,"starts":3,"sub_appearances":5,"minutes":294,"rating":5.12,"birth_date":"2009-08-19","age":16,"laterality":"Derecho","club_origin":""}'::jsonb),
   ('Jorge', 'Alonso Cordovilla', 22, true, '',
     '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":16,"starts":1,"sub_appearances":15,"minutes":275,"rating":4.81,"birth_date":"2009-04-29","age":16,"laterality":"Derecho","club_origin":""}'::jsonb),
+  ('Carlos Jose', 'Montes Ricse', 23, true, '',
+    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
   -- SUPLENTES / CADETE (sin ficha federativa completa)
   ('Héctor', 'Cáceres Marcos', 7, false, '',
     '{"goals":0,"assists":0,"yellow_cards":1,"red_cards":0,"matches_played":11,"starts":8,"sub_appearances":3,"minutes":816,"rating":4.73,"birth_date":"2008-11-29","age":17,"laterality":"","club_origin":""}'::jsonb),

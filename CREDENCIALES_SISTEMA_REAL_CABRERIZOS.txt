@@ -1,0 +1,162 @@
+🏆 CABRERIZOS F.C. - JUVENIL B
+CREDENCIALES DE ACCESO PERSONAL
+============================================================
+
+🌐 WEB: https://rafator11-beep.github.io/cabrerizos-fc/
+
+📱 CÓMO ACCEDER:
+1. Ir a la web del club
+2. Clic en "Inicia sesión" (abajo)
+3. Introducir TU NOMBRE y APELLIDOS
+4. Introducir TU CONTRASEÑA
+5. ¡Listo! Verás tu perfil personal
+
+============================================================
+
+👤 JUGADOR: Haritz González Delgado
+🔢 DORSAL: #1
+📝 NOMBRE: Haritz
+📝 APELLIDOS: González Delgado
+🔑 CONTRASEÑA: haritz1
+--------------------------------------------------
+
+👤 JUGADOR: Álvaro Delgado González
+🔢 DORSAL: #2
+📝 NOMBRE: Álvaro
+📝 APELLIDOS: Delgado González
+🔑 CONTRASEÑA: álvaro2
+--------------------------------------------------
+
+👤 JUGADOR: Asier Marcos Riesco
+🔢 DORSAL: #4
+📝 NOMBRE: Asier
+📝 APELLIDOS: Marcos Riesco
+🔑 CONTRASEÑA: asier4
+--------------------------------------------------
+
+👤 JUGADOR: Hugo López García
+🔢 DORSAL: #5
+📝 NOMBRE: Hugo
+📝 APELLIDOS: López García
+🔑 CONTRASEÑA: hugo5
+--------------------------------------------------
+
+👤 JUGADOR: Gabriel Fraile Alguacil
+🔢 DORSAL: #6
+📝 NOMBRE: Gabriel
+📝 APELLIDOS: Fraile Alguacil
+🔑 CONTRASEÑA: gabriel6
+--------------------------------------------------
+
+👤 JUGADOR: Héctor Cáceres Marcos
+🔢 DORSAL: #7
+📝 NOMBRE: Héctor
+📝 APELLIDOS: Cáceres Marcos
+🔑 CONTRASEÑA: héctor7
+--------------------------------------------------
+
+👤 JUGADOR: Iván Martín Cañizal
+🔢 DORSAL: #9
+📝 NOMBRE: Iván
+📝 APELLIDOS: Martín Cañizal
+🔑 CONTRASEÑA: iván9
+--------------------------------------------------
+
+👤 JUGADOR: Aarón Gabriel García
+🔢 DORSAL: #10
+📝 NOMBRE: Aarón Gabriel
+📝 APELLIDOS: García
+🔑 CONTRASEÑA: aarón10
+--------------------------------------------------
+
+👤 JUGADOR: Ricardo André Romero Chiuz
+🔢 DORSAL: #11
+📝 NOMBRE: Ricardo André
+📝 APELLIDOS: Romero Chiuz
+🔑 CONTRASEÑA: ricardo11
+--------------------------------------------------
+
+👤 JUGADOR: David Mario Hidalgo Vizcaíno
+🔢 DORSAL: #12
+📝 NOMBRE: David Mario
+📝 APELLIDOS: Hidalgo Vizcaíno
+🔑 CONTRASEÑA: david12
+--------------------------------------------------
+
+👤 JUGADOR: Carlos Martín Silva
+🔢 DORSAL: #14
+📝 NOMBRE: Carlos
+📝 APELLIDOS: Martín Silva
+🔑 CONTRASEÑA: carlos14
+--------------------------------------------------
+
+👤 JUGADOR: Unai Rodríguez Ríos
+🔢 DORSAL: #15
+📝 NOMBRE: Unai
+📝 APELLIDOS: Rodríguez Ríos
+🔑 CONTRASEÑA: unai15
+--------------------------------------------------
+
+👤 JUGADOR: Daniel Alonso Gago
+🔢 DORSAL: #16
+📝 NOMBRE: Daniel
+📝 APELLIDOS: Alonso Gago
+🔑 CONTRASEÑA: daniel16
+--------------------------------------------------
+
+👤 JUGADOR: Álex Hernández Nicolás
+🔢 DORSAL: #17
+📝 NOMBRE: Álex
+📝 APELLIDOS: Hernández Nicolás
+🔑 CONTRASEÑA: álex17
+--------------------------------------------------
+
+👤 JUGADOR: Iván Matías González
+🔢 DORSAL: #18
+📝 NOMBRE: Iván Matías
+📝 APELLIDOS: González
+🔑 CONTRASEÑA: iván18
+--------------------------------------------------
+
+👤 JUGADOR: Raúl Rodríguez Morán
+🔢 DORSAL: #19
+📝 NOMBRE: Raúl
+📝 APELLIDOS: Rodríguez Morán
+🔑 CONTRASEÑA: raúl19
+--------------------------------------------------
+
+👤 JUGADOR: Juan Vicente Hernández
+🔢 DORSAL: #20
+📝 NOMBRE: Juan Vicente
+📝 APELLIDOS: Hernández
+🔑 CONTRASEÑA: juan20
+--------------------------------------------------
+
+👤 JUGADOR: Guillermo Domínguez García
+🔢 DORSAL: #21
+📝 NOMBRE: Guillermo
+📝 APELLIDOS: Domínguez García
+🔑 CONTRASEÑA: guillermo21
+--------------------------------------------------
+
+👤 JUGADOR: Jorge Alonso Cordovilla
+🔢 DORSAL: #22
+📝 NOMBRE: Jorge
+📝 APELLIDOS: Alonso Cordovilla
+🔑 CONTRASEÑA: jorge22
+--------------------------------------------------
+
+👤 JUGADOR: Carlos Jose Montes Ricse
+🔢 DORSAL: #23
+📝 NOMBRE: Carlos Jose
+📝 APELLIDOS: Montes Ricse
+🔑 CONTRASEÑA: carlos23
+--------------------------------------------------
+
+🔒 IMPORTANTE:
+- Escribe EXACTAMENTE tu nombre y apellidos
+- La contraseña es tu nombre + tu número
+- Cada jugador tiene su perfil personal
+- Podrás ver TUS entrenamientos y alineaciones
+
+❓ ¿PROBLEMAS? Habla con el entrenador
