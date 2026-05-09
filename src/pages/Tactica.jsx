@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import FieldCanvas from '../components/FieldCanvas';
+import TVModeButton from '../components/TVModeButton';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { 
   Plus, Move, Spline, X, 

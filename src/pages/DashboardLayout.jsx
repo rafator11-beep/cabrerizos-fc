@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import FloatingTimer from '../components/FloatingTimer';
+import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, Home as HomeIcon, PenTool, Dumbbell, Users, LayoutGrid, Target, X, Search, Command, Bell } from 'lucide-react';
+import { LogOut, Menu, Home as HomeIcon, PenTool, Dumbbell, Users, LayoutGrid, Target, X, Search, Command } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function DashboardLayout() {
@@ -172,6 +173,9 @@ export default function DashboardLayout() {
               <span className="text-[10px] text-muted/60 font-medium">Buscar...</span>
               <kbd className="text-[8px] font-mono text-muted bg-white/5 px-1.5 py-0.5 rounded ml-2">⌘K</kbd>
             </button>
+
+            {/* Notification Bell */}
+            <NotificationBell />
 
             {/* Desktop Mode Switcher */}
             {isRealAdmin && (

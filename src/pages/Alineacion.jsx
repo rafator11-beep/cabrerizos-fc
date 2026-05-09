@@ -335,7 +335,7 @@ export default function Alineacion() {
     setShowComments(true);
   };
 
-  const savePlayerComment = () => {
+  const savePlayerComment = async () => {
     if (!selectedPlayer || !activeLineup) return;
     
     const updatedComments = {
@@ -347,6 +347,24 @@ export default function Alineacion() {
       ...activeLineup,
       player_comments: updatedComments
     });
+    
+    // Crear notificación si el jugador tiene auth_profile_id y hay comentario
+    if (playerComment.trim() && selectedPlayer.auth_profile_id) {
+      try {
+        const notificationData = {
+          player_id: selectedPlayer.auth_profile_id,
+          type: 'lineup_comment',
+          title: 'Comentario del entrenador',
+          message: `El entrenador te ha dejado un comentario en la alineación: "${playerComment.substring(0, 100)}${playerComment.length > 100 ? '...' : ''}"`,
+          read: false
+        };
+        
+        await supabase.from('notifications').insert([notificationData]);
+        console.log('Notification created for player comment');
+      } catch (error) {
+        console.error('Error creating notification:', error);
+      }
+    }
     
     setShowComments(false);
     setSelectedPlayer(null);
