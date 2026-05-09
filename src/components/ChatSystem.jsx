@@ -329,29 +329,28 @@ export default function ChatSystem() {
         </div>
       ) : null}
 
-      {/* Input */}
-      {((!isRealAdmin) || (isRealAdmin && selectedPlayerId && selectedPlayer)) && (
-        <div className="p-4 border-t border-white/10">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              className="input-field flex-1 text-sm"
-              placeholder="Escribe un mensaje..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-            />
-            <button
-              type="button"
-              onClick={sendMessage}
-              disabled={!newMessage.trim()}
-              className="w-10 h-10 bg-accent text-bg rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <Send size={16} />
-            </button>
-          </div>
+      {/* Input - SIEMPRE VISIBLE */}
+      <div className="p-4 border-t border-white/10">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className="input-field flex-1 text-sm"
+            placeholder={isRealAdmin && !selectedPlayerId ? "Selecciona un jugador primero..." : "Escribe un mensaje..."}
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+            disabled={isRealAdmin && !selectedPlayerId}
+          />
+          <button
+            type="button"
+            onClick={sendMessage}
+            disabled={!newMessage.trim() || (isRealAdmin && !selectedPlayerId)}
+            className="w-10 h-10 bg-accent text-bg rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Send size={16} />
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
