@@ -71,6 +71,8 @@ export default function ChatSystem() {
       }
       
       console.log('Players loaded:', data);
+      console.log('First player:', data[0]);
+      console.log('First player ID:', data[0]?.id, typeof data[0]?.id);
       setPlayers(data || []);
     } catch (error) {
       console.error('Error loading players:', error);
@@ -292,7 +294,10 @@ export default function ChatSystem() {
                     key={p.id}
                     type="button"
                     onClick={() => {
-                      setSelectedPlayerId(String(p.id));
+                      console.log('Clicking player:', p, 'ID:', p.id);
+                      const playerId = String(p.id);
+                      console.log('Setting playerId to:', playerId);
+                      setSelectedPlayerId(playerId);
                       setShowAllPlayers(false);
                     }}
                     className="w-full p-3 bg-white/5 hover:bg-accent/10 border border-white/10 hover:border-accent/40 rounded-xl text-left transition-all"
