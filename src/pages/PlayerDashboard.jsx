@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Star, Send, Calendar, Clock, AlertCircle, CheckCircle, ChevronRight, User, Camera, Lock, Trophy, Activity, Settings, Edit3, Shield, Key, MessageSquare } from 'lucide-react';

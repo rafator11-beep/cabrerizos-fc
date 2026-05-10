@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import FloatingTimer from '../components/FloatingTimer';
-import FloatingChat from '../components/FloatingChat';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, Home as HomeIcon, PenTool, Dumbbell, Users, User, LayoutGrid, Target, X, Search, Command, Bell, MessageSquare } from 'lucide-react';
+import { LogOut, Menu, Home as HomeIcon, PenTool, Dumbbell, Users, User, Search, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function DashboardLayout() {
@@ -185,9 +184,8 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
 
-        {/* Floating Training Timer & Chat */}
+        {/* Floating Training Timer */}
         <FloatingTimer />
-        <FloatingChat />
 
         {/* MOBILE BOTTOM NAV */}
         <nav 
