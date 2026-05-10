@@ -3,16 +3,17 @@ import React, { useState } from 'react';
 export default function ProfessionalToken({ token, isSelected, onPointerDown, onDoubleClick }) {
   const { id, x = 0, y = 0, photo_url, name, label, isRival } = token;
   const [imgError, setImgError] = useState(false);
-  
+
   const tokenColor = isRival ? '#ef4444' : (token.color || '#0057ff');
   const hasPhoto = !!photo_url && !imgError;
-  
-  const r = 18; 
-  const size = r * 3.2;
+
+  const r = 20;
+  const clipId = `clip-${id}`;
+  const shadowId = `shadow-${id}`;
+  const glowId = `glow-${id}`;
 
   return (
     <g
-      key={id}
       transform={`translate(${x}, ${y})`}
       onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
@@ -20,85 +21,65 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
       style={{ touchAction: 'none' }}
     >
       <defs>
-        <filter id={`shadow-${id}`}>
-          <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.5" />
+        <clipPath id={clipId}>
+          <circle r={r} />
+        </clipPath>
+        <filter id={shadowId} x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity="0.6" />
+        </filter>
+        <filter id={glowId} x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#00ff87" floodOpacity="0.9" />
         </filter>
       </defs>
 
-      {hasPhoto ? (
-        <foreignObject x={-size/2} y={-size/2} width={size} height={size}>
-          <div style={{
-            width: '100%',
-            height: '100%',
-            position: 'relative',
-            background: 'transparent'
-          }}>
-            <img 
-              src={photo_url} 
-              crossOrigin="anonymous" 
-              alt={name || label}
-              style={{ 
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                filter: `
-                  ${isSelected ? 'drop-shadow(0 0 8px #00ff87)' : 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))'}
-                  contrast(1.2) 
-                  saturate(1.2)
-                  brightness(1.1)
-                `,
-                background: 'transparent',
-                // Hacer el fondo gris/blanco transparente
-                WebkitMaskImage: `
-                  radial-gradient(circle, 
-                    rgba(0,0,0,1) 0%, 
-                    rgba(0,0,0,1) 60%, 
-                    rgba(0,0,0,0.8) 70%, 
-                    rgba(0,0,0,0.3) 80%, 
-                    rgba(0,0,0,0) 90%
-                  )
-                `,
-                maskImage: `
-                  radial-gradient(circle, 
-                    rgba(0,0,0,1) 0%, 
-                    rgba(0,0,0,1) 60%, 
-                    rgba(0,0,0,0.8) 70%, 
-                    rgba(0,0,0,0.3) 80%, 
-                    rgba(0,0,0,0) 90%
-                  )
-                `
-              }} 
-              draggable={false}
+      {/* Token body */}
+      <g filter={`url(#${isSelected ? glowId : shadowId})`}>
+        {hasPhoto ? (
+          <>
+            {/* Background circle */}
+            <circle
+              r={r}
+              fill="#1a2030"
+              stroke={isSelected ? '#00ff87' : 'rgba(255,255,255,0.4)'}
+              strokeWidth={isSelected ? 2.5 : 1.5}
             />
-          </div>
-        </foreignObject>
-      ) : (
-        <g filter={`url(#shadow-${id})`}>
-          <circle r={r} fill={tokenColor} stroke="white" strokeWidth="2" />
-          <text textAnchor="middle" dy="5" fontSize="12" fontWeight="900" fill="white" style={{ pointerEvents: 'none', fontFamily: 'system-ui, sans-serif' }}>
-            {label}
-          </text>
-        </g>
-      )}
+            {/* Native SVG image — much more reliable than foreignObject */}
+            <image
+              href={photo_url}
+              x={-r} y={-r}
+              width={r * 2} height={r * 2}
+              clipPath={`url(#${clipId})`}
+              preserveAspectRatio="xMidYMid slice"
+              onError={() => setImgError(true)}
+            />
+          </>
+        ) : (
+          <>
+            <circle r={r} fill={tokenColor} stroke="white" strokeWidth="2" />
+            <text
+              textAnchor="middle"
+              dy="5"
+              fontSize="11"
+              fontWeight="900"
+              fill="white"
+              style={{ pointerEvents: 'none', fontFamily: 'system-ui, sans-serif' }}
+            >
+              {label}
+            </text>
+          </>
+        )}
+      </g>
 
-      {/* Name Badge */}
+      {/* Name badge */}
       {name && (
-        <g transform={`translate(0, ${hasPhoto ? r * 1.5 : r + 10})`}>
-          <rect 
-            x="-30" 
-            y="0" 
-            width="60" 
-            height="14" 
-            rx="4" 
-            fill="rgba(0,0,0,0.6)" 
-            className="pointer-events-none"
-          />
-          <text 
-            textAnchor="middle" 
-            dy="10" 
-            fontSize="9" 
-            fontWeight="800" 
-            fill="white" 
+        <g transform={`translate(0, ${r + 6})`}>
+          <rect x="-28" y="0" width="56" height="13" rx="4" fill="rgba(0,0,0,0.7)" className="pointer-events-none" />
+          <text
+            textAnchor="middle"
+            dy="9"
+            fontSize="8"
+            fontWeight="800"
+            fill="white"
             className="pointer-events-none"
             style={{ fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' }}
           >
@@ -107,9 +88,16 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
         </g>
       )}
 
-      {/* Selection Indicator */}
+      {/* Selection ring */}
       {isSelected && (
-        <ellipse cx="0" cy={hasPhoto ? r * 1.2 : r} rx={r * 1.5} ry={r * 0.4} fill="rgba(0,255,135,0.2)" stroke="#00ff87" strokeWidth="1" strokeDasharray="3,2" className="pointer-events-none" />
+        <circle
+          r={r + 5}
+          fill="none"
+          stroke="#00ff87"
+          strokeWidth="1.5"
+          strokeDasharray="4,3"
+          className="pointer-events-none"
+        />
       )}
     </g>
   );
