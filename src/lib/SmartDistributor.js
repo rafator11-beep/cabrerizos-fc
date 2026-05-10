@@ -3,34 +3,34 @@
  * and auto-distributes attendees into groups based on position.
  */
 
-// Regex patterns to extract team sizes from exercise descriptions
-const PATTERNS = [
-  // "Rondo 4v2", "Partido 5v5", "4x4+2", "3 contra 3"
-  /(\d+)\s*(?:v|vs|x|contra)\s*(\d+)(?:\s*\+\s*(\d+))?/i,
-  // "Rondo de 6", "Grupos de 4"
-  /(?:rondo|grupo|grupos|equipo|equipos)\s+(?:de\s+)?(\d+)/i,
-  // "Tríos", "Parejas", "Cuartetos"
-  /\b(par(?:eja|es))\b/i,
-  /\b(tr[ií]os?)\b/i,
-  /\b(cuarteto|cuartetos)\b/i,
-  /\b(quinteto|quintetos)\b/i,
-  // "2 equipos de 5"
-  /(\d+)\s+equipos?\s+de\s+(\d+)/i,
-  // Fallback: just a number like "6 jugadores"
-  /(\d+)\s*jugador/i,
-];
+const WORD_TO_NUM = { 
+  'pareja': 2, 'parejas': 2, 'pares': 2, 'par': 2, 
+  'trío': 3, 'trio': 3, 'trios': 3, 'tríos': 3, 
+  'cuarteto': 4, 'cuartetos': 4, 
+  'quinteto': 5, 'quintetos': 5 
+};
 
-const WORD_TO_NUM = { 'parejas': 2, 'pares': 2, 'pareja': 2, 'par': 2, 'tríos': 3, 'trio': 3, 'trios': 3, 'trío': 3, 'cuarteto': 4, 'cuartetos': 4, 'quinteto': 5, 'quintetos': 5 };
+/**
+ * Fisher-Yates Shuffle for unbiased randomization.
+ */
+function shuffle(array) {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+}
 
 /**
  * Parse an exercise description to extract team structure.
- * Returns { teamA: number, teamB: number, extras: number, total: number }
  */
 export function parseExercise(description) {
   if (!description) return null;
   const text = description.toLowerCase();
 
-  // Pattern 1: "4v2", "5v5+2", "3 contra 3"
+  // 1. Check for "X v Y [+ Z]" patterns
   const vsMatch = text.match(/(\d+)\s*(?:v|vs|x|contra)\s*(\d+)(?:\s*\+\s*(\d+))?/i);
   if (vsMatch) {
     const a = parseInt(vsMatch[1]);
@@ -39,7 +39,7 @@ export function parseExercise(description) {
     return { teamA: a, teamB: b, extras: c, total: a + b + c };
   }
 
-  // Pattern 2: "2 equipos de 5"
+  // 2. Check for "N equipos de M"
   const teamsOfMatch = text.match(/(\d+)\s+equipos?\s+de\s+(\d+)/i);
   if (teamsOfMatch) {
     const numTeams = parseInt(teamsOfMatch[1]);
@@ -47,21 +47,18 @@ export function parseExercise(description) {
     return { teamA: perTeam, teamB: perTeam, extras: (numTeams - 2) * perTeam, total: numTeams * perTeam };
   }
 
-  // Pattern 3: "Rondo de 6", "Grupos de 4"
+  // 3. Check for specific groupings (Rondo de 6, Tríos, etc.)
   const groupMatch = text.match(/(?:rondo|grupo|grupos|equipo)\s+(?:de\s+)?(\d+)/i);
   if (groupMatch) {
     const n = parseInt(groupMatch[1]);
     return { teamA: n, teamB: 0, extras: 0, total: n };
   }
 
-  // Pattern 4: Word-based ("Tríos", "Parejas")
   for (const [word, num] of Object.entries(WORD_TO_NUM)) {
-    if (text.includes(word)) {
-      return { teamA: num, teamB: 0, extras: 0, total: num };
-    }
+    if (text.includes(word)) return { teamA: num, teamB: 0, extras: 0, total: num };
   }
 
-  // Pattern 5: "X jugadores"
+  // 4. Fallback: "X jugadores"
   const jugMatch = text.match(/(\d+)\s*jugador/i);
   if (jugMatch) {
     const n = parseInt(jugMatch[1]);
@@ -72,65 +69,44 @@ export function parseExercise(description) {
 }
 
 /**
- * Group players by position for balanced distribution.
+ * Normalize and group players by tactical area.
  */
 function groupByPosition(players) {
-  const groups = {
-    portero: [],
-    defensa: [],
-    centrocampista: [],
-    delantero: [],
-    otro: [],
-  };
-
+  const groups = { gk: [], def: [], mid: [], att: [], other: [] };
+  
   players.forEach(p => {
     const pos = (p.position || '').toLowerCase();
-    if (pos.includes('porter') || pos.includes('gk') || pos.includes('meta')) {
-      groups.portero.push(p);
-    } else if (pos.includes('defen') || pos.includes('central') || pos.includes('lateral') || pos.includes('df')) {
-      groups.defensa.push(p);
-    } else if (pos.includes('centro') || pos.includes('medio') || pos.includes('mc') || pos.includes('pivote') || pos.includes('interior')) {
-      groups.centrocampista.push(p);
-    } else if (pos.includes('delant') || pos.includes('extrem') || pos.includes('punta') || pos.includes('dc') || pos.includes('att')) {
-      groups.delantero.push(p);
-    } else {
-      groups.otro.push(p);
-    }
+    if (pos.match(/porter|gk|meta/)) groups.gk.push(p);
+    else if (pos.match(/defen|central|lateral|df/)) groups.def.push(p);
+    else if (pos.match(/centro|medio|mc|pivote|interior/)) groups.mid.push(p);
+    else if (pos.match(/delant|extrem|punta|dc|att/)) groups.att.push(p);
+    else groups.other.push(p);
   });
 
   return groups;
 }
 
 /**
- * Distribute players into a balanced pool, alternating positions.
+ * Distribute players ensuring tactical balance (alternating positions).
  */
 function balancedShuffle(players) {
   const byPos = groupByPosition(players);
   const pools = Object.values(byPos).filter(g => g.length > 0);
   
-  // Shuffle each position group
-  pools.forEach(g => g.sort(() => Math.random() - 0.5));
+  // Shuffle each sub-pool properly
+  pools.forEach(g => shuffle(g));
   
-  // Interleave: pick one from each position group in round-robin
   const result = [];
-  let idx = 0;
-  let maxLen = Math.max(...pools.map(g => g.length));
+  const maxLen = Math.max(...pools.map(g => g.length));
+  
   for (let round = 0; round < maxLen; round++) {
     for (const pool of pools) {
-      if (round < pool.length) {
-        result.push(pool[round]);
-      }
+      if (round < pool.length) result.push(pool[round]);
     }
   }
   return result;
 }
 
-/**
- * Main distribution function.
- * @param {Array} exercises - Array of exercise objects with { id, name, description }
- * @param {Array} attendees - Array of player objects with { id, name, number, position }
- * @returns {Object} session_lineup - { [exercise_id]: { equipoA: [...], equipoB: [...], comodines: [...], rotacion: [...] } }
- */
 export function distributeGroups(exercises, attendees) {
   if (!exercises?.length || !attendees?.length) return {};
   
@@ -138,20 +114,16 @@ export function distributeGroups(exercises, attendees) {
   
   exercises.forEach(ex => {
     const parsed = parseExercise(ex.description || ex.name || '');
-    
     if (!parsed) {
-      // No pattern found — assign all attendees as a single group
       sessionLineup[ex.id] = {
         equipoA: attendees.map(p => ({ id: p.id, name: p.name, number: p.number })),
-        equipoB: [],
-        comodines: [],
-        rotacion: [],
+        equipoB: [], comodines: [], rotacion: []
       };
       return;
     }
     
     const shuffled = balancedShuffle([...attendees]);
-    const { teamA, teamB, extras, total } = parsed;
+    const { teamA, teamB, extras } = parsed;
     
     let pointer = 0;
     const pick = (n) => {
@@ -160,16 +132,11 @@ export function distributeGroups(exercises, attendees) {
       return slice;
     };
     
-    const groupA = pick(Math.min(teamA, shuffled.length - pointer));
-    const groupB = pick(Math.min(teamB, shuffled.length - pointer));
-    const comodines = pick(Math.min(extras, shuffled.length - pointer));
-    const rotacion = shuffled.slice(pointer).map(p => ({ id: p.id, name: p.name, number: p.number }));
-    
     sessionLineup[ex.id] = {
-      equipoA: groupA,
-      equipoB: groupB,
-      comodines,
-      rotacion,
+      equipoA: pick(Math.min(teamA, shuffled.length - pointer)),
+      equipoB: pick(Math.min(teamB, shuffled.length - pointer)),
+      comodines: pick(Math.min(extras, shuffled.length - pointer)),
+      rotacion: shuffled.slice(pointer).map(p => ({ id: p.id, name: p.name, number: p.number })),
       parsed: `${teamA}v${teamB}${extras ? `+${extras}` : ''}`,
     };
   });
@@ -177,25 +144,20 @@ export function distributeGroups(exercises, attendees) {
   return sessionLineup;
 }
 
-/**
- * Get a player's assignments across all exercises.
- * @returns {Array} [{ exerciseName, exerciseIndex, team, parsed }]
- */
 export function getPlayerAssignments(sessionLineup, exercises, playerId) {
   if (!sessionLineup || !exercises?.length || !playerId) return [];
   
   const assignments = [];
+  const teams = [
+    { key: 'equipoA', label: 'Equipo A', color: '#3b82f6' },
+    { key: 'equipoB', label: 'Equipo B', color: '#ef4444' },
+    { key: 'comodines', label: 'Comodín', color: '#f59e0b' },
+    { key: 'rotacion', label: 'Rotación', color: '#6b7280' },
+  ];
   
   exercises.forEach((ex, i) => {
     const lineup = sessionLineup[ex.id];
     if (!lineup) return;
-    
-    const teams = [
-      { key: 'equipoA', label: 'Equipo A', color: '#3b82f6' },
-      { key: 'equipoB', label: 'Equipo B', color: '#ef4444' },
-      { key: 'comodines', label: 'Comodín', color: '#f59e0b' },
-      { key: 'rotacion', label: 'Rotación', color: '#6b7280' },
-    ];
     
     for (const t of teams) {
       if (lineup[t.key]?.some(p => p.id === playerId)) {
@@ -215,3 +177,4 @@ export function getPlayerAssignments(sessionLineup, exercises, playerId) {
   
   return assignments;
 }
+

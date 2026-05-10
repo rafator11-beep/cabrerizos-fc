@@ -3,11 +3,12 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import FieldCanvas from '../components/FieldCanvas';
 import { useOfflineSync } from '../hooks/useOfflineSync';
+import { useRealtimePizarra } from '../hooks/useRealtimePizarra';
 import {
   Plus, Move, ArrowRight, Trash2, Save, Monitor, Spline,
   ChevronRight, ChevronLeft,
   Activity, Info,
-  PenTool, Circle,
+  PenTool, Circle, Users,
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -22,35 +23,40 @@ const CATEGORIES = [
 ];
 
 const LEGEND = [
-  { id: 'pass', label: 'Pase Raso', icon: '⎯', color: '#4ade80' },
+  { id: 'pass', label: 'Pase', icon: '⎯', color: '#4ade80' },
   { id: 'run', label: 'Desmarque', icon: '╌', color: '#fbbf24' },
-  { id: 'shoot', label: 'Tiro/Largo', icon: '⟶', color: '#ef4444' },
+  { id: 'shoot', label: 'Tiro', icon: '⟶', color: '#ef4444' },
   { id: 'curved', label: 'Bombeado', icon: '⤿', color: '#c084fc' },
   { id: 'zigzag', label: 'Conducción', icon: '〰', color: '#3b82f6' },
 ];
+
+const migratePlay = (p) => {
+  const isMigrated = p.tokens && Array.isArray(p.tokens) && p.tokens.length > 0 && p.tokens[0]?.step !== undefined;
+  return isMigrated ? p : { ...p, tokens: [{ step: 1, tokens: p.tokens || [], arrows: p.arrows || [], zones: p.zones || [] }] };
+};
 
 export default function Tactica({ externalExercise = null, overridePreset = null, hideLibrary = false, hideEditor = false }) {
   const { isRealAdmin, viewAsPlayer } = useAuth();
   const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
-  
+
   const [plays, setPlays] = useState([]);
   const [activePlay, setActivePlay] = useState(null);
   const [activeCategory, setActiveCategory] = useState('corners');
   const [loading, setLoading] = useState(true);
-  const [mobileTab, setMobileTab] = useState('jugadas'); 
+  const [mobileTab, setMobileTab] = useState('jugadas');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '' });
-  const [tool, setTool] = useState("move");
-  const [arrowType, setArrowType] = useState("pass");
+  const [tool, setTool] = useState('move');
+  const [arrowType, setArrowType] = useState('pass');
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [players, setPlayers] = useState([]);
-  const [showTools, setShowTools] = useState(false);
+  const [showRoster, setShowRoster] = useState(false);
   const [zoomPreset, setZoomPreset] = useState(null);
   const [libCollapsed, setLibCollapsed] = useState(false);
   const [editorCollapsed, setEditorCollapsed] = useState(false);
-  
+
   const ZOOM_OPTIONS = [
     { id: null, label: 'Completo', icon: '🏟️' },
     { id: 'corner_right_top', label: 'Córner ↗', icon: '⛳' },
@@ -60,9 +66,16 @@ export default function Tactica({ externalExercise = null, overridePreset = null
     { id: 'penalty_right', label: 'Área →', icon: '🎯' },
     { id: 'penalty_left', label: 'Área ←', icon: '🎯' },
   ];
-  
+
   const fieldSvgRef = useRef(null);
   const { queueUpdate } = useOfflineSync();
+
+  // Real-time: players receive admin saves instantly
+  useRealtimePizarra(activePlay?.id ?? null, (updated) => {
+    const safe = migratePlay(updated);
+    setPlays(ps => ps.map(p => p.id === safe.id ? safe : p));
+    if (activePlay?.id === safe.id) setActivePlay(safe);
+  });
 
   useEffect(() => {
     fetchPlays();
@@ -78,10 +91,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
     setLoading(true);
     const { data } = await supabase.from('plays').select('*').eq('category', activeCategory).order('created_at', { ascending: false });
     if (data) {
-      const safe = data.map(p => {
-        const isMigrated = p.tokens && Array.isArray(p.tokens) && p.tokens.length > 0 && p.tokens[0].step !== undefined;
-        return isMigrated ? p : { ...p, tokens: [{ step: 1, tokens: p.tokens || [], arrows: p.arrows || [], zones: p.zones || [] }] };
-      });
+      const safe = data.map(migratePlay);
       setPlays(safe);
       if (safe.length > 0) setActivePlay(safe[0]);
     }
@@ -115,7 +125,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
       updateCurrentStep({
         tokens: [...(currentStep.tokens || []), {
           id: `pl-${label}-${isRival ? 'R' : ''}-${Date.now()}`,
-          kind: "player",
+          kind: 'player',
           x: 275 + (Math.random() * 40 - 20),
           y: 183 + (Math.random() * 40 - 20),
           color: isRival ? '#ef4444' : '#0057ff',
@@ -154,7 +164,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
       type: 'tactical',
       tokens: [{ step: 1, tokens: [], arrows: [], zones: [] }]
     }]).select().single();
-    if (error) { alert('Error al crear jugada: ' + error.message); return; }
+    if (error) { console.error('Create play error:', error); return; }
     if (data) {
       setPlays([data, ...plays]);
       setActivePlay(data);
@@ -165,8 +175,8 @@ export default function Tactica({ externalExercise = null, overridePreset = null
 
   return (
     <div className="flex h-full bg-bg overflow-hidden">
-      
-      {/* 1. LEFT SIDEBAR: Biblioteca (colapsable en desktop) */}
+
+      {/* 1. LEFT SIDEBAR: Biblioteca */}
       {!externalExercise && !hideLibrary && (
         <div className={`
           flex-shrink-0 bg-surface/30 border-r border-white/5 flex flex-col transition-all duration-300
@@ -174,8 +184,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           ${isMobile && mobileTab !== 'jugadas' ? 'hidden' : 'flex'}
           ${libCollapsed ? 'md:w-14' : 'md:w-56'}
         `}>
-
-          {/* Header con botón colapsar */}
           <div className="p-3 border-b border-white/5 flex items-center justify-between gap-2 flex-shrink-0">
             {!libCollapsed && (
               <div className="min-w-0">
@@ -189,13 +197,12 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                   <Plus size={14} />
                 </button>
               )}
-              <button onClick={() => setLibCollapsed(v => !v)} className="hidden md:flex w-7 h-7 rounded-lg bg-white/5 text-white/40 hover:text-white hover:bg-white/10 items-center justify-center transition-all" title={libCollapsed ? 'Expandir biblioteca' : 'Colapsar biblioteca'}>
+              <button onClick={() => setLibCollapsed(v => !v)} className="hidden md:flex w-7 h-7 rounded-lg bg-white/5 text-white/40 hover:text-white hover:bg-white/10 items-center justify-center transition-all">
                 {libCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
               </button>
             </div>
           </div>
 
-          {/* Categorías (iconos siempre visibles) */}
           <div className={`flex-shrink-0 bg-black/10 ${libCollapsed ? 'flex flex-col p-1 gap-1' : 'flex overflow-x-auto no-scrollbar p-2 gap-2'}`}>
             {CATEGORIES.map(cat => (
               <button key={cat.id} onClick={() => setActiveCategory(cat.id)} title={cat.label}
@@ -205,7 +212,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
             ))}
           </div>
 
-          {/* Lista de jugadas (oculta cuando colapsado) */}
           {!libCollapsed && (
             <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1">
               {loading ? (
@@ -213,7 +219,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                   {[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-white/5 rounded-2xl" />)}
                 </div>
               ) : plays.length > 0 ? plays.map(p => (
-                <button key={p.id} onClick={() => { setActivePlay(p); setMobileTab('campo'); }}
+                <button key={p.id} onClick={() => { setActivePlay(p); setMobileTab('campo'); setActiveStepIndex(0); }}
                   className={`w-full px-3 py-3 rounded-xl text-left border transition-all ${activePlay?.id === p.id ? 'bg-accent/10 border-accent/40 text-white' : 'bg-white/5 border-white/5 text-muted hover:border-white/10'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest truncate">{p.name}</span>
@@ -231,59 +237,46 @@ export default function Tactica({ externalExercise = null, overridePreset = null
         </div>
       )}
 
-      {/* 2. CENTER: Editor Canvas */}
+      {/* 2. CENTER: Canvas + Mobile Bottom Toolbar */}
       <div className={`
-        flex-1 min-h-0 min-w-0 relative flex flex-col bg-[#05070a] overflow-hidden
+        flex-1 min-h-0 min-w-0 flex flex-col bg-[#05070a] overflow-hidden
         ${isMobile && mobileTab !== 'campo' ? 'hidden' : 'flex'}
       `}>
-        
-        {/* Playback Controls (Floating Top) */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-5 py-2 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          {isMobile && (
-            <button 
-              onClick={() => setMobileTab('jugadas')}
-              className="w-8 h-8 rounded-xl bg-white/5 text-accent flex items-center justify-center mr-2 active:scale-90 transition-all"
-              title="Volver al listado"
-            >
+
+        {/* Desktop: Floating step nav bar */}
+        {!isMobile && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-5 py-2 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            <button onClick={() => setAnimating(!animating)} className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${animating ? 'bg-amber-500 text-bg shadow-lg shadow-amber-500/20' : 'text-white/40 hover:text-white'}`}>
+              <Monitor size={18} />
+            </button>
+            <div className="w-px h-6 bg-white/10 mx-1" />
+            <button onClick={() => setActiveStepIndex(Math.max(0, activeStepIndex - 1))} className="w-8 h-8 rounded-xl text-white/40 hover:text-white hover:bg-white/5 flex items-center justify-center transition-all">
               <ChevronLeft size={20} />
             </button>
-          )}
-          
-          <button onClick={() => setAnimating(!animating)} className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${animating ? 'bg-amber-500 text-bg shadow-lg shadow-amber-500/20' : 'text-white/40 hover:text-white'}`}>
-            <Monitor size={18} />
-          </button>
-          
-          <div className="w-px h-6 bg-white/10 mx-1" />
-
-          <button onClick={() => setActiveStepIndex(Math.max(0, activeStepIndex - 1))} className="w-8 h-8 rounded-xl text-white/40 hover:text-white hover:bg-white/5 flex items-center justify-center transition-all">
-            <ChevronLeft size={20} />
-          </button>
-          
-          <div className="flex items-center gap-2 px-3">
-            {steps.map((_, idx) => (
-              <button key={idx} onClick={() => setActiveStepIndex(idx)}
-                className={`h-3 rounded-full transition-all duration-300 ${activeStepIndex === idx ? 'w-10 bg-accent shadow-[0_0_15px_rgba(0,255,135,0.5)]' : 'w-3 bg-white/10 hover:bg-white/20'}`} />
-            ))}
-            {!isPlayerMode && (
-              <button onClick={addStep} className="w-7 h-7 rounded-xl bg-white/5 text-white/40 hover:text-accent hover:bg-accent/10 flex items-center justify-center ml-1 transition-all">
-                <Plus size={14} />
+            <div className="flex items-center gap-2 px-3">
+              {steps.map((_, idx) => (
+                <button key={idx} onClick={() => setActiveStepIndex(idx)}
+                  className={`h-3 rounded-full transition-all duration-300 ${activeStepIndex === idx ? 'w-10 bg-accent shadow-[0_0_15px_rgba(0,255,135,0.5)]' : 'w-3 bg-white/10 hover:bg-white/20'}`} />
+              ))}
+              {!isPlayerMode && (
+                <button onClick={addStep} className="w-7 h-7 rounded-xl bg-white/5 text-white/40 hover:text-accent hover:bg-accent/10 flex items-center justify-center ml-1 transition-all">
+                  <Plus size={14} />
+                </button>
+              )}
+            </div>
+            <button onClick={() => setActiveStepIndex(Math.min(steps.length - 1, activeStepIndex + 1))} className="w-8 h-8 rounded-xl text-white/40 hover:text-white hover:bg-white/5 flex items-center justify-center transition-all">
+              <ChevronRight size={20} />
+            </button>
+            {!isPlayerMode && steps.length > 1 && (
+              <button onClick={removeStep} className="w-8 h-8 rounded-xl text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 flex items-center justify-center ml-2 transition-all">
+                <Trash2 size={16} />
               </button>
             )}
           </div>
+        )}
 
-          <button onClick={() => setActiveStepIndex(Math.min(steps.length - 1, activeStepIndex + 1))} className="w-8 h-8 rounded-xl text-white/40 hover:text-white hover:bg-white/5 flex items-center justify-center transition-all">
-            <ChevronRight size={20} />
-          </button>
-
-          {!isPlayerMode && steps.length > 1 && (
-            <button onClick={removeStep} className="w-8 h-8 rounded-xl text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 flex items-center justify-center ml-2 transition-all">
-              <Trash2 size={16} />
-            </button>
-          )}
-        </div>
-
-        {/* Tools Toolbar (Floating Left) */}
-        {!isPlayerMode && (
+        {/* Desktop: Floating tools toolbar (left) */}
+        {!isPlayerMode && !isMobile && (
           <div className="absolute top-20 left-4 z-30 flex flex-col gap-2 p-2 bg-surface/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
             <button onClick={() => setTool('move')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${tool === 'move' ? 'bg-accent text-bg shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`} title="Mover">
               <Move size={18} />
@@ -302,18 +295,18 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           </div>
         )}
 
-        {/* Global Actions (Top Right) */}
-        <div className="absolute top-4 right-4 z-20 flex gap-2">
-          {!isPlayerMode && (
+        {/* Desktop: Save button (top right) */}
+        {!isPlayerMode && !isMobile && (
+          <div className="absolute top-4 right-4 z-20">
             <button onClick={savePlay} className="h-11 px-6 bg-accent text-bg font-black rounded-2xl shadow-xl shadow-accent/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all">
               <Save size={18} />
-              <span className="text-[11px] uppercase tracking-[0.2em] hidden sm:inline">Guardar</span>
+              <span className="text-[11px] uppercase tracking-[0.2em]">Guardar</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* ZOOM BAR */}
-        {!isPlayerMode && (
+        {/* Desktop: Zoom bar (bottom center) */}
+        {!isPlayerMode && !isMobile && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-3 py-1.5 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             {ZOOM_OPTIONS.map(z => (
               <button key={z.id ?? 'full'} onClick={() => setZoomPreset(z.id)}
@@ -324,7 +317,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           </div>
         )}
 
-        {/* FIELD CANVAS (Maximum protagonist) */}
+        {/* FIELD CANVAS */}
         <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden" style={{ touchAction: 'none' }}>
           <div
             style={{
@@ -369,23 +362,101 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           </div>
         </div>
 
-        {/* MOBILE: TOOLS BOTTOM BUTTON */}
-        {isMobile && !isPlayerMode && (
-          <button 
-            onClick={() => setShowTools(true)}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 bg-accent text-bg font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 active:scale-95 transition-all"
-          >
-            <PenTool size={16} />
-            <span className="text-[10px] uppercase tracking-[0.2em]">Herramientas</span>
-          </button>
+        {/* MOBILE BOTTOM TOOLBAR */}
+        {isMobile && (
+          <div className="flex-shrink-0 bg-surface/95 backdrop-blur-2xl border-t border-white/10">
+
+            {/* Arrow type sub-bar (admin, when arrow tool active) */}
+            {!isPlayerMode && tool === 'arrow' && (
+              <div className="flex gap-1.5 px-3 pt-2 pb-0 overflow-x-auto no-scrollbar">
+                {LEGEND.map(l => (
+                  <button key={l.id} onClick={() => setArrowType(l.id)}
+                    className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase transition-all ${arrowType === l.id ? 'text-bg' : 'bg-white/5 text-white/40'}`}
+                    style={{ background: arrowType === l.id ? l.color : undefined }}>
+                    <span>{l.icon}</span> {l.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Main toolbar row */}
+            <div className="flex items-center gap-1 px-2 py-2">
+
+              {/* Back to library */}
+              <button onClick={() => setMobileTab('jugadas')}
+                className="w-11 h-11 rounded-xl bg-white/5 text-accent flex items-center justify-center flex-shrink-0 active:scale-90 transition-all">
+                <ChevronLeft size={20} />
+              </button>
+
+              {!isPlayerMode && <div className="w-px h-6 bg-white/10 mx-0.5 flex-shrink-0" />}
+
+              {/* Tool + objects (admin only) */}
+              {!isPlayerMode && (
+                <>
+                  <button onClick={() => setTool('move')}
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${tool === 'move' ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'bg-white/5 text-white/40'}`}>
+                    <Move size={18} />
+                  </button>
+                  <button onClick={() => { setTool('arrow'); }}
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${tool === 'arrow' ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'bg-white/5 text-white/40'}`}>
+                    <ArrowRight size={18} />
+                  </button>
+                  <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `ball-${Date.now()}`, kind: 'ball', x: 275, y: 183 }] })}
+                    className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center text-lg flex-shrink-0 active:scale-90 transition-all">
+                    ⚽
+                  </button>
+                  <div className="w-px h-6 bg-white/10 mx-0.5 flex-shrink-0" />
+                </>
+              )}
+
+              {/* Step navigation (center flex) */}
+              <div className="flex-1 flex items-center justify-center gap-1">
+                <button onClick={() => setActiveStepIndex(Math.max(0, activeStepIndex - 1))}
+                  className="w-8 h-8 rounded-lg text-white/40 flex items-center justify-center active:text-white transition-all">
+                  <ChevronLeft size={16} />
+                </button>
+                <div className="flex items-center gap-1.5">
+                  {steps.map((_, idx) => (
+                    <button key={idx} onClick={() => setActiveStepIndex(idx)}
+                      className={`h-2 rounded-full transition-all duration-300 ${activeStepIndex === idx ? 'w-8 bg-accent shadow-[0_0_10px_rgba(0,255,135,0.5)]' : 'w-2 bg-white/20 hover:bg-white/40'}`}
+                    />
+                  ))}
+                  {!isPlayerMode && (
+                    <button onClick={addStep}
+                      className="w-6 h-6 rounded-lg bg-white/5 text-white/30 flex items-center justify-center active:scale-90 transition-all">
+                      <Plus size={12} />
+                    </button>
+                  )}
+                </div>
+                <button onClick={() => setActiveStepIndex(Math.min(steps.length - 1, activeStepIndex + 1))}
+                  className="w-8 h-8 rounded-lg text-white/40 flex items-center justify-center active:text-white transition-all">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {!isPlayerMode && <div className="w-px h-6 bg-white/10 mx-0.5 flex-shrink-0" />}
+
+              {/* Roster + Save (admin only) */}
+              {!isPlayerMode && (
+                <>
+                  <button onClick={() => setShowRoster(true)}
+                    className="w-11 h-11 rounded-xl bg-white/5 text-white/50 flex items-center justify-center flex-shrink-0 active:scale-90 transition-all">
+                    <Users size={18} />
+                  </button>
+                  <button onClick={savePlay}
+                    className="w-11 h-11 rounded-xl bg-accent text-bg flex items-center justify-center flex-shrink-0 active:scale-90 transition-all shadow-lg shadow-accent/20">
+                    <Save size={18} />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
 
-      {/* 3. RIGHT SIDEBAR: Editor PRO Panel (Desktop Only, collapsible) */}
+      {/* 3. RIGHT SIDEBAR: Editor PRO (desktop only) */}
       {!isPlayerMode && !hideEditor && (
         <div className={`hidden md:flex flex-shrink-0 transition-all duration-300 ${editorCollapsed ? 'w-12' : 'w-72'} bg-surface/60 backdrop-blur-xl border-l border-white/10 flex-col overflow-hidden`}>
-
-          {/* Header */}
           <div className={`flex-shrink-0 border-b border-white/10 flex items-center ${editorCollapsed ? 'justify-center p-2' : 'justify-between p-4'}`}>
             {!editorCollapsed && (
               <div>
@@ -396,13 +467,11 @@ export default function Tactica({ externalExercise = null, overridePreset = null
             <button
               onClick={() => setEditorCollapsed(v => !v)}
               className="w-7 h-7 rounded-lg bg-white/5 text-white/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all flex-shrink-0"
-              title={editorCollapsed ? 'Expandir panel' : 'Colapsar panel'}
             >
               {editorCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
             </button>
           </div>
 
-          {/* Collapsed: icon strip */}
           {editorCollapsed ? (
             <div className="flex-1 flex flex-col items-center gap-2 py-3">
               <button onClick={savePlay} className="w-9 h-9 bg-accent text-bg rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all" title="Guardar">
@@ -424,7 +493,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
             <>
               <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-6">
 
-                {/* Mode Selectors */}
                 <div className="space-y-3">
                   <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Modo de Edición</h4>
                   <div className="grid grid-cols-2 gap-2">
@@ -441,7 +509,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                   </div>
                 </div>
 
-                {/* Elements Palette */}
                 <div className="space-y-3">
                   <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Insertar Objetos</h4>
                   <div className="grid grid-cols-4 gap-2">
@@ -450,14 +517,13 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                     <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `cone-${Date.now()}`, kind: 'cone', x: 275, y: 183 }] })}
                       className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Cono">🚧</button>
                     <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `man-${Date.now()}`, kind: 'mannequin', x: 275, y: 183 }] })}
-                      className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Barrera/Maniquí">👤</button>
+                      className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-90" title="Barrera">👤</button>
                     <button className="aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-white/20 cursor-not-allowed" title="Zonas (Próximamente)">
                       <Circle size={18} />
                     </button>
                   </div>
                 </div>
 
-                {/* Arrow Sub-palette */}
                 {tool === 'arrow' && (
                   <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
                     <h4 className="text-[9px] font-black text-accent uppercase tracking-[0.2em]">Tipo de Trazo</h4>
@@ -473,7 +539,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                   </div>
                 )}
 
-                {/* Roster Management */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Plantilla CFC</h4>
@@ -491,7 +556,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
                       );
                     })}
                   </div>
-
                   <h4 className="text-[9px] font-black text-rose-500/50 uppercase tracking-[0.2em] pt-2">Rival</h4>
                   <div className="grid grid-cols-6 gap-1.5">
                     {Array.from({ length: 11 }).map((_, i) => {
@@ -519,58 +583,34 @@ export default function Tactica({ externalExercise = null, overridePreset = null
         </div>
       )}
 
-      {/* 4. MODALS & MOBILE SHEETS */}
-      {isMobile && showTools && (
+      {/* MOBILE ROSTER DRAWER */}
+      {isMobile && showRoster && (
         <div className="fixed inset-0 z-[100] animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowTools(false)} />
-          <div className="absolute bottom-0 left-0 right-0 h-[85vh] bg-surface rounded-t-[48px] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-500">
-            <div className="w-16 h-1.5 bg-white/10 rounded-full mx-auto my-6" />
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar pb-24">
-              {/* Mode + Objects */}
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black text-accent uppercase tracking-widest">Edición</h4>
-                <div className="grid grid-cols-4 gap-2">
-                  <button onClick={() => { setTool('move'); }} className={`aspect-square rounded-2xl flex items-center justify-center border transition-all ${tool === 'move' ? 'bg-accent text-bg border-accent' : 'bg-white/5 text-white/40 border-white/5'}`}><Move size={20}/></button>
-                  <button onClick={() => { setTool('arrow'); }} className={`aspect-square rounded-2xl flex items-center justify-center border transition-all ${tool === 'arrow' ? 'bg-accent text-bg border-accent' : 'bg-white/5 text-white/40 border-white/5'}`}><Spline size={20}/></button>
-                  <button onClick={() => { updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `ball-${Date.now()}`, kind: 'ball', x: 275, y: 183 }] }); }} className="aspect-square rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-2xl">⚽</button>
-                  <button onClick={() => { updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `cone-${Date.now()}`, kind: 'cone', x: 275, y: 183 }] }); }} className="aspect-square rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-2xl">🚧</button>
-                </div>
-              </div>
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowRoster(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-surface rounded-t-[32px] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-400"
+            style={{ maxHeight: '65vh' }}>
+            <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-4 mb-3 flex-shrink-0" />
 
-              {/* Arrow types */}
-              {tool === 'arrow' && (
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-black text-accent uppercase tracking-widest">Tipo de Trazo</h4>
-                  <div className="grid grid-cols-1 gap-2">
-                    {LEGEND.map(l => (
-                      <button key={l.id} onClick={() => setArrowType(l.id)}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${arrowType === l.id ? 'bg-white/10 border-accent/40' : 'bg-white/5 border-white/5 opacity-50'}`}>
-                        <span className="text-lg w-6 text-center" style={{ color: l.color }}>{l.icon}</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest">{l.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="px-5 pb-3 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Jugadores en Campo</h3>
+              <span className="px-2 py-0.5 bg-accent/10 text-accent text-[9px] font-black rounded-full">
+                {(currentStep.tokens || []).filter(t => t.kind === 'player' && !t.isRival).length} en campo
+              </span>
+            </div>
 
-              {/* Clear actions */}
-              <div className="flex gap-2">
-                <button onClick={() => { updateCurrentStep({ arrows: [] }); }} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-muted flex items-center justify-center gap-2"><Trash2 size={14}/>Limpiar Trazos</button>
-                <button onClick={() => { updateCurrentStep({ arrows: (currentStep.arrows || []).slice(0, -1) }); }} className="py-3 px-4 rounded-xl bg-white/5 border border-white/5 text-muted"><ChevronLeft size={16}/></button>
-              </div>
-
-              {/* Roster */}
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black text-muted uppercase tracking-widest">Plantilla</h4>
+            <div className="flex-1 overflow-y-auto no-scrollbar px-5 space-y-4 pb-6">
+              {/* CFC roster */}
+              <div>
+                <h4 className="text-[9px] font-black text-accent uppercase tracking-widest mb-2">Cabrerizos FC</h4>
                 <div className="grid grid-cols-5 gap-2">
                   {players.map(p => {
                     const label = String(p.number || '?');
                     const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === label && !t.isRival);
                     return (
                       <button key={p.id} onClick={() => togglePlayer(p, false)}
-                        className={`aspect-square rounded-xl flex flex-col items-center justify-center border transition-all ${on ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-white/5 text-white/40'}`}>
+                        className={`aspect-square rounded-xl flex flex-col items-center justify-center border transition-all active:scale-90 ${on ? 'bg-accent text-bg border-accent shadow-lg shadow-accent/20' : 'bg-white/5 border-white/5 text-white/50'}`}>
                         <span className="text-base font-black">{p.number}</span>
-                        <span className="text-[8px] font-bold truncate w-full px-1 text-center">{(p.name || '').split(' ')[0]}</span>
+                        <span className="text-[7px] font-bold truncate w-full px-1 text-center opacity-70">{(p.name || '').split(' ')[0]}</span>
                       </button>
                     );
                   })}
@@ -578,28 +618,41 @@ export default function Tactica({ externalExercise = null, overridePreset = null
               </div>
 
               {/* Rival */}
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Rival</h4>
+              <div>
+                <h4 className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-2">Rival</h4>
                 <div className="grid grid-cols-6 gap-2">
                   {Array.from({ length: 11 }).map((_, i) => {
                     const num = String(i + 1);
                     const on = (currentStep.tokens || []).some(t => t.kind === 'player' && t.label === num && t.isRival);
                     return (
                       <button key={i} onClick={() => togglePlayer({ number: i + 1 }, true)}
-                        className={`aspect-square rounded-xl border flex items-center justify-center text-xs font-black ${on ? 'bg-rose-500 border-rose-500 text-white' : 'bg-white/5 border-white/5 text-white/30'}`}>{num}</button>
+                        className={`aspect-square rounded-xl border flex items-center justify-center text-sm font-black transition-all active:scale-90 ${on ? 'bg-rose-500 border-rose-500 text-white' : 'bg-white/5 border-white/5 text-white/30'}`}>
+                        {num}
+                      </button>
                     );
                   })}
                 </div>
               </div>
-            </div>
-            <div className="p-4 bg-black/40 border-t border-white/10">
-              <button onClick={() => setShowTools(false)} className="w-full py-4 bg-accent text-bg font-black uppercase tracking-widest text-[10px] rounded-2xl active:scale-95 transition-all">Aplicar y Cerrar</button>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => updateCurrentStep({ arrows: [] })}
+                  className="flex-1 py-3 rounded-xl bg-white/5 border border-white/5 text-[9px] font-black uppercase tracking-widest text-muted flex items-center justify-center gap-2">
+                  <Trash2 size={12} /> Limpiar Trazos
+                </button>
+                {steps.length > 1 && (
+                  <button onClick={() => { removeStep(); setShowRoster(false); }}
+                    className="py-3 px-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[9px] font-black uppercase tracking-widest">
+                    Borrar Paso
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* New Play Modal */}
+      {/* NEW PLAY MODAL */}
       {showForm && (
         <div
           className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300"
@@ -616,6 +669,8 @@ export default function Tactica({ externalExercise = null, overridePreset = null
               placeholder="Ej: Salida de balón 01"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
+              onKeyDown={e => e.key === 'Enter' && createPlay()}
+              autoFocus
             />
             <div className="flex gap-3" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
               <button onClick={() => setShowForm(false)} className="flex-1 py-4 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all">Cancelar</button>
@@ -624,7 +679,6 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           </div>
         </div>
       )}
-
     </div>
   );
 }
