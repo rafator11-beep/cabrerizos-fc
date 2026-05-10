@@ -126,7 +126,6 @@ const FieldCanvas = forwardRef(({
       setDrawingZone(null);
     }
     dragIdRef.current = null;
-    setDragId(null);
   };
 
   const renderArrow = (a, isGhost = false) => {
