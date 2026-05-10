@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 
 const SwipeCard = ({ children, onSwipeLeft, onSwipeRight, onSwipeUp }) => {
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -23,8 +23,8 @@ const SwipeCard = ({ children, onSwipeLeft, onSwipeRight, onSwipeUp }) => {
     setDragging(false);
     e.target.releasePointerCapture(e.pointerId);
 
-    const thresholdX = 60;
-    const thresholdY = 80;
+    const thresholdX = 45;
+    const thresholdY = 55;
 
     if (pos.x > thresholdX) {
       onSwipeRight && onSwipeRight();
@@ -47,8 +47,9 @@ const SwipeCard = ({ children, onSwipeLeft, onSwipeRight, onSwipeUp }) => {
       onPointerCancel={handlePointerUp}
       style={{
         transform: `translate(${pos.x}px, ${pos.y}px) rotate(${rotation}deg)`,
-        transition: dragging ? 'none' : 'transform 0.3s ease',
+        transition: dragging ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)',
         touchAction: 'none',
+        willChange: 'transform',
         width: '100%',
         height: '100%',
         position: 'relative'

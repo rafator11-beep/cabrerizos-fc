@@ -12,8 +12,8 @@
 }
 
 :root {
-  --nav-h: 64px;
-  --header-h: 56px;
+  --nav-h: 70px;
+  --header-h: 58px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
 }
@@ -85,7 +85,8 @@ body {
   @apply bg-white/5 border border-white/10 text-white hover:bg-white/10;
 }
 
-.btn-sm { @apply px-4 py-2 text-[9px]; }
+.btn-sm { @apply px-4 py-2.5 text-[11px]; }
+.btn-touch { @apply min-h-[48px] px-5 text-xs; }
 .btn-danger { @apply bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white; }
 
 /* ── Input System ── */

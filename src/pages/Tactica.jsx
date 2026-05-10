@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import FieldCanvas from '../components/FieldCanvas';
 import { useOfflineSync } from '../hooks/useOfflineSync';
-import { 
-  Plus, Move, ArrowRight, Trash2, Save, Monitor, Spline, X, 
-  ChevronRight, ChevronLeft, Layers, Users, MousePointer2, 
-  Target, Activity, Info, Settings, Play, Square,
-  Dumbbell, PenTool, Circle, Type
+import {
+  Plus, Move, ArrowRight, Trash2, Save, Monitor, Spline,
+  ChevronRight, ChevronLeft,
+  Activity, Info,
+  PenTool, Circle,
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -30,7 +30,7 @@ const LEGEND = [
 ];
 
 export default function Tactica({ externalExercise = null, overridePreset = null, hideLibrary = false, hideEditor = false }) {
-  const { isAdmin, isRealAdmin, viewAsPlayer, profile } = useAuth();
+  const { isRealAdmin, viewAsPlayer } = useAuth();
   const isPlayerMode = !isRealAdmin || viewAsPlayer;
   const isMobile = useIsMobile();
   
@@ -317,7 +317,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-3 py-1.5 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             {ZOOM_OPTIONS.map(z => (
               <button key={z.id ?? 'full'} onClick={() => setZoomPreset(z.id)}
-                className={`px-2.5 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${zoomPreset === z.id ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+                className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${zoomPreset === z.id ? 'bg-accent text-bg shadow-lg shadow-accent/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
                 {z.icon} {z.label}
               </button>
             ))}

@@ -181,9 +181,9 @@ const FieldCanvas = forwardRef(({
 
     return (
       <g key={a.id} opacity={isGhost ? 0.4 : 0.9} className="pointer-events-none">
-        <path d={d} fill="none" stroke={color} strokeWidth="2.5" strokeDasharray={dashArray} strokeLinecap="round" />
-        <path d={`M ${a.to.x} ${a.to.y} L ${a.to.x - headSize * Math.cos(angle - Math.PI/6)} ${a.to.y - headSize * Math.sin(angle - Math.PI/6)} M ${a.to.x} ${a.to.y} L ${a.to.x - headSize * Math.cos(angle + Math.PI/6)} ${a.to.y - headSize * Math.sin(angle + Math.PI/6)}`} 
-          stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <path d={d} fill="none" stroke={color} strokeWidth="3" strokeDasharray={dashArray} strokeLinecap="round" />
+        <path d={`M ${a.to.x} ${a.to.y} L ${a.to.x - headSize * Math.cos(angle - Math.PI/6)} ${a.to.y - headSize * Math.sin(angle - Math.PI/6)} M ${a.to.x} ${a.to.y} L ${a.to.x - headSize * Math.cos(angle + Math.PI/6)} ${a.to.y - headSize * Math.sin(angle + Math.PI/6)}`}
+          stroke={color} strokeWidth="3" fill="none" strokeLinecap="round" />
       </g>
     );
   };
@@ -319,7 +319,7 @@ const FieldCanvas = forwardRef(({
       ))}
 
       {/* Field Lines */}
-      <g stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" fill="none">
+      <g stroke="rgba(255,255,255,0.32)" strokeWidth="1.8" fill="none">
         <rect x={20} y={20} width={FW-40} height={FH-40} />
         <line x1={FW/2} y1={20} x2={FW/2} y2={FH-20} />
         <circle cx={FW/2} cy={FH/2} r={45} />
@@ -336,8 +336,8 @@ const FieldCanvas = forwardRef(({
         <rect x={FW-20} y={FH/2 - 18} width={8} height={36} rx={2} />
 
         {/* Penalty spots */}
-        <circle cx={80} cy={FH/2} r={2} fill="rgba(255,255,255,0.15)" />
-        <circle cx={FW-80} cy={FH/2} r={2} fill="rgba(255,255,255,0.15)" />
+        <circle cx={80} cy={FH/2} r={2.5} fill="rgba(255,255,255,0.5)" />
+        <circle cx={FW-80} cy={FH/2} r={2.5} fill="rgba(255,255,255,0.5)" />
 
         {/* Corner arcs */}
         <path d={`M 20 28 A 8 8 0 0 1 28 20`} />

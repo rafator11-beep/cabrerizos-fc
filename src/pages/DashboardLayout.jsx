@@ -43,19 +43,19 @@ export default function DashboardLayout() {
 
   // Admin en campo (móvil): 4 ítems orientados al campo
   const adminMobileNav = [
-    { to: '/', icon: <HomeIcon size={18} />, label: 'Campo' },
-    { to: '/entrenamientos', icon: <Dumbbell size={18} />, label: 'Sesión' },
-    { to: '/tactica', icon: <PenTool size={18} />, label: 'Táctica' },
-    { to: '/plantilla', icon: <Users size={18} />, label: 'Plantilla' },
+    { to: '/', icon: <HomeIcon size={22} />, label: 'Campo' },
+    { to: '/entrenamientos', icon: <Dumbbell size={22} />, label: 'Sesión' },
+    { to: '/tactica', icon: <PenTool size={22} />, label: 'Táctica' },
+    { to: '/plantilla', icon: <Users size={22} />, label: 'Plantilla' },
   ];
 
   // Jugador (y admin en modo jugador): 5 ítems centrados en el jugador
   const playerNav = [
-    { to: '/', icon: <HomeIcon size={18} />, label: 'Inicio' },
-    { to: '/mi-sesion', icon: <User size={18} />, label: 'Mi Sesión' },
-    { to: '/tactica', icon: <PenTool size={18} />, label: 'Táctica' },
-    { to: '/feedback', icon: <MessageSquare size={18} />, label: 'Feedback' },
-    { to: '/entrenamientos', icon: <Dumbbell size={18} />, label: 'Entrenos' },
+    { to: '/', icon: <HomeIcon size={22} />, label: 'Inicio' },
+    { to: '/mi-sesion', icon: <User size={22} />, label: 'Mi Sesión' },
+    { to: '/tactica', icon: <PenTool size={22} />, label: 'Táctica' },
+    { to: '/feedback', icon: <MessageSquare size={22} />, label: 'Feedback' },
+    { to: '/entrenamientos', icon: <Dumbbell size={22} />, label: 'Entrenos' },
   ];
 
   const bottomNav = isPlayerMode ? playerNav : adminMobileNav;
@@ -210,19 +210,19 @@ export default function DashboardLayout() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) => `
-                flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1 transition-all duration-200
+                flex flex-col items-center justify-center gap-1 min-w-0 flex-1 py-2 transition-all duration-200
                 ${isActive ? 'text-accent' : 'text-muted/50'}
               `}
             >
               {({ isActive }) => (
                 <>
                   <div className={`
-                    p-1.5 rounded-xl transition-all duration-200
-                    ${isActive ? 'bg-accent/15 shadow-[0_0_12px_rgba(0,255,135,0.08)]' : ''}
+                    p-2 rounded-xl transition-all duration-200
+                    ${isActive ? 'bg-accent/15 shadow-[0_0_14px_rgba(0,255,135,0.1)]' : ''}
                   `}>
                     {item.icon}
                   </div>
-                  <span className={`text-[7px] font-black uppercase tracking-tight leading-none ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                  <span className={`text-[10px] font-black uppercase tracking-tight leading-none ${isActive ? 'opacity-100' : 'opacity-60'}`}>
                     {item.label}
                   </span>
                 </>

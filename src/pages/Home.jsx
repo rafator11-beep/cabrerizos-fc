@@ -107,52 +107,52 @@ export default function Home() {
             <div className="absolute top-0 right-0 p-5 opacity-5 pointer-events-none">
               <Dumbbell size={72} />
             </div>
-            <div className="text-[9px] font-black text-accent uppercase tracking-[0.2em] mb-1">
+            <div className="text-xs font-black text-accent uppercase tracking-[0.2em] mb-1">
               {upcomingTraining ? 'Próxima Sesión' : 'Última Sesión'}
             </div>
             {fieldSession ? (
               <>
-                <h2 className="text-lg font-black text-white mb-1">{fieldSession.title}</h2>
-                <div className="flex items-center gap-3 text-muted text-[10px] font-bold mb-4">
-                  <span className="flex items-center gap-1"><Calendar size={11} />{fieldSession.date}</span>
-                  {fieldSession.duration && <span className="flex items-center gap-1"><Clock size={11} />{fieldSession.duration}'</span>}
+                <h2 className="text-xl font-black text-white mb-1">{fieldSession.title}</h2>
+                <div className="flex items-center gap-3 text-muted text-xs font-bold mb-4">
+                  <span className="flex items-center gap-1.5"><Calendar size={13} />{fieldSession.date}</span>
+                  {fieldSession.duration && <span className="flex items-center gap-1.5"><Clock size={13} />{fieldSession.duration}'</span>}
                 </div>
                 <Link
                   to="/entrenamientos"
-                  className="w-full py-3 rounded-2xl bg-accent text-bg font-black text-xs uppercase tracking-[0.15em] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent/20"
+                  className="w-full py-4 rounded-2xl bg-accent text-bg font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent/20"
                 >
-                  <Dumbbell size={15} /> Gestionar Sesión
+                  <Dumbbell size={17} /> Gestionar Sesión
                 </Link>
               </>
             ) : (
               <Link
                 to="/entrenamientos"
-                className="mt-2 w-full py-3 rounded-2xl bg-accent text-bg font-black text-xs uppercase tracking-[0.15em] flex items-center justify-center gap-2"
+                className="mt-2 w-full py-4 rounded-2xl bg-accent text-bg font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2"
               >
-                <Plus size={15} /> Nueva Sesión
+                <Plus size={17} /> Nueva Sesión
               </Link>
             )}
           </div>
 
           {/* Atajos campo */}
           <div className="grid grid-cols-3 gap-3">
-            <Link to="/tactica" className="bg-surface rounded-2xl border border-white/5 p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                <PenTool size={18} />
+            <Link to="/tactica" className="bg-surface rounded-2xl border border-white/5 p-5 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <PenTool size={22} />
               </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted">Táctica</span>
+              <span className="text-xs font-black uppercase tracking-widest text-muted">Táctica</span>
             </Link>
-            <Link to="/plantilla" className="bg-surface rounded-2xl border border-white/5 p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                <Users size={18} />
+            <Link to="/plantilla" className="bg-surface rounded-2xl border border-white/5 p-5 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                <Users size={22} />
               </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted">Plantilla</span>
+              <span className="text-xs font-black uppercase tracking-widest text-muted">Plantilla</span>
             </Link>
-            <Link to="/feedback" className="bg-surface rounded-2xl border border-white/5 p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                <MessageSquare size={18} />
+            <Link to="/feedback" className="bg-surface rounded-2xl border border-white/5 p-5 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <MessageSquare size={22} />
               </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted">Feedback</span>
+              <span className="text-xs font-black uppercase tracking-widest text-muted">Feedback</span>
             </Link>
           </div>
 
@@ -163,9 +163,9 @@ export default function Home() {
               { v: trainingCount, l: 'Sesiones',  c: 'text-emerald-400' },
               { v: playCount,     l: 'Jugadas',   c: 'text-amber-400' },
             ].map(s => (
-              <div key={s.l} className="bg-surface rounded-2xl border border-white/5 p-3 text-center">
-                <div className={`text-2xl font-black ${s.c}`}>{s.v}</div>
-                <div className="text-[9px] font-bold text-muted/50 uppercase tracking-widest mt-0.5">{s.l}</div>
+              <div key={s.l} className="bg-surface rounded-2xl border border-white/5 p-4 text-center">
+                <div className={`text-3xl font-black ${s.c}`}>{s.v}</div>
+                <div className="text-[11px] font-bold text-muted/60 uppercase tracking-widest mt-1">{s.l}</div>
               </div>
             ))}
           </div>

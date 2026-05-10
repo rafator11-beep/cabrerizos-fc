@@ -25,7 +25,7 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
           <circle r={r} />
         </clipPath>
         <filter id={shadowId} x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity="0.6" />
+          <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#000" floodOpacity="0.8" />
         </filter>
         <filter id={glowId} x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#00ff87" floodOpacity="0.9" />
@@ -40,8 +40,8 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
             <circle
               r={r}
               fill="#1a2030"
-              stroke={isSelected ? '#00ff87' : 'rgba(255,255,255,0.4)'}
-              strokeWidth={isSelected ? 2.5 : 1.5}
+              stroke={isSelected ? '#00ff87' : 'rgba(255,255,255,0.65)'}
+              strokeWidth={isSelected ? 3 : 2}
             />
             {/* Native SVG image — much more reliable than foreignObject */}
             <image
@@ -73,15 +73,15 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
       {/* Name badge */}
       {name && (
         <g transform={`translate(0, ${r + 6})`}>
-          <rect x="-28" y="0" width="56" height="13" rx="4" fill="rgba(0,0,0,0.7)" className="pointer-events-none" />
+          <rect x="-33" y="0" width="66" height="16" rx="5" fill="rgba(0,0,0,0.82)" className="pointer-events-none" />
           <text
             textAnchor="middle"
-            dy="9"
-            fontSize="8"
+            dy="11"
+            fontSize="10"
             fontWeight="800"
             fill="white"
             className="pointer-events-none"
-            style={{ fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' }}
+            style={{ fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase', letterSpacing: '0.04em' }}
           >
             {name.split(' ')[0]}
           </text>
@@ -91,11 +91,11 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
       {/* Selection ring */}
       {isSelected && (
         <circle
-          r={r + 5}
+          r={r + 6}
           fill="none"
           stroke="#00ff87"
-          strokeWidth="1.5"
-          strokeDasharray="4,3"
+          strokeWidth="2"
+          strokeDasharray="5,3"
           className="pointer-events-none"
         />
       )}
