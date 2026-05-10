@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAppContext } from '../context/AppContext'
 
 // ── Minimal IndexedDB wrapper (no external library) ──────────────────────────
 
@@ -12,7 +13,7 @@ function openDB() {
     req.onupgradeneeded = (e) => {
       const db = e.target.result
       if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: 'rowId' }) // keyed by rowId → deduplication
+        db.createObjectStore(STORE, { keyPath: 'rowId' })
       }
     }
     req.onsuccess = () => resolve(req.result)
@@ -24,7 +25,6 @@ async function enqueue(op) {
   const db = await openDB()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')
-    // put() replaces existing entry for the same rowId (keeps only latest update)
     tx.objectStore(STORE).put(op)
     tx.oncomplete = resolve
     tx.onerror = () => reject(tx.error)
@@ -48,19 +48,8 @@ async function dequeueAll() {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-/**
- * Offline-first sync for Supabase UPDATE operations.
- *
- * Usage (replace direct supabase.from().update() calls):
- *   const { queueUpdate, pendingCount } = useOfflineSync()
- *   await queueUpdate('plays', play.id, { tokens: play.tokens })
- *
- * How it works:
- *  - Online  → writes directly to Supabase; on failure, enqueues to IndexedDB
- *  - Offline → stores in IndexedDB keyed by rowId (deduplicates multiple saves)
- *  - On reconnect → flushes the queue in order
- */
 export function useOfflineSync() {
+  const { showToast } = useAppContext()
   const flushingRef = useRef(false)
   const pendingRef = useRef(0)
 
@@ -71,42 +60,43 @@ export function useOfflineSync() {
       const ops = await dequeueAll()
       if (ops.length === 0) { flushingRef.current = false; return }
 
-      console.log(`[OfflineSync] Syncing ${ops.length} queued operation(s)…`)
+      const n = ops.length
+      showToast(`Sincronizando ${n} cambio${n > 1 ? 's' : ''} guardado${n > 1 ? 's' : ''}...`, 'info')
+
+      let failed = 0
       for (const op of ops) {
         const { error } = await supabase.from(op.table).update(op.data).eq('id', op.rowId)
         if (error) {
-          // Re-enqueue if still failing
           await enqueue(op)
-          console.warn('[OfflineSync] re-queued op:', op.rowId, error.message)
+          failed++
         }
       }
-      pendingRef.current = 0
+
+      pendingRef.current = failed
+      if (failed === 0) {
+        showToast('¡Todo sincronizado! ✓', 'success')
+      } else {
+        showToast(`${failed} cambio${failed > 1 ? 's' : ''} sin sincronizar — reintentando`, 'warning')
+      }
     } catch (err) {
       console.error('[OfflineSync] flush error:', err)
     } finally {
       flushingRef.current = false
     }
-  }, [])
+  }, [showToast])
 
-  // Auto-flush when the browser regains connectivity
   useEffect(() => {
     if (navigator.onLine) flush()
     window.addEventListener('online', flush)
     return () => window.removeEventListener('online', flush)
   }, [flush])
 
-  /**
-   * Save an UPDATE. If offline, stores optimistically in IndexedDB.
-   * @param {string} table  - Supabase table name
-   * @param {string} rowId  - Row primary key
-   * @param {object} data   - Columns to update
-   * @returns {Promise<{ error: object|null }>}
-   */
   const queueUpdate = useCallback(async (table, rowId, data) => {
     if (!navigator.onLine) {
       await enqueue({ table, rowId, data, ts: Date.now() })
       pendingRef.current += 1
-      return { error: null } // optimistic — no error shown to user
+      showToast('Sin conexión · Guardado localmente', 'warning')
+      return { error: null }
     }
 
     const { error } = await supabase.from(table).update(data).eq('id', rowId)
@@ -114,10 +104,11 @@ export function useOfflineSync() {
       console.warn('[OfflineSync] live save failed, queuing:', error.message)
       await enqueue({ table, rowId, data, ts: Date.now() })
       pendingRef.current += 1
+      showToast('Error al guardar · Se reintentará pronto', 'danger')
       return { error }
     }
     return { error: null }
-  }, [])
+  }, [showToast])
 
   return { queueUpdate, isOnline: navigator.onLine }
 }

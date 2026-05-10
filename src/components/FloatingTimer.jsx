@@ -53,8 +53,8 @@ export default function FloatingTimer() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
         <div className="flex gap-1">
-          <button onClick={() => { setMode('stopwatch'); reset(); }} className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${mode === 'stopwatch' ? 'bg-accent/20 text-accent' : 'text-muted'}`}>Crono</button>
-          <button onClick={() => { setMode('countdown'); reset(); }} className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${mode === 'countdown' ? 'bg-accent/20 text-accent' : 'text-muted'}`}>Cuenta Atrás</button>
+          <button onClick={() => { setMode('stopwatch'); reset(); }} className={`px-2 py-1 rounded-lg text-[11px] font-black uppercase ${mode === 'stopwatch' ? 'bg-accent/20 text-accent' : 'text-muted'}`}>Crono</button>
+          <button onClick={() => { setMode('countdown'); reset(); }} className={`px-2 py-1 rounded-lg text-[11px] font-black uppercase ${mode === 'countdown' ? 'bg-accent/20 text-accent' : 'text-muted'}`}>Atrás</button>
         </div>
         <button onClick={() => setOpen(false)} className="text-muted"><X size={14} /></button>
       </div>

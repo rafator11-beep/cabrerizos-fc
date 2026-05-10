@@ -1,23 +1,33 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Save, X, UserCheck, Map, Image as ImageIcon, ChevronRight, Plus } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
+import { Save, X, UserCheck, Map, Image as ImageIcon, ChevronRight, Plus, Loader } from 'lucide-react';
 import FieldCanvas from './FieldCanvas';
 import { resolveExerciseImageSrc } from '../utils/exerciseImages';
 
 const GRUPOS = [
-  { id: 'red',    label: 'Equipo A',  peto: 'Peto Rojo',     bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', dot: '#ef4444' },
-  { id: 'yellow', label: 'Equipo B',  peto: 'Peto Amarillo', bg: '#fef9c3', color: '#854d0e', border: '#fde047', dot: '#eab308' },
-  { id: 'green',  label: 'Equipo C',  peto: 'Peto Verde',    bg: '#dcfce7', color: '#166534', border: '#86efac', dot: '#22c55e' },
-  { id: 'blue',   label: 'Equipo D',  peto: 'Peto Azul',     bg: '#dbeafe', color: '#1e3a8a', border: '#93c5fd', dot: '#3b82f6' },
-  { id: 'pink',   label: 'Comodines', peto: 'Sin Peto',      bg: '#fce7f3', color: '#831843', border: '#f9a8d4', dot: '#ec4899' },
+  { id: 'red',    label: 'Equipo A',  peto: 'Peto Rojo',     bg: 'rgba(239,68,68,0.12)',  color: '#fca5a5', border: 'rgba(239,68,68,0.3)',   dot: '#ef4444' },
+  { id: 'yellow', label: 'Equipo B',  peto: 'Peto Amarillo', bg: 'rgba(234,179,8,0.12)',  color: '#fde047', border: 'rgba(234,179,8,0.3)',    dot: '#eab308' },
+  { id: 'green',  label: 'Equipo C',  peto: 'Peto Verde',    bg: 'rgba(34,197,94,0.12)',  color: '#86efac', border: 'rgba(34,197,94,0.3)',    dot: '#22c55e' },
+  { id: 'blue',   label: 'Equipo D',  peto: 'Peto Azul',     bg: 'rgba(59,130,246,0.12)', color: '#93c5fd', border: 'rgba(59,130,246,0.3)',   dot: '#3b82f6' },
+  { id: 'pink',   label: 'Comodines', peto: 'Sin Peto',      bg: 'rgba(236,72,153,0.12)', color: '#f9a8d4', border: 'rgba(236,72,153,0.3)',  dot: '#ec4899' },
 ];
 
 const PETO_ICONS = { red: '🔴', yellow: '🟡', green: '🟢', blue: '🔵', pink: '🩷' };
 
+const SURFACE    = 'rgba(255,255,255,0.03)';
+const SURFACE_HI = 'rgba(255,255,255,0.07)';
+const BORDER     = 'rgba(255,255,255,0.08)';
+const MUTED      = '#64748b';
+const ACCENT     = '#00ff87';
+const FREE       = { bg: 'rgba(255,255,255,0.04)', color: '#64748b', border: 'rgba(255,255,255,0.1)', label: 'Sin equipo', icon: '⬜' };
+
 export default function SessionDistributor({ activeTraining, players, onClose, onSave }) {
+  const { showToast } = useAppContext();
   const [attendees, setAttendees] = useState(
     activeTraining.attendees?.length ? activeTraining.attendees : players.map(p => p.id)
   );
+  const [saving, setSaving] = useState(false);
 
   const normalizeGa = (ga) => ({
     red:    ga?.red    || ga?.teamA  || [],
@@ -36,14 +46,13 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
   };
 
   const [exercises, setExercises] = useState((activeTraining.exercises || []).map(normalizeEx));
-  const [activeExIdx, setActiveExIdx]       = useState(0);
+  const [activeExIdx, setActiveExIdx]         = useState(0);
   const [activeStationIdx, setActiveStationIdx] = useState(0);
-  const [canvasMode, setCanvasMode]         = useState(false);
-  const [previewImage, setPreviewImage]     = useState(false);
+  const [canvasMode, setCanvasMode]           = useState(false);
+  const [previewImage, setPreviewImage]       = useState(false);
 
   const attendingPlayers = players.filter(p => attendees.includes(p.id));
 
-  // ── Attendance ───────────────────────────────────────────────────────────
   const toggleAttendance = (pid) => {
     if (attendees.includes(pid)) {
       setAttendees(a => a.filter(id => id !== pid));
@@ -57,7 +66,6 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
     }
   };
 
-  // ── Group cycling within the active station (other stations unaffected) ──
   const cycleGroup = (exIdx, pid) => {
     setExercises(prev => {
       const exs = [...prev];
@@ -115,7 +123,6 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
       .filter(Boolean);
   };
 
-  // ── Canvas ───────────────────────────────────────────────────────────────
   const updateTokenPos = (exIdx, pid, x, y) => {
     setExercises(prev => {
       const exs = [...prev];
@@ -142,8 +149,8 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
       };
     });
 
-  // ── Save — sync stations[0].group_assignments to top-level for back-compat
   const handleSave = async () => {
+    setSaving(true);
     const exercisesToSave = exercises.map(ex => ({
       ...ex,
       group_assignments: ex.stations?.[0]?.group_assignments || ex.group_assignments,
@@ -153,8 +160,13 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
         .from('trainings').update({ attendees, exercises: exercisesToSave })
         .eq('id', activeTraining.id).select().single();
       if (error) throw error;
+      showToast('Grupos guardados ✓', 'success');
       onSave(data);
-    } catch { alert('Error al guardar. Inténtalo de nuevo.'); }
+    } catch {
+      showToast('Error al guardar · Inténtalo de nuevo', 'danger');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const ex = exercises[activeExIdx];
@@ -164,17 +176,20 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
     const bgImage = resolveExerciseImageSrc(ex.image);
     const canvasTokens = buildCanvasTokens(ex);
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '80vh', gap: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="flex flex-col gap-3" style={{ height: '80vh' }}>
+        <div className="flex justify-between items-center">
           <div>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>Pizarra: {ex.name}</div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>Arrastra fichas sobre el diagrama.</div>
+            <div className="font-black text-white text-base">Pizarra · {ex.name}</div>
+            <div className="text-xs text-muted mt-0.5">Mueve los jugadores sobre el campo</div>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setCanvasMode(false)}>
-            <Save size={14}/> Listo
+          <button
+            onClick={() => setCanvasMode(false)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-bg text-xs font-black uppercase tracking-wide"
+          >
+            <Save size={14} /> Listo
           </button>
         </div>
-        <div style={{ flex: 1, background: '#1e293b', borderRadius: 12, overflow: 'hidden' }}>
+        <div className="flex-1 rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: `1px solid ${BORDER}` }}>
           <FieldCanvas
             tool="move"
             tokens={canvasTokens}
@@ -191,39 +206,66 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
   return (
     <div style={{ paddingBottom: 40 }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+      <div className="flex justify-between items-center mb-5">
         <div>
-          <div style={{ fontWeight: 800, fontSize: 18 }}>Distribuidor de Sesión</div>
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{activeTraining.title}</div>
+          <div className="font-black text-white text-lg leading-tight">Armar Grupos</div>
+          <div className="text-xs text-muted mt-0.5">{activeTraining.title}</div>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn btn-outline btn-sm" onClick={onClose}><X size={14}/></button>
-          <button className="btn btn-primary btn-sm" onClick={handleSave}><Save size={14}/> Guardar</button>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-white/10 text-muted hover:text-white transition-colors"
+          >
+            <X size={16} />
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-bg text-xs font-black uppercase tracking-wide disabled:opacity-50 active:scale-95 transition-all"
+          >
+            {saving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? 'Guardando...' : 'Confirmar Grupos'}
+          </button>
         </div>
       </div>
 
       {/* Attendance */}
-      <div className="card" style={{ padding: 16, marginBottom: 18 }}>
-        <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <UserCheck size={15} color="#0057ff"/>
-          Control de Asistencia
-          <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: '#0057ff', background: '#eef3ff', padding: '2px 8px', borderRadius: 20 }}>
+      <div className="rounded-2xl mb-5 overflow-hidden" style={{ background: SURFACE, border: `1px solid ${BORDER}` }}>
+        <div className="px-4 py-3 flex items-center gap-2 border-b" style={{ borderColor: BORDER }}>
+          <UserCheck size={15} color={ACCENT} />
+          <span className="font-black text-white text-sm">¿Quién está hoy?</span>
+          <span className="ml-auto text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(0,255,135,0.1)', color: ACCENT }}>
             {attendees.length}/{players.length}
           </span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <div className="p-3 flex flex-col gap-1.5">
           {players.map(p => {
             const on = attendees.includes(p.id);
             return (
-              <label key={p.id} onClick={() => toggleAttendance(p.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', userSelect: 'none', background: on ? '#eef3ff' : '#f8fafc', border: `1.5px solid ${on ? '#0057ff' : '#e2e8f0'}`, transition: 'all .1s' }}>
-                <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${on ? '#0057ff' : '#cbd5e1'}`, background: on ? '#0057ff' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .1s' }}>
-                  {on && <svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              <label
+                key={p.id}
+                onClick={() => toggleAttendance(p.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', borderRadius: 10, cursor: 'pointer', userSelect: 'none',
+                  background: on ? 'rgba(0,255,135,0.08)' : SURFACE,
+                  border: `1.5px solid ${on ? 'rgba(0,255,135,0.25)' : BORDER}`,
+                  transition: 'all .1s',
+                }}
+              >
+                <div style={{
+                  width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                  border: `2px solid ${on ? ACCENT : MUTED}`,
+                  background: on ? ACCENT : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all .1s',
+                }}>
+                  {on && <svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="#0a0a0a" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                 </div>
-                <span style={{ fontSize: 12, fontWeight: on ? 700 : 500, color: on ? '#0057ff' : '#475569' }}>
+                <span style={{ fontSize: 13, fontWeight: on ? 700 : 500, color: on ? '#fff' : MUTED }}>
                   {p.number ? `#${p.number} ` : ''}{p.name} {p.surname}
                 </span>
-                {p.position && <span style={{ marginLeft: 'auto', fontSize: 9, color: '#94a3b8', fontWeight: 600 }}>{p.position}</span>}
+                {p.position && <span style={{ marginLeft: 'auto', fontSize: 9, color: MUTED, fontWeight: 600 }}>{p.position}</span>}
               </label>
             );
           })}
@@ -234,8 +276,17 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
       {exercises.length > 1 && (
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 14, paddingBottom: 2 }}>
           {exercises.map((e, i) => (
-            <button key={i} onClick={() => setActiveExIdx(i)}
-              style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${activeExIdx === i ? '#0057ff' : '#e0e4ed'}`, background: activeExIdx === i ? '#eef3ff' : 'white', color: activeExIdx === i ? '#0057ff' : '#64748b', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <button
+              key={i}
+              onClick={() => setActiveExIdx(i)}
+              style={{
+                padding: '6px 14px', borderRadius: 20, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                fontWeight: 800, fontSize: 11,
+                border: `1.5px solid ${activeExIdx === i ? ACCENT : BORDER}`,
+                background: activeExIdx === i ? 'rgba(0,255,135,0.1)' : SURFACE,
+                color: activeExIdx === i ? ACCENT : MUTED,
+              }}
+            >
               {i + 1}. {e.name}
             </button>
           ))}
@@ -244,52 +295,57 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
 
       {/* Exercise card */}
       {ex ? (
-        <div className="card" style={{ marginBottom: 14, overflow: 'hidden' }}>
+        <div className="rounded-2xl overflow-hidden" style={{ background: SURFACE, border: `1px solid ${BORDER}`, marginBottom: 14 }}>
           {/* Exercise header */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, fontSize: 15 }}>{ex.name}</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#fff' }}>{ex.name}</div>
               {ex.description && (
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>{ex.description}</div>
+                <div style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>{ex.description}</div>
               )}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               {ex.image && (
-                <button className="btn btn-outline btn-sm" onClick={() => setPreviewImage(p => !p)}>
-                  <ImageIcon size={13}/> {previewImage ? 'Ocultar' : 'Ver foto'}
+                <button
+                  onClick={() => setPreviewImage(p => !p)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 10, border: `1px solid ${BORDER}`, background: SURFACE_HI, color: MUTED, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+                >
+                  <ImageIcon size={13} /> {previewImage ? 'Ocultar' : 'Ver foto'}
                 </button>
               )}
-              <button className="btn btn-sm" style={{ background: '#111827', color: 'white', border: 'none' }}
-                onClick={() => { setCanvasMode(true); }}>
-                <Map size={13}/> Pizarra
+              <button
+                onClick={() => setCanvasMode(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 10, background: 'rgba(0,255,135,0.1)', border: `1px solid rgba(0,255,135,0.2)`, color: ACCENT, cursor: 'pointer', fontSize: 11, fontWeight: 800 }}
+              >
+                <Map size={13} /> Pizarra
               </button>
             </div>
           </div>
 
           {/* Image preview */}
           {previewImage && resolveExerciseImageSrc(ex.image) && (
-            <div style={{ padding: 12, background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ padding: 12, background: 'rgba(0,0,0,0.2)', borderBottom: `1px solid ${BORDER}` }}>
               <img
                 src={resolveExerciseImageSrc(ex.image)}
                 alt={ex.name}
-                style={{ width: '100%', maxHeight: 220, objectFit: 'contain', borderRadius: 8, background: '#fff' }}
+                style={{ width: '100%', maxHeight: 220, objectFit: 'contain', borderRadius: 8 }}
                 onError={e => { e.target.style.display = 'none'; }}
               />
             </div>
           )}
 
           {/* Station tabs */}
-          <div style={{ padding: '10px 14px 0', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ padding: '10px 14px 0', borderBottom: `1px solid ${BORDER}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               {ex.stations.map((s, si) => (
                 <button
                   key={s.id}
                   onClick={() => setActiveStationIdx(si)}
                   style={{
-                    padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${activeStationIdx === si ? '#0057ff' : '#e0e4ed'}`,
-                    background: activeStationIdx === si ? '#eef3ff' : 'white',
-                    color: activeStationIdx === si ? '#0057ff' : '#64748b',
-                    fontWeight: 800, fontSize: 11, cursor: 'pointer',
+                    padding: '5px 14px', borderRadius: 20, cursor: 'pointer', fontWeight: 800, fontSize: 11,
+                    border: `1.5px solid ${activeStationIdx === si ? ACCENT : BORDER}`,
+                    background: activeStationIdx === si ? 'rgba(0,255,135,0.1)' : SURFACE,
+                    color: activeStationIdx === si ? ACCENT : MUTED,
                   }}
                 >
                   {s.name}
@@ -297,7 +353,7 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
               ))}
               <button
                 onClick={() => addStation(activeExIdx)}
-                style={{ padding: '5px 10px', borderRadius: 20, border: '1.5px dashed #cbd5e1', background: 'white', color: '#64748b', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 20, border: `1.5px dashed ${BORDER}`, background: 'transparent', color: MUTED, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
               >
                 <Plus size={11} /> Añadir posta
               </button>
@@ -306,54 +362,57 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
 
           {/* Group assignment grid */}
           <div style={{ padding: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .6, color: '#96a0b5', marginBottom: 10 }}>
-              {ex.stations[activeStationIdx]?.name || 'Posta'} — clic para ciclar grupo
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .6, color: MUTED, marginBottom: 10 }}>
+              {ex.stations[activeStationIdx]?.name || 'Posta'} · Toca para cambiar equipo
             </div>
 
             {/* Legend */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
               {GRUPOS.map(g => (
-                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: g.bg, border: `1px solid ${g.border}` }}>
-                  <span style={{ fontSize: 10 }}>{PETO_ICONS[g.id]}</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: g.color }}>{g.label}</span>
+                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, background: g.bg, border: `1px solid ${g.border}` }}>
+                  <span style={{ fontSize: 12 }}>{PETO_ICONS[g.id]}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: g.color }}>{g.label}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: '#f1f5f9', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b' }}>⬜ Libre</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, background: FREE.bg, border: `1px solid ${FREE.border}` }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: FREE.color }}>⬜ Sin equipo</span>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 7 }}>
               {attendingPlayers.map(p => {
                 const g = getPlayerGroup(ex, p.id);
                 const allAssignments = getPlayerStationSummary(ex, p.id);
                 const style = g
                   ? { bg: g.bg, color: g.color, border: g.border, label: g.label, icon: PETO_ICONS[g.id] }
-                  : { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0', label: 'Libre', icon: '⬜' };
+                  : FREE;
                 return (
-                  <div key={p.id} onClick={() => cycleGroup(activeExIdx, p.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 9, cursor: 'pointer', userSelect: 'none', background: style.bg, border: `1.5px solid ${style.border}`, transition: 'all .12s' }}>
-                    <span style={{ fontSize: 14, flexShrink: 0 }}>{style.icon}</span>
+                  <div
+                    key={p.id}
+                    onClick={() => cycleGroup(activeExIdx, p.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', userSelect: 'none', background: style.bg, border: `1.5px solid ${style.border}`, transition: 'all .12s' }}
+                  >
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{style.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 11, color: style.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 700, fontSize: 12, color: style.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.name}
                       </div>
-                      <div style={{ fontSize: 9, color: style.color, opacity: .7 }}>{style.label}</div>
+                      <div style={{ fontSize: 10, color: style.color, opacity: .7 }}>{style.label}</div>
                       {allAssignments.length > 1 && (
-                        <div style={{ fontSize: 8, color: '#0057ff', fontWeight: 700, marginTop: 1 }}>
+                        <div style={{ fontSize: 9, color: ACCENT, fontWeight: 700, marginTop: 1 }}>
                           {allAssignments.map(a => `${a.stationName}: ${a.group.label}`).join(' · ')}
                         </div>
                       )}
                     </div>
-                    <ChevronRight size={11} color={style.color} style={{ opacity: .5, flexShrink: 0 }} />
+                    <ChevronRight size={12} color={style.color} style={{ opacity: .5, flexShrink: 0 }} />
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Summary by group for active station */}
-          <div style={{ padding: '10px 14px', borderTop: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {/* Summary by group */}
+          <div style={{ padding: '10px 14px', borderTop: `1px solid ${BORDER}`, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {GRUPOS.map(g => {
               const ga = ex.stations[activeStationIdx]?.group_assignments || ex.group_assignments;
               const members = (ga[g.id] || [])
@@ -361,8 +420,8 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
                 .filter(Boolean);
               if (!members.length) return null;
               return (
-                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: g.bg, border: `1px solid ${g.border}` }}>
-                  <span style={{ fontSize: 11 }}>{PETO_ICONS[g.id]}</span>
+                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 20, background: g.bg, border: `1px solid ${g.border}` }}>
+                  <span style={{ fontSize: 12 }}>{PETO_ICONS[g.id]}</span>
                   <span style={{ fontSize: 10, fontWeight: 700, color: g.color }}>{g.label}:</span>
                   <span style={{ fontSize: 10, color: g.color }}>{members.join(', ')}</span>
                 </div>
@@ -371,8 +430,8 @@ export default function SessionDistributor({ activeTraining, players, onClose, o
           </div>
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: 20, color: '#64748b', fontSize: 12 }}>
-          Este entrenamiento no tiene ejercicios todavía.
+        <div className="text-center py-10 text-muted text-xs font-bold">
+          Añade ejercicios al entrenamiento para organizar los grupos.
         </div>
       )}
     </div>
