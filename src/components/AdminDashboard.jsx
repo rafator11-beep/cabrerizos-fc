@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import {
   Dumbbell, Users, PenTool, LayoutGrid, RefreshCw, Calendar,
   Clock, Activity, TrendingUp, AlertCircle, ChevronRight, Zap,
-  Shield, Target, CheckCircle
+  Shield, Target, CheckCircle, Wifi, WifiOff, Shuffle
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { profile } = useAuth();
+  const { online } = useAppContext();
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null);
   const [data, setData] = useState({
@@ -55,24 +57,34 @@ export default function AdminDashboard() {
   return (
     <div className="hidden md:block w-full">
       {/* Sync Bar */}
-      <div className="flex items-center justify-between mb-6 px-1">
+      <div className="flex items-center justify-between mb-6 px-1 gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[9px] font-black text-muted uppercase tracking-widest">
-            Panel Admin · Última sync: {lastSync ? lastSync.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          {/* Indicador online/offline */}
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
+            online
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+          }`}>
+            {online
+              ? <><Wifi size={11} /> Online</>
+              : <><WifiOff size={11} /> <span className="animate-pulse">Offline · Modo Local</span></>
+            }
+          </div>
+          <span className="text-[9px] font-black text-muted/50 uppercase tracking-widest hidden lg:block">
+            Última sync: {lastSync ? lastSync.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
           </span>
         </div>
         <button
           onClick={forceSync}
-          disabled={syncing}
+          disabled={syncing || !online}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 ${
             syncing
               ? 'bg-accent/20 text-accent cursor-wait'
-              : 'bg-surface-2 border border-white/5 text-muted hover:text-white hover:border-accent/30'
+              : 'bg-surface-2 border border-white/5 text-muted hover:text-white hover:border-accent/30 disabled:opacity-30'
           }`}
         >
           <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Sincronizando...' : 'Forzar Sincronización'}
+          {syncing ? 'Sincronizando...' : 'Sincronizar'}
         </button>
       </div>
 
@@ -116,6 +128,9 @@ export default function AdminDashboard() {
               <div className="flex gap-2 mt-4">
                 <Link to="/entrenamientos" className="flex-1 py-3 bg-accent text-bg text-center text-[9px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-accent/20">
                   Editar Sesión
+                </Link>
+                <Link to="/entrenamientos" className="px-4 py-3 bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-purple-500/20 transition-all flex items-center gap-1.5">
+                  <Shuffle size={12} /> Distribuir
                 </Link>
                 <Link to="/alineacion" className="px-4 py-3 bg-white/5 text-muted text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/5">
                   Once
