@@ -1,32 +1,19 @@
-/*
-MIGRACIÓN SQL:
-CREATE TABLE sessions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  titulo TEXT NOT NULL,
-  fecha DATE DEFAULT CURRENT_DATE,
-  duracion TEXT,
-  intensidad INTEGER CHECK (intensidad >= 1 AND intensidad <= 5),
-  lugar TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-*/
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAppContext } from '../context/AppContext';
 
+// Apunta a la tabla `trainings` que usa el resto de la app.
+// La tabla `sessions` del esquema antiguo está descontinuada.
 export const useSupabaseSessions = () => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { online } = useAppContext();
 
   const fetchSessions = async () => {
     try {
       const { data, error } = await supabase
-        .from('sessions')
+        .from('trainings')
         .select('*')
-        .order('fecha', { ascending: false });
-      
+        .order('date', { ascending: false });
+
       if (error) throw error;
       setSessions(data);
       localStorage.setItem('cabrerizos_sessions_cache', JSON.stringify(data));
@@ -43,13 +30,11 @@ export const useSupabaseSessions = () => {
     fetchSessions();
 
     const subscription = supabase
-      .channel('sessions_changes')
-      .on('postgres_changes', { event: '*', table: 'sessions' }, fetchSessions)
+      .channel('trainings_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trainings' }, fetchSessions)
       .subscribe();
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => { supabase.removeChannel(subscription); };
   }, []);
 
   return { sessions, loading, refresh: fetchSessions };

@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import FloatingTimer from '../components/FloatingTimer';
 import FloatingChat from '../components/FloatingChat';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, Home as HomeIcon, PenTool, Dumbbell, Users, User, LayoutGrid, Target, X, Search, Command, Bell, MessageSquare } from 'lucide-react';
+import { LogOut, Menu, Home as HomeIcon, PenTool, Dumbbell, Users, User, Search, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function DashboardLayout() {
@@ -41,14 +41,24 @@ export default function DashboardLayout() {
   const switchToPlayer = () => { setViewAsPlayer(true); navigate('/'); };
   const switchToAdmin = () => { setViewAsPlayer(false); navigate('/'); };
 
-  const bottomNav = [
-    { to: '/', icon: <HomeIcon size={18} />, label: 'Inicio' },
-    { to: '/entrenamientos', icon: <Dumbbell size={18} />, label: 'Entrenos' },
+  // Admin en campo (móvil): 4 ítems orientados al campo
+  const adminMobileNav = [
+    { to: '/', icon: <HomeIcon size={18} />, label: 'Campo' },
+    { to: '/entrenamientos', icon: <Dumbbell size={18} />, label: 'Sesión' },
     { to: '/tactica', icon: <PenTool size={18} />, label: 'Táctica' },
-    { to: '/feedback', icon: <MessageSquare size={18} />, label: 'Chat' },
-    { to: '/plantilla', icon: <Users size={18} />, label: 'Equipo' },
-    { to: '/mi-sesion', icon: <User size={18} />, label: 'Perfil' },
+    { to: '/plantilla', icon: <Users size={18} />, label: 'Plantilla' },
   ];
+
+  // Jugador (y admin en modo jugador): 5 ítems centrados en el jugador
+  const playerNav = [
+    { to: '/', icon: <HomeIcon size={18} />, label: 'Inicio' },
+    { to: '/mi-sesion', icon: <User size={18} />, label: 'Mi Sesión' },
+    { to: '/tactica', icon: <PenTool size={18} />, label: 'Táctica' },
+    { to: '/feedback', icon: <MessageSquare size={18} />, label: 'Feedback' },
+    { to: '/entrenamientos', icon: <Dumbbell size={18} />, label: 'Entrenos' },
+  ];
+
+  const bottomNav = isPlayerMode ? playerNav : adminMobileNav;
 
   // ── FEATURE 2: Command Palette ──
   const CMD_ITEMS = [

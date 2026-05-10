@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Calendar, AlertTriangle, Map } from 'lucide-react';
+import { Calendar, Clock, AlertTriangle, Map, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import FieldCanvas from './FieldCanvas';
 
 const NOMENCLATURE_COLORS = [
-  { id: 'red', label: 'Rojo', hex: '#ef4444', bg: '#fef2f2', text: '#b91c1c' },
-  { id: 'yellow', label: 'Amarillo', hex: '#facc15', bg: '#fefce8', text: '#a16207' },
-  { id: 'green', label: 'Verde', hex: '#22c55e', bg: '#f0fdf4', text: '#15803d' },
-  { id: 'blue', label: 'Azul', hex: '#3b82f6', bg: '#eff6ff', text: '#1d4ed8' },
-  { id: 'pink', label: 'Rosa', hex: '#ec4899', bg: '#fdf2f8', text: '#be185d' },
+  { id: 'red',    label: 'Rojo',     hex: '#ef4444', bg: 'bg-red-500/15',     text: 'text-red-400'     },
+  { id: 'yellow', label: 'Amarillo', hex: '#facc15', bg: 'bg-yellow-500/15',  text: 'text-yellow-400'  },
+  { id: 'green',  label: 'Verde',    hex: '#22c55e', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+  { id: 'blue',   label: 'Azul',     hex: '#3b82f6', bg: 'bg-blue-500/15',    text: 'text-blue-400'    },
+  { id: 'pink',   label: 'Rosa',     hex: '#ec4899', bg: 'bg-pink-500/15',    text: 'text-pink-400'    },
 ];
 
 export default function NextSession({ training, myRosterId }) {
@@ -16,132 +16,151 @@ export default function NextSession({ training, myRosterId }) {
   const [visualModeIndex, setVisualModeIndex] = useState(null);
 
   useEffect(() => {
-    if (myRosterId) {
-      fetchTacticalRoles();
-    }
+    if (myRosterId) fetchTacticalRoles();
   }, [myRosterId]);
 
   const fetchTacticalRoles = async () => {
     const { data } = await supabase.from('plays').select('*');
-    if (data) {
-      const myRoles = [];
-      data.forEach(play => {
-        const tokens = play.tokens?.[0]?.tokens || [];
-        const playComment = play.tokens?.[0]?.playComment || '';
-        const myToken = tokens.find(t => t.assigned_player_id === myRosterId);
-        if (myToken && (myToken.tactical_role || myToken.tactical_note || playComment)) {
-          myRoles.push({
-            playName: play.name,
-            category: play.category,
-            role: myToken.tactical_role || '',
-            note: myToken.tactical_note || '',
-            playComment,
-          });
-        }
-      });
-      setTacticalRoles(myRoles);
-    }
+    if (!data) return;
+    const myRoles = [];
+    data.forEach(play => {
+      const tokens = play.tokens?.[0]?.tokens || [];
+      const playComment = play.tokens?.[0]?.playComment || '';
+      const myToken = tokens.find(t => t.assigned_player_id === myRosterId);
+      if (myToken && (myToken.tactical_role || myToken.tactical_note || playComment)) {
+        myRoles.push({
+          playName: play.name,
+          category: play.category,
+          role: myToken.tactical_role || '',
+          note: myToken.tactical_note || '',
+          playComment,
+        });
+      }
+    });
+    setTacticalRoles(myRoles);
   };
 
-  if (!training) return null;
+  if (!training) return (
+    <div className="bg-surface rounded-3xl border border-white/5 p-10 text-center">
+      <Calendar size={32} className="mx-auto mb-3 text-muted/30" />
+      <p className="text-xs font-black uppercase tracking-widest text-muted/40">Sin sesiones programadas</p>
+    </div>
+  );
 
   const getMyGroup = (exercise) => {
     const ga = exercise.group_assignments;
     if (!ga) return null;
-    
-    // Check old schema fallback
-    if (ga.teamA?.includes(myRosterId)) return { label: 'Petos', color: '#1d4ed8', bg: '#dbeafe', hex: '#3b82f6' };
-    if (ga.teamB?.includes(myRosterId)) return { label: 'Sin Peto', color: '#b91c1c', bg: '#fee2e2', hex: '#ef4444' };
-    if (ga.jokers?.includes(myRosterId)) return { label: 'Comodín', color: '#b45309', bg: '#fef3c7', hex: '#facc15' };
-
-    // New schema
-    for (const color of NOMENCLATURE_COLORS) {
-      if (ga[color.id] && ga[color.id].includes(myRosterId)) {
-        return { label: color.label, color: color.text, bg: color.bg, hex: color.hex };
-      }
+    if (ga.teamA?.includes(myRosterId)) return { label: 'Petos',    hex: '#3b82f6', bg: 'bg-blue-500/15',    text: 'text-blue-400'    };
+    if (ga.teamB?.includes(myRosterId)) return { label: 'Sin Peto', hex: '#ef4444', bg: 'bg-red-500/15',     text: 'text-red-400'     };
+    if (ga.jokers?.includes(myRosterId)) return { label: 'Comodín', hex: '#facc15', bg: 'bg-yellow-500/15',  text: 'text-yellow-400'  };
+    for (const c of NOMENCLATURE_COLORS) {
+      if (ga[c.id]?.includes(myRosterId)) return c;
     }
     return null;
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="space-y-3">
+      {/* ── Alerta táctica ── */}
       {tacticalRoles.length > 0 && (
-        <div className="card" style={{ padding: 16, background: '#fffbeb', border: '1px solid #fcd34d' }}>
-          <div style={{ fontWeight: 800, color: '#b45309', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <AlertTriangle size={18} /> ATENCIÓN TÁCTICA
+        <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4">
+          <div className="flex items-center gap-2 text-amber-400 font-black text-xs uppercase tracking-widest mb-3">
+            <AlertTriangle size={14} /> Atención Táctica
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div className="space-y-2">
             {tacticalRoles.map((r, i) => (
-                <div key={i} style={{ padding: '8px 12px', background: 'white', borderRadius: 8, border: '1px solid #fde68a' }}>
-                <div style={{ fontSize: 10, color: '#d97706', fontWeight: 800, textTransform: 'uppercase' }}>Estrategia | {r.playName}</div>
-                {r.role && <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginTop: 2 }}>{r.role}</div>}
-                {r.note && <div style={{ fontSize: 12, color: '#475569', marginTop: 4, lineHeight: 1.45 }}>{r.note}</div>}
-                {r.playComment && <div style={{ fontSize: 11, color: '#92400e', marginTop: 6, lineHeight: 1.45 }}>{r.playComment}</div>}
+              <div key={i} className="bg-black/20 rounded-xl p-3 border border-amber-500/10">
+                <div className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">
+                  {r.category || 'Estrategia'} · {r.playName}
+                </div>
+                {r.role && <div className="text-sm font-bold text-white">{r.role}</div>}
+                {r.note && <div className="text-xs text-white/60 mt-1 leading-relaxed">{r.note}</div>}
+                {r.playComment && <div className="text-xs text-amber-300/70 mt-2 leading-relaxed">{r.playComment}</div>}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="card" style={{ padding: 16, borderTop: '4px solid #10b981' }}>
-        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{training.title}</div>
-        <div style={{ fontSize: 12, color: '#64748b', display: 'flex', gap: 10, marginBottom: 12 }}>
-          <span><Calendar size={12} style={{ verticalAlign: 'middle', marginRight: 2 }}/> {training.date}</span>
-        </div>
+      {/* ── Sesión principal ── */}
+      <div className="bg-surface rounded-3xl border border-white/5 overflow-hidden">
+        <div className="h-1 w-full bg-emerald-500" />
+        <div className="p-5">
+          <div className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Próxima Sesión</div>
+          <h3 className="text-lg font-black text-white mb-3">{training.title}</h3>
+          <div className="flex items-center gap-4 text-muted mb-5 flex-wrap">
+            <span className="flex items-center gap-1.5 text-[10px] font-bold">
+              <Calendar size={12} /> {training.date}
+            </span>
+            {training.duration && (
+              <span className="flex items-center gap-1.5 text-[10px] font-bold">
+                <Clock size={12} /> {training.duration}'
+              </span>
+            )}
+            {(training.exercises || []).length > 0 && (
+              <span className="flex items-center gap-1.5 text-[10px] font-bold">
+                <Users size={12} /> {training.exercises.length} ejercicios
+              </span>
+            )}
+          </div>
 
-        <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>Tu plan de sesión:</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {(training.exercises || []).map((ex, i) => {
-            const myGroup = getMyGroup(ex);
-            const hasVisual = ex.canvas_tokens && ex.canvas_tokens.length > 0;
-            const isVisualOpen = visualModeIndex === i;
+          {(training.exercises || []).length > 0 && (
+            <div className="space-y-2">
+              <div className="text-[9px] font-black text-muted/40 uppercase tracking-widest mb-2">Tu plan de sesión</div>
+              {(training.exercises || []).map((ex, i) => {
+                const myGroup = getMyGroup(ex);
+                const hasCanvas = ex.canvas_tokens?.length > 0;
+                const isOpen = visualModeIndex === i;
 
-            return (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 10, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#64748b' }}>
-                    {i + 1}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', display: 'flex', justifyContent: 'space-between' }}>
-                      {ex.name}
-                      {hasVisual && (
-                        <button className="btn btn-sm" style={{ padding: '2px 8px', fontSize: 10, background: '#1e293b', color: 'white', borderRadius: 4, border: 'none' }}
-                                onClick={() => setVisualModeIndex(isVisualOpen ? null : i)}>
-                          <Map size={12} style={{ marginRight: 4 }}/> {isVisualOpen ? 'Ocultar Pizarra' : 'Ver tu posición'}
+                return (
+                  <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-muted flex-shrink-0">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-white truncate">{ex.name}</div>
+                        {myGroup ? (
+                          <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[9px] font-black ${myGroup.bg} ${myGroup.text}`}>
+                            Equipo {myGroup.label}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-muted/40 font-bold mt-1 block">Sin grupo asignado</span>
+                        )}
+                      </div>
+                      {hasCanvas && (
+                        <button
+                          onClick={() => setVisualModeIndex(isOpen ? null : i)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[9px] font-black text-muted uppercase tracking-wide hover:text-white transition-colors flex-shrink-0"
+                        >
+                          <Map size={10} />
+                          {isOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                         </button>
                       )}
                     </div>
-                    {myGroup ? (
-                      <div style={{ marginTop: 6, display: 'inline-block', padding: '4px 8px', borderRadius: 6, background: myGroup.bg, color: myGroup.color, fontSize: 11, fontWeight: 800 }}>
-                        Vas con el equipo: {myGroup.label}
+
+                    {isOpen && ex.image && (
+                      <div className="h-56 bg-bg border-t border-white/5">
+                        <FieldCanvas
+                          tool="view"
+                          tokens={ex.canvas_tokens.map(t => ({
+                            ...t,
+                            kind: 'player',
+                            label: 'TÚ',
+                            assigned_player_id: t.id,
+                            color: myGroup?.hex || '#3b82f6',
+                          }))}
+                          backgroundImage={`${import.meta.env.BASE_URL}exercises/${ex.image}`}
+                          myRosterId={myRosterId}
+                          animating={true}
+                        />
                       </div>
-                    ) : (
-                      <div style={{ marginTop: 6, fontSize: 11, color: '#94a3b8' }}>Sin grupo asignado</div>
                     )}
                   </div>
-                </div>
-
-                {isVisualOpen && ex.image && (
-                  <div style={{ marginTop: 10, height: 250, background: '#1e293b', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
-                    <FieldCanvas 
-                      tool="view"
-                      tokens={ex.canvas_tokens.map(t => ({
-                        ...t,
-                        kind: 'player',
-                        label: 'TÚ',
-                        assigned_player_id: t.id,
-                        color: myGroup?.hex || '#3b82f6'
-                      }))}
-                      backgroundImage={`${import.meta.env.BASE_URL}exercises/${ex.image}`}
-                      myRosterId={myRosterId}
-                      animating={true}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
