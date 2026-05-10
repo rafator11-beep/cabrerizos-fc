@@ -273,77 +273,117 @@ CREATE POLICY "Admins can delete roster" ON roster
   FOR DELETE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
 -- ==========================================
--- 10. SEED: Pre-cargar plantilla Cabrerizos FC
+-- 10. NOTIFICATIONS TABLE
 -- ==========================================
--- Solo ejecutar una vez. Si ya existe algún jugador, no duplicar.
-INSERT INTO roster (name, surname, number, is_starter, position, stats) VALUES
-  -- TITULARES CON FICHA FEDERATIVA
-  ('Haritz', 'González Delgado', 1, true, 'Portero',
-    '{"goals":1,"assists":0,"yellow_cards":1,"red_cards":0,"matches_played":20,"starts":18,"sub_appearances":2,"minutes":1599,"rating":4.95,"birth_date":"2007-06-22","age":18,"laterality":"Desconocido","club_origin":""}'::jsonb),
-  ('Álvaro', 'Delgado González', 2, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
-  ('Asier', 'Marcos Riesco', 4, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":1,"matches_played":19,"starts":16,"sub_appearances":3,"minutes":1431,"rating":4.84,"birth_date":"2009-09-17","age":16,"laterality":"Derecho","club_origin":"Villares de la Reina"}'::jsonb),
-  ('Hugo', 'López García', 5, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":6,"red_cards":0,"matches_played":19,"starts":18,"sub_appearances":1,"minutes":1619,"rating":4.89,"birth_date":"2009-10-13","age":16,"laterality":"Derecho","club_origin":"UDSalamanca"}'::jsonb),
-  ('Gabriel', 'Fraile Alguacil', 6, true, '',
-    '{"goals":3,"assists":1,"yellow_cards":0,"red_cards":0,"matches_played":14,"starts":14,"sub_appearances":0,"minutes":1169,"rating":4.93,"birth_date":"2009-11-04","age":16,"laterality":"Derecho","club_origin":"Cristo Rey"}'::jsonb),
-  ('Iván', 'Martín Cañizal', 9, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":1,"red_cards":0,"matches_played":17,"starts":12,"sub_appearances":5,"minutes":996,"rating":4.88,"birth_date":"","age":0,"laterality":"Desconocido","club_origin":""}'::jsonb),
-  ('Aarón', 'Gabriel García', 10, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
-  ('Ricardo André', 'Romero Chiuz', 11, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":19,"starts":7,"sub_appearances":12,"minutes":619,"rating":4.95,"birth_date":"2009-04-29","age":16,"laterality":"Desconocido","club_origin":""}'::jsonb),
-  ('David Mario', 'Hidalgo Vizcaíno', 12, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":6,"starts":6,"sub_appearances":0,"minutes":495,"rating":4.67,"birth_date":"2008-07-14","age":17,"laterality":"Desconocido","club_origin":""}'::jsonb),
-  ('Carlos', 'Martín Silva', 14, true, '',
-    '{"goals":3,"assists":0,"yellow_cards":2,"red_cards":0,"matches_played":12,"starts":7,"sub_appearances":5,"minutes":599,"rating":4.58,"birth_date":"2008-01-14","age":18,"laterality":"Desconocido","club_origin":""}'::jsonb),
-  ('Unai', 'Rodríguez Ríos', 15, true, '',
-    '{"goals":1,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":19,"starts":17,"sub_appearances":2,"minutes":1423,"rating":4.95,"birth_date":"2009-09-14","age":16,"laterality":"Zurdo","club_origin":""}'::jsonb),
-  ('Daniel', 'Alonso Gago', 16, true, '',
-    '{"goals":5,"assists":0,"yellow_cards":2,"red_cards":0,"matches_played":20,"starts":13,"sub_appearances":7,"minutes":1248,"rating":4.90,"birth_date":"2009-09-06","age":16,"laterality":"","club_origin":""}'::jsonb),
-  ('Álex', 'Hernández Nicolás', 17, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":10,"starts":7,"sub_appearances":3,"minutes":627,"rating":4.70,"birth_date":"2009-10-07","age":16,"laterality":"Desconocido","club_origin":""}'::jsonb),
-  ('Iván', 'Matías González', 18, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
-  ('Raúl', 'Rodríguez Morán', 19, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
-  ('Juan', 'Vicente Hernández', 20, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":3,"red_cards":1,"matches_played":20,"starts":15,"sub_appearances":5,"minutes":1347,"rating":4.80,"birth_date":"2008-10-20","age":17,"laterality":"Desconocido","club_origin":""}'::jsonb),
-  ('Guillermo', 'Domínguez García', 21, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":8,"starts":3,"sub_appearances":5,"minutes":294,"rating":5.12,"birth_date":"2009-08-19","age":16,"laterality":"Derecho","club_origin":""}'::jsonb),
-  ('Jorge', 'Alonso Cordovilla', 22, true, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":16,"starts":1,"sub_appearances":15,"minutes":275,"rating":4.81,"birth_date":"2009-04-29","age":16,"laterality":"Derecho","club_origin":""}'::jsonb),
-  -- SUPLENTES / CADETE (sin ficha federativa completa)
-  ('Héctor', 'Cáceres Marcos', 7, false, '',
-    '{"goals":0,"assists":0,"yellow_cards":1,"red_cards":0,"matches_played":11,"starts":8,"sub_appearances":3,"minutes":816,"rating":4.73,"birth_date":"2008-11-29","age":17,"laterality":"","club_origin":""}'::jsonb),
-  ('Alejandro', 'Cuevas Gonzalo', 8, false, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
-  ('Daniel', 'Fuentes Santana', 68, false, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb),
-  ('Hugo', 'Torres Salvado', 33, false, '',
-    '{"goals":0,"assists":0,"yellow_cards":0,"red_cards":0,"matches_played":0,"starts":0,"sub_appearances":0,"minutes":0,"rating":0,"birth_date":"","age":0,"laterality":"","club_origin":""}'::jsonb)
-ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGSERIAL PRIMARY KEY,
+  player_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_player ON notifications(player_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can update their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Admins can insert notifications" ON notifications;
+
+CREATE POLICY "Users can view their own notifications"
+  ON notifications FOR SELECT
+  USING (auth.uid() = player_id);
+
+CREATE POLICY "Users can update their own notifications"
+  ON notifications FOR UPDATE
+  USING (auth.uid() = player_id);
+
+CREATE POLICY "Admins can insert notifications"
+  ON notifications FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- ==========================================
--- 11. STORAGE: Bucket para fotos de jugadores
+-- 11. MESSAGES TABLE (Chat)
 -- ==========================================
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('player-photos', 'player-photos', true)
-ON CONFLICT (id) DO NOTHING;
+CREATE TABLE IF NOT EXISTS messages (
+  id BIGSERIAL PRIMARY KEY,
+  sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  receiver_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-CREATE POLICY "Anyone can view player photos"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'player-photos');
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
 
-CREATE POLICY "Authenticated users can upload photos"
-  ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'player-photos');
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can update photos"
-  ON storage.objects FOR UPDATE
-  USING (bucket_id = 'player-photos');
+DROP POLICY IF EXISTS "Messages viewable by sender or receiver or admin" ON messages;
+DROP POLICY IF EXISTS "Users can insert messages" ON messages;
 
-CREATE POLICY "Authenticated users can delete photos"
-  ON storage.objects FOR DELETE
-  USING (bucket_id = 'player-photos');
+CREATE POLICY "Messages viewable by sender or receiver or admin" ON messages
+  FOR SELECT USING (
+    auth.uid() = sender_id OR 
+    auth.uid() = receiver_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Users can insert messages" ON messages
+  FOR INSERT WITH CHECK (auth.uid() = sender_id);
+
+-- ==========================================
+-- 12. FUNCTIONS
+-- ==========================================
+
+-- Change Password Function
+CREATE OR REPLACE FUNCTION change_user_password(new_password TEXT)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  user_id UUID;
+BEGIN
+  user_id := auth.uid();
+  IF user_id IS NULL THEN RETURN json_build_object('success', false, 'message', 'Usuario no autenticado'); END IF;
+  IF LENGTH(new_password) < 6 THEN RETURN json_build_object('success', false, 'message', 'La contraseña debe tener al menos 6 caracteres'); END IF;
+  
+  UPDATE auth.users SET encrypted_password = crypt(new_password, gen_salt('bf')), updated_at = NOW() WHERE id = user_id;
+  RETURN json_build_object('success', true, 'message', 'Contraseña actualizada correctamente');
+EXCEPTION WHEN OTHERS THEN RETURN json_build_object('success', false, 'message', SQLERRM);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION change_user_password(TEXT) TO authenticated;
+
+-- Create Notification Function
+CREATE OR REPLACE FUNCTION create_notification(p_player_id UUID, p_type TEXT, p_title TEXT, p_message TEXT)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE notification_id BIGINT;
+BEGIN
+  INSERT INTO notifications (player_id, type, title, message, read, created_at)
+  VALUES (p_player_id, p_type, p_title, p_message, FALSE, NOW())
+  RETURNING id INTO notification_id;
+  RETURN json_build_object('success', true, 'notification_id', notification_id, 'message', 'Notificación creada correctamente');
+EXCEPTION WHEN OTHERS THEN RETURN json_build_object('success', false, 'message', SQLERRM);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION create_notification(UUID, TEXT, TEXT, TEXT) TO authenticated;
+
+-- ==========================================
+-- 13. SEED & STORAGE
+-- ==========================================
+INSERT INTO storage.buckets (id, name, public) VALUES ('player-photos', 'player-photos', true) ON CONFLICT (id) DO NOTHING;
+CREATE POLICY "Anyone can view player photos" ON storage.objects FOR SELECT USING (bucket_id = 'player-photos');
+CREATE POLICY "Authenticated users can upload photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'player-photos');
+CREATE POLICY "Authenticated users can update photos" ON storage.objects FOR UPDATE USING (bucket_id = 'player-photos');
+CREATE POLICY "Authenticated users can delete photos" ON storage.objects FOR DELETE USING (bucket_id = 'player-photos');

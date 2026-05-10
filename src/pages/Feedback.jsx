@@ -1,188 +1,165 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MessageSquare, Dumbbell, Send, Calendar } from 'lucide-react';
+import { Star, Send, MessageSquare, Plus, Activity, CheckCircle } from 'lucide-react';
 
 export default function Feedback() {
-  const { profile, isAdmin } = useAuth();
-  const [feedbacks, setFeedbacks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Form state
-  const [type, setType] = useState('exercise_suggestion');
-  const [content, setContent] = useState('');
+  const { profile, user } = useAuth();
+  const [training, setTraining] = useState(null);
+  const [score, setScore] = useState(7);
+  const [comment, setComment] = useState('');
+  const [proposal, setProposal] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [myScore, setMyScore] = useState(null);
 
   useEffect(() => {
-    fetchFeedbacks();
-  }, []);
+    loadLatestTraining();
+  }, [user]);
 
-  const fetchFeedbacks = async () => {
-    setLoading(true);
-    let query = supabase.from('feedback').select(`
-      id, type, content, created_at,
-      profiles ( name, surname, number )
-    `).order('created_at', { ascending: false });
-
-    // If not admin, only show own feedback
-    if (!isAdmin && profile?.id) {
-      query = query.eq('player_id', profile.id);
-    }
-
-    const { data, error } = await query;
+  const loadLatestTraining = async () => {
+    if (!user) return;
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from('trainings')
+      .select('*')
+      .lte('date', today)
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
     if (data) {
-      setFeedbacks(data);
-    } else {
-      // Mock data
-      setFeedbacks([
-        { id: '1', type: 'exercise_suggestion', content: 'Estaría genial hacer un torneo de fut-tenis el viernes.', profiles: { name: 'Luis', surname: 'Campos', number: 7 }, created_at: new Date().toISOString() },
-        { id: '2', type: 'session_comment', content: 'Me costó un poco entender la presión 4-3-3 de ayer, necesito repasarlo.', profiles: { name: 'Diego', surname: 'Soto', number: 4 }, created_at: new Date().toISOString() }
-      ]);
+      setTraining(data);
+      const { data: sc } = await supabase
+        .from('training_scores')
+        .select('*')
+        .eq('training_id', data.id)
+        .eq('player_id', user.id)
+        .maybeSingle();
+      if (sc) {
+        setMyScore(sc);
+        setScore(sc.score);
+        setComment(sc.comment || '');
+      }
+    }
+  };
+
+  const submitFeedback = async () => {
+    if (!training || loading) return;
+    setLoading(true);
+    try {
+      const payload = { 
+        training_id: training.id, 
+        player_id: user.id, 
+        score, 
+        comment 
+      };
+      
+      if (myScore) {
+        await supabase.from('training_scores').update({ score, comment }).eq('id', myScore.id);
+      } else {
+        await supabase.from('training_scores').insert([payload]);
+      }
+      
+      if (proposal.trim()) {
+        await supabase.from('feedback').insert([{
+          player_id: user.id,
+          type: 'exercise_suggestion',
+          content: proposal,
+          session_id: training.id
+        }]);
+      }
+
+      setSaved(true);
+      setProposal('');
+      setTimeout(() => setSaved(false), 3000);
+      loadLatestTraining();
+    } catch (e) {
+      console.error(e);
     }
     setLoading(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!content.trim() || !profile?.id) return;
-
-    const newFeedback = {
-      player_id: profile.id,
-      type,
-      content
-    };
-
-    const { data, error } = await supabase.from('feedback').insert([newFeedback]).select(`
-      id, type, content, created_at,
-      profiles ( name, surname, number )
-    `).single();
-
-    if (data) {
-      setFeedbacks([data, ...feedbacks]);
-      setContent('');
-    } else {
-      // Mock insert
-      const mock = { ...newFeedback, id: Date.now().toString(), profiles: { name: profile.name, surname: profile.surname, number: 10 }, created_at: new Date().toISOString() };
-      setFeedbacks([mock, ...feedbacks]);
-      setContent('');
-    }
-  };
+  const scoreColor = score >= 8 ? '#10b981' : score >= 6 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <span style={{ fontWeight: 800, fontSize: 17 }}>Comentarios y Sugerencias</span>
-      </div>
-
-      {!isAdmin && (
-        <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>¿Tienes alguna sugerencia para el próximo entreno?</div>
-          <form onSubmit={handleSubmit}>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-              <button 
-                type="button"
-                onClick={() => setType('exercise_suggestion')}
-                style={{ 
-                  flex: 1, padding: '10px', borderRadius: 8, border: '2px solid', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  borderColor: type === 'exercise_suggestion' ? '#0057ff' : '#e2e6ed',
-                  background: type === 'exercise_suggestion' ? '#eef3ff' : 'white',
-                  color: type === 'exercise_suggestion' ? '#0057ff' : '#4a5568',
-                  fontWeight: 600
-                }}
-              >
-                <Dumbbell size={16} /> Sugerir Ejercicio
-              </button>
-              <button 
-                type="button"
-                onClick={() => setType('session_comment')}
-                style={{ 
-                  flex: 1, padding: '10px', borderRadius: 8, border: '2px solid', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  borderColor: type === 'session_comment' ? '#00b96b' : '#e2e6ed',
-                  background: type === 'session_comment' ? '#ecfdf5' : 'white',
-                  color: type === 'session_comment' ? '#059669' : '#4a5568',
-                  fontWeight: 600
-                }}
-              >
-                <MessageSquare size={16} /> Comentar Entreno
-              </button>
-            </div>
-            
-            <textarea 
-              className="input-field" 
-              style={{ minHeight: 80, resize: 'vertical', marginBottom: 10 }}
-              placeholder={type === 'exercise_suggestion' ? 'Me gustaría practicar tiros a puerta desde fuera del área...' : 'El entrenamiento de ayer me pareció muy intenso...'}
-              value={content}
-              onChange={e => setContent(e.target.value)}
-            />
-            
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="submit" className="btn btn-primary">
-                <Send size={14} /> Enviar al cuerpo técnico
-              </button>
-            </div>
-          </form>
+    <div className="max-w-2xl mx-auto p-4 space-y-6 pb-20">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
+          <Activity size={24} />
         </div>
-      )}
-
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: '#4a5568' }}>
-        {isAdmin ? 'Buzón del equipo' : 'Tus mensajes enviados'}
+        <div>
+          <h1 className="text-xl font-black text-white uppercase tracking-tighter">Feedback & Propuestas</h1>
+          <p className="text-xs text-muted uppercase tracking-widest font-bold">Tu opinión cuenta para mejorar</p>
+        </div>
       </div>
 
-      {loading ? (
-        <div>Cargando...</div>
-      ) : feedbacks.length === 0 ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center', color: '#96a0b5' }}>
-          No hay comentarios todavía.
+      {training ? (
+        <div className="bg-surface rounded-3xl border border-white/5 p-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+            <Star size={80} className="fill-white" />
+          </div>
+
+          <div className="text-[10px] font-black text-accent uppercase tracking-[0.2em] mb-2">Valoración del Entrenamiento</div>
+          <h2 className="text-lg font-black text-white mb-6">{training.title}</h2>
+
+          <div className="space-y-6">
+            <div>
+              <div className="flex justify-between items-end mb-4">
+                <span className="text-xs font-bold text-white/70">¿Qué te ha parecido la sesión?</span>
+                <span className="text-3xl font-black" style={{ color: scoreColor }}>{score}</span>
+              </div>
+              <div className="flex gap-1.5">
+                {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                  <button key={n} onClick={() => setScore(n)}
+                    className="flex-1 h-10 rounded-xl text-xs font-black transition-all active:scale-90"
+                    style={{
+                      backgroundColor: score >= n ? (n >= 8 ? '#10b981' : n >= 6 ? '#f59e0b' : '#ef4444') : 'rgba(255,255,255,0.05)',
+                      color: score >= n ? '#fff' : 'rgba(255,255,255,0.3)',
+                    }}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <textarea
+              className="w-full bg-black/20 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-muted focus:border-accent outline-none transition-all"
+              placeholder="¿Cómo te has sentido? (cansancio, molestias, sensaciones...)"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              rows={3}
+            />
+          </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {feedbacks.map(f => (
-            <div key={f.id} className="card" style={{ padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#f5f6f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>
-                    #{f.profiles?.number || '-'}
-                  </div>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>{f.profiles?.name} {f.profiles?.surname}</span>
-                  <span style={{ fontSize: 10, color: '#96a0b5' }}>{new Date(f.created_at).toLocaleDateString()}</span>
-                </div>
-                <span style={{ 
-                  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                  background: f.type === 'exercise_suggestion' ? '#eef3ff' : f.type === 'training_proposal' ? '#fef3c7' : '#ecfdf5',
-                  color: f.type === 'exercise_suggestion' ? '#0057ff' : f.type === 'training_proposal' ? '#d97706' : '#059669'
-                }}>
-                  {f.type === 'exercise_suggestion' ? <><Dumbbell size={10}/> Sugerencia</> : f.type === 'training_proposal' ? <><Calendar size={10}/> Sesión Propuesta</> : <><MessageSquare size={10}/> Comentario</>}
-                </span>
-              </div>
-              <div style={{ color: '#111', fontSize: 13, lineHeight: '1.5' }}>
-                {f.type === 'training_proposal' ? (
-                  <div style={{ background: '#f8f9fb', padding: 12, borderRadius: 8, border: '1px solid #e2e6ed' }}>
-                    {(() => {
-                      try {
-                        const parsed = JSON.parse(f.content);
-                        return (
-                          <>
-                            <div style={{ fontWeight: 800, color: '#0057ff', marginBottom: 2 }}>{parsed.title} ({parsed.duration} min)</div>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Intensidad: {parsed.intensity.toUpperCase()}</div>
-                            {parsed.objective && <div style={{ fontSize: 12, marginBottom: 8, fontStyle: 'italic' }}>"{parsed.objective}"</div>}
-                            <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}>Ejercicios propuestos ({parsed.exercises?.length}):</div>
-                            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: '#4a5568' }}>
-                              {parsed.exercises?.map((ex, i) => <li key={i}>{ex.name} ({ex.duration} min)</li>)}
-                            </ul>
-                          </>
-                        );
-                      } catch {
-                        return f.content;
-                      }
-                    })()}
-                  </div>
-                ) : (
-                  f.content
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="bg-surface rounded-3xl border border-white/5 p-10 text-center text-muted text-xs font-bold uppercase tracking-widest">
+          No hay entrenamientos recientes para valorar
         </div>
       )}
+
+      <div className="bg-surface rounded-3xl border border-white/5 p-6 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+          <Plus size={80} />
+        </div>
+        <div className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">Propuesta de Ejercicios</div>
+        <h2 className="text-lg font-black text-white mb-4">¿Qué te gustaría entrenar?</h2>
+        <textarea
+          className="w-full bg-black/20 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-muted focus:border-emerald-400 outline-none transition-all"
+          placeholder="Describe un ejercicio o aspecto que te gustaría trabajar en las próximas sesiones..."
+          value={proposal}
+          onChange={e => setProposal(e.target.value)}
+          rows={3}
+        />
+      </div>
+
+      <button 
+        onClick={submitFeedback}
+        disabled={loading || saved}
+        className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 transition-all ${saved ? 'bg-emerald-500 text-bg' : 'bg-accent text-bg shadow-xl shadow-accent/20 hover:scale-[1.02] active:scale-95'}`}
+      >
+        {saved ? <><CheckCircle size={18} /> ¡Enviado correctamente!</> : <><Send size={18} /> Guardar Feedback</>}
+      </button>
     </div>
   );
 }

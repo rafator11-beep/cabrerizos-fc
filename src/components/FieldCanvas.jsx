@@ -38,7 +38,7 @@ const FieldCanvas = forwardRef(({
   const isPlayerMode = !isRealAdmin || viewAsPlayer;
   
   const svgRef = useRef(null);
-  const [dragId, setDragId] = useState(null);
+  const dragIdRef = useRef(null);
   const [drawingArrow, setDrawingArrow] = useState(null);
   const [drawingZone, setDrawingZone] = useState(null);
 
@@ -77,8 +77,9 @@ const FieldCanvas = forwardRef(({
     const ctm = svgRef.current.getScreenCTM();
     if (!ctm) return { x: 0, y: 0 };
     const pt = svgRef.current.createSVGPoint();
-    pt.x = e.clientX ?? 0;
-    pt.y = e.clientY ?? 0;
+    const touch = e.touches?.[0] || e.changedTouches?.[0];
+    pt.x = e.clientX ?? touch?.clientX ?? 0;
+    pt.y = e.clientY ?? touch?.clientY ?? 0;
     const transformed = pt.matrixTransform(ctm.inverse());
     return { x: transformed.x, y: transformed.y };
   };
@@ -102,8 +103,8 @@ const FieldCanvas = forwardRef(({
     e.preventDefault();
     const { x, y } = toSVG(e);
 
-    if (dragId) {
-      onMove?.(dragId, x, y);
+    if (dragIdRef.current) {
+      onMove?.(dragIdRef.current, x, y);
     } else if (drawingArrow) {
       setDrawingArrow({ ...drawingArrow, to: { x, y } });
     } else if (drawingZone) {
@@ -111,7 +112,7 @@ const FieldCanvas = forwardRef(({
     }
   };
 
-  const handlePointerUp = (e) => {
+  const handlePointerUp = () => {
     if (drawingArrow) {
       if (Math.hypot(drawingArrow.to.x - drawingArrow.from.x, drawingArrow.to.y - drawingArrow.from.y) > 10) {
         onArrow?.(drawingArrow);
@@ -124,6 +125,7 @@ const FieldCanvas = forwardRef(({
       }
       setDrawingZone(null);
     }
+    dragIdRef.current = null;
     setDragId(null);
   };
 
@@ -212,28 +214,13 @@ const FieldCanvas = forwardRef(({
   const renderToken = (t) => {
     const isSelected = selectedTokenId === t.id;
     const ev = {
-      onPointerDown: (e) => { 
-        e.stopPropagation(); 
+      onPointerDown: (e) => {
+        e.stopPropagation();
         e.preventDefault();
         if (tool === 'move') {
-          // Capture pointer for fluid cross-element dragging
-          e.target.setPointerCapture(e.pointerId);
-          setDragId(t.id);
+          svgRef.current?.setPointerCapture(e.pointerId);
+          dragIdRef.current = t.id;
           onSelectToken?.(t.id);
-        }
-      },
-      onPointerMove: (e) => {
-        if (dragId === t.id) {
-          e.stopPropagation();
-          e.preventDefault();
-          const { x, y } = toSVG(e);
-          onMove?.(t.id, x, y);
-        }
-      },
-      onPointerUp: (e) => {
-        if (dragId === t.id) {
-          e.target.releasePointerCapture(e.pointerId);
-          setDragId(null);
         }
       },
       onDoubleClick: (e) => { e.stopPropagation(); onDelete?.(t.id); }
@@ -305,11 +292,9 @@ const FieldCanvas = forwardRef(({
         return (
           <ProfessionalToken 
             key={t.id} 
-            token={{...t, x: posX, y: posY}} 
+            token={{...t, x: posX, y: posY}}
             isSelected={isSelected}
             onPointerDown={ev.onPointerDown}
-            onPointerMove={ev.onPointerMove}
-            onPointerUp={ev.onPointerUp}
             onDoubleClick={ev.onDoubleClick}
           />
         );

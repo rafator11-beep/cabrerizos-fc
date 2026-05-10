@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Save, Trash2, X, ChevronRight, Download, Share2 } from 'lucide-react';
+import { Plus, Save, Trash2, X, ChevronRight, Download, Share2, Edit3 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { exportSvgAsImage } from '../utils/ExportHelper';
 import Convocatoria from '../components/Convocatoria';
@@ -81,8 +81,10 @@ export default function Alineacion() {
   const [form, setForm] = useState({ name: '', formation: '4-3-3', match_date: '' });
   const [mobileTab, setMobileTab] = useState('list');
   const svgRef = useRef(null);
-  const [dragging, setDragging] = useState(null);
+  const draggingRef = useRef(null);
   const [showConvocatoria, setShowConvocatoria] = useState(false);
+  const [showRenameForm, setShowRenameForm] = useState(false);
+  const [renameForm, setRenameForm] = useState({ name: '', match_date: '' });
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -130,6 +132,30 @@ export default function Alineacion() {
     }
   };
 
+  const deleteLineup = async () => {
+    if (isPlayerMode || !activeLineup) return;
+    if (!confirm(`¿Eliminar la alineación "${activeLineup.name}"?`)) return;
+    await supabase.from('lineups').delete().eq('id', activeLineup.id);
+    const updated = lineups.filter(l => l.id !== activeLineup.id);
+    setLineups(updated);
+    setActiveLineup(updated.length > 0 ? updated[0] : null);
+    if (isMobile) setMobileTab('list');
+  };
+
+  const startRename = () => {
+    setRenameForm({ name: activeLineup.name, match_date: activeLineup.match_date || '' });
+    setShowRenameForm(true);
+  };
+
+  const saveRename = async () => {
+    if (!renameForm.name) return;
+    await supabase.from('lineups').update({ name: renameForm.name, match_date: renameForm.match_date || null }).eq('id', activeLineup.id);
+    const next = { ...activeLineup, name: renameForm.name, match_date: renameForm.match_date || null };
+    setActiveLineup(next);
+    setLineups(lineups.map(l => l.id === next.id ? next : l));
+    setShowRenameForm(false);
+  };
+
   const toSVG = (e) => {
     if (!svgRef.current) return { x: 0, y: 0 };
     const svg = svgRef.current;
@@ -145,15 +171,21 @@ export default function Alineacion() {
   const onDragStart = (e, index) => {
     if (isPlayerMode) return;
     e.preventDefault();
-    setDragging({ index });
+    draggingRef.current = { index };
+  };
+
+  const onDragEnd = () => {
+    draggingRef.current = null;
+    setDragging(null);
   };
 
   const onMove = (e) => {
-    if (!dragging || isPlayerMode) return;
+    const d = draggingRef.current;
+    if (!d || isPlayerMode) return;
     e.preventDefault();
     const pt = toSVG(e);
     const next = [...activeLineup.starters];
-    next[dragging.index] = { ...next[dragging.index], x: pt.x, y: pt.y };
+    next[d.index] = { ...next[d.index], x: pt.x, y: pt.y };
     setActiveLineup({ ...activeLineup, starters: next });
   };
 
@@ -221,6 +253,21 @@ export default function Alineacion() {
         </div>
       )}
 
+      {/* Rename Modal */}
+      {showRenameForm && (
+        <div className="modal-overlay animate-fade-in z-[200]" onClick={() => setShowRenameForm(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-black text-white mb-6">Renombrar Alineación</h2>
+            <input className="input-field mb-3" placeholder="Nombre" value={renameForm.name} onChange={e => setRenameForm({ ...renameForm, name: e.target.value })} autoFocus />
+            <input type="date" className="input-field mb-6" value={renameForm.match_date} onChange={e => setRenameForm({ ...renameForm, match_date: e.target.value })} />
+            <div className="flex gap-3">
+              <button onClick={() => setShowRenameForm(false)} className="flex-1 py-4 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest text-[10px]">Cancelar</button>
+              <button onClick={saveRename} className="flex-1 py-4 rounded-2xl bg-accent text-bg font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all">Guardar Cambios</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar List */}
       <div className={`flex-shrink-0 md:w-64 border-r border-white/10 flex flex-col ${isMobile && mobileTab !== 'list' ? 'hidden' : 'flex'}`}>
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
@@ -244,7 +291,14 @@ export default function Alineacion() {
         <div className="h-12 flex-shrink-0 flex items-center justify-between px-4 border-b border-white/10">
           {isMobile && <button onClick={() => setMobileTab('list')} className="text-muted"><X size={18} /></button>}
           <div className="flex items-center gap-3">
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{activeLineup?.name || 'XI'}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{activeLineup?.name || 'XI'}</h2>
+              {!isPlayerMode && activeLineup && (
+                <button onClick={startRename} className="text-muted hover:text-white transition-colors" title="Editar nombre">
+                  <Edit3 size={12} />
+                </button>
+              )}
+            </div>
             {/* Formation badge */}
             {activeLineup && (
               <select value={activeLineup.formation || '4-3-3'} onChange={e => changeFormation(e.target.value)} disabled={isPlayerMode}
@@ -256,6 +310,7 @@ export default function Alineacion() {
           <div className="flex gap-2">
             {!isPlayerMode && <button onClick={() => setShowConvocatoria(true)} className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center" title="Convocatoria WhatsApp"><Share2 size={14} /></button>}
             {!isPlayerMode && <button onClick={handleExport} className="w-8 h-8 rounded-lg bg-white/5 text-muted flex items-center justify-center" title="Exportar"><Download size={14} /></button>}
+            {!isPlayerMode && <button onClick={deleteLineup} className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors" title="Eliminar Alineación"><Trash2 size={14} /></button>}
             {!isPlayerMode && <button onClick={saveLineup} className="px-3 py-1.5 bg-accent text-bg font-black rounded-lg text-[9px] uppercase tracking-widest active:scale-95 transition-all">Guardar</button>}
           </div>
         </div>
@@ -263,8 +318,8 @@ export default function Alineacion() {
         {/* SVG Field */}
         <div className={`flex-1 relative overflow-hidden ${isMobile && mobileTab === 'players' ? 'h-[40vh]' : ''}`}>
           <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full h-full" style={{ touchAction: 'none' }}
-            onMouseMove={onMove} onMouseUp={() => setDragging(null)} onMouseLeave={() => setDragging(null)}
-            onTouchMove={(e) => { e.preventDefault(); onMove(e); }} onTouchEnd={() => setDragging(null)}>
+            onMouseMove={onMove} onMouseUp={onDragEnd} onMouseLeave={onDragEnd}
+            onTouchMove={(e) => { e.preventDefault(); onMove(e); }} onTouchEnd={onDragEnd}>
             
             {/* Field Stripes */}
             {Array.from({ length: 7 }).map((_, i) => (

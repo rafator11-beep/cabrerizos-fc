@@ -103,9 +103,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const buildEmail = (name, surname, surname2 = '') => {
-    const n = name.trim().toLowerCase().replace(/\s+/g, '.');
-    const s = surname.trim().toLowerCase().replace(/\s+/g, '.');
-    const s2 = surname2 ? surname2.trim().toLowerCase().replace(/\s+/g, '.') : '';
+    const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const n = normalize(name).trim().toLowerCase().replace(/\s+/g, '.');
+    const s = normalize(surname).trim().toLowerCase().replace(/\s+/g, '.');
+    const s2 = surname2 ? normalize(surname2).trim().toLowerCase().replace(/\s+/g, '.') : '';
     return s2 ? `${n}.${s}.${s2}@cabrerizos-fc.app` : `${n}.${s}@cabrerizos-fc.app`;
   };
 

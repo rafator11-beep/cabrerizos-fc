@@ -1,33 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-export default function ProfessionalToken({ token, isSelected, onPointerDown, onPointerMove, onPointerUp, onDoubleClick, zoomScale = 1 }) {
+export default function ProfessionalToken({ token, isSelected, onPointerDown, onDoubleClick }) {
   const { id, x = 0, y = 0, photo_url, name, label, isRival } = token;
-  const tokenColor = isRival ? '#ef4444' : (token.color || '#0057ff');
-  const hasPhoto = !!photo_url;
+  const [imgError, setImgError] = useState(false);
   
-  // Base scale is 1, but when zoomed in, we might want tokens to scale down slightly relative to the field 
-  // to maintain visual crispness, but the user requested them to scale automatically.
-  // The base size
+  const tokenColor = isRival ? '#ef4444' : (token.color || '#0057ff');
+  const hasPhoto = !!photo_url && !imgError;
+  
   const r = 18; 
-  const size = r * 3; 
+  const size = r * 3.2;
 
   return (
-    <g 
-      key={id} 
-      transform={`translate(${x}, ${y})`} 
+    <g
+      key={id}
+      transform={`translate(${x}, ${y})`}
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
       onDoubleClick={onDoubleClick}
-      className="cursor-grab active:cursor-grabbing transition-transform duration-200" 
+      className="cursor-grab active:cursor-grabbing"
       style={{ touchAction: 'none' }}
     >
       <defs>
-        <filter id={`drop-shadow-${id}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="4" stdDeviation="3" floodOpacity="0.5" floodColor="#000000" />
-        </filter>
-        <filter id={`drop-shadow-selected-${id}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="0" stdDeviation="6" floodOpacity="0.8" floodColor="#00ff87" />
+        <filter id={`shadow-${id}`}>
+          <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.5" />
         </filter>
       </defs>
 
@@ -79,7 +73,7 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
           </div>
         </foreignObject>
       ) : (
-        <g filter={isSelected ? `url(#drop-shadow-selected-${id})` : `url(#drop-shadow-${id})`}>
+        <g filter={`url(#shadow-${id})`}>
           <circle r={r} fill={tokenColor} stroke="white" strokeWidth="2" />
           <text textAnchor="middle" dy="5" fontSize="12" fontWeight="900" fill="white" style={{ pointerEvents: 'none', fontFamily: 'system-ui, sans-serif' }}>
             {label}
@@ -87,35 +81,35 @@ export default function ProfessionalToken({ token, isSelected, onPointerDown, on
         </g>
       )}
 
-      {/* Clean, professional name badge */}
+      {/* Name Badge */}
       {name && (
-        <g transform={`translate(0, ${hasPhoto ? size / 2 + 2 : r + 10})`}>
+        <g transform={`translate(0, ${hasPhoto ? r * 1.5 : r + 10})`}>
           <rect 
-            x="-25" 
+            x="-30" 
             y="0" 
-            width="50" 
-            height="12" 
+            width="60" 
+            height="14" 
             rx="4" 
-            fill="rgba(0,0,0,0.4)" 
+            fill="rgba(0,0,0,0.6)" 
             className="pointer-events-none"
           />
           <text 
             textAnchor="middle" 
-            dy="9" 
-            fontSize="8" 
-            fontWeight="700" 
+            dy="10" 
+            fontSize="9" 
+            fontWeight="800" 
             fill="white" 
             className="pointer-events-none"
-            style={{ fontFamily: 'Montserrat, Roboto, sans-serif', letterSpacing: '0.05em' }}
+            style={{ fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' }}
           >
             {name.split(' ')[0]}
           </text>
         </g>
       )}
 
-      {/* Optional selection ring if it doesn't have a photo, or rely purely on the neon drop-shadow defined above */}
-      {isSelected && !hasPhoto && (
-        <circle r={r + 4} fill="none" stroke="#00ff87" strokeWidth="2" strokeDasharray="4,3" className="pointer-events-none" />
+      {/* Selection Indicator */}
+      {isSelected && (
+        <ellipse cx="0" cy={hasPhoto ? r * 1.2 : r} rx={r * 1.5} ry={r * 0.4} fill="rgba(0,255,135,0.2)" stroke="#00ff87" strokeWidth="1" strokeDasharray="3,2" className="pointer-events-none" />
       )}
     </g>
   );

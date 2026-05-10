@@ -181,10 +181,12 @@ body {
 
 /* ── Modal / Sheet Overlay ── */
 .modal-overlay {
-  @apply fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md;
+  @apply fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md;
 }
 .modal-sheet {
-  @apply bg-surface w-full max-w-md rounded-[32px] p-8 border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.8)];
+  @apply bg-surface w-full max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 sm:p-8 border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-y-auto;
+  max-height: 90dvh;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 

@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import FloatingTimer from '../components/FloatingTimer';
+import FloatingChat from '../components/FloatingChat';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, Home as HomeIcon, PenTool, Dumbbell, Users, LayoutGrid, Target, X, Search, Command, Bell } from 'lucide-react';
+import { LogOut, Menu, Home as HomeIcon, PenTool, Dumbbell, Users, User, LayoutGrid, Target, X, Search, Command, Bell, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function DashboardLayout() {
@@ -44,9 +45,9 @@ export default function DashboardLayout() {
     { to: '/', icon: <HomeIcon size={18} />, label: 'Inicio' },
     { to: '/entrenamientos', icon: <Dumbbell size={18} />, label: 'Entrenos' },
     { to: '/tactica', icon: <PenTool size={18} />, label: 'Táctica' },
-    { to: '/tecnica', icon: <Target size={18} />, label: 'Técnica' },
+    { to: '/feedback', icon: <MessageSquare size={18} />, label: 'Chat' },
     { to: '/plantilla', icon: <Users size={18} />, label: 'Equipo' },
-    { to: '/alineacion', icon: <LayoutGrid size={18} />, label: 'XI' },
+    { to: '/mi-sesion', icon: <User size={18} />, label: 'Perfil' },
   ];
 
   // ── FEATURE 2: Command Palette ──
@@ -184,8 +185,9 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
 
-        {/* Floating Training Timer */}
+        {/* Floating Training Timer & Chat */}
         <FloatingTimer />
+        <FloatingChat />
 
         {/* MOBILE BOTTOM NAV */}
         <nav 

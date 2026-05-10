@@ -48,7 +48,7 @@ export default function Tactica({ externalExercise = null, overridePreset = null
   const [players, setPlayers] = useState([]);
   const [showTools, setShowTools] = useState(false);
   const [zoomPreset, setZoomPreset] = useState(null);
-  const [libCollapsed, setLibCollapsed] = useState(true);
+  const [libCollapsed, setLibCollapsed] = useState(false);
   const [editorCollapsed, setEditorCollapsed] = useState(false);
   
   const ZOOM_OPTIONS = [
@@ -239,6 +239,16 @@ export default function Tactica({ externalExercise = null, overridePreset = null
         
         {/* Playback Controls (Floating Top) */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-5 py-2 bg-surface/80 backdrop-blur-2xl border border-white/10 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          {isMobile && (
+            <button 
+              onClick={() => setMobileTab('jugadas')}
+              className="w-8 h-8 rounded-xl bg-white/5 text-accent flex items-center justify-center mr-2 active:scale-90 transition-all"
+              title="Volver al listado"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
+          
           <button onClick={() => setAnimating(!animating)} className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${animating ? 'bg-amber-500 text-bg shadow-lg shadow-amber-500/20' : 'text-white/40 hover:text-white'}`}>
             <Monitor size={18} />
           </button>
@@ -271,6 +281,26 @@ export default function Tactica({ externalExercise = null, overridePreset = null
             </button>
           )}
         </div>
+
+        {/* Tools Toolbar (Floating Left) */}
+        {!isPlayerMode && (
+          <div className="absolute top-20 left-4 z-30 flex flex-col gap-2 p-2 bg-surface/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+            <button onClick={() => setTool('move')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${tool === 'move' ? 'bg-accent text-bg shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`} title="Mover">
+              <Move size={18} />
+            </button>
+            <div className="w-6 h-px bg-white/10 mx-auto" />
+            <button onClick={() => { setTool('arrow'); setArrowType('pass'); }} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${tool === 'arrow' ? 'bg-accent text-bg shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`} title="Pase">
+              <ArrowRight size={18} />
+            </button>
+            <button onClick={() => { setTool('arrow'); setArrowType('run'); }} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${tool === 'arrow' && arrowType === 'run' ? 'bg-amber-500 text-bg shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`} title="Desmarque">
+              <Activity size={18} />
+            </button>
+            <div className="w-6 h-px bg-white/10 mx-auto" />
+            <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `ball-${Date.now()}`, kind: 'ball', x: 275, y: 183 }] })} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-lg hover:bg-white/10 transition-all" title="Balón">⚽</button>
+            <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `cone-${Date.now()}`, kind: 'cone', x: 275, y: 183 }] })} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-lg hover:bg-white/10 transition-all" title="Cono">🚧</button>
+            <button onClick={() => updateCurrentStep({ tokens: [...(currentStep.tokens || []), { id: `man-${Date.now()}`, kind: 'mannequin', x: 275, y: 183 }] })} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-lg hover:bg-white/10 transition-all" title="Barrera">👤</button>
+          </div>
+        )}
 
         {/* Global Actions (Top Right) */}
         <div className="absolute top-4 right-4 z-20 flex gap-2">
@@ -571,14 +601,25 @@ export default function Tactica({ externalExercise = null, overridePreset = null
 
       {/* New Play Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-surface w-full max-w-md rounded-[48px] p-10 border border-white/10 shadow-[0_0_100px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-300">
-            <h2 className="text-2xl font-black text-white mb-8 tracking-tighter">Nueva Jugada</h2>
-            <input className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white outline-none focus:border-accent/50 transition-all mb-8 font-bold text-lg"
-              placeholder="Ej: Salida de balón 01" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus />
-            <div className="flex gap-4">
-              <button onClick={() => setShowForm(false)} className="flex-1 py-5 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all">Cancelar</button>
-              <button onClick={createPlay} className="flex-1 py-5 rounded-2xl bg-accent text-bg font-black uppercase tracking-widest text-xs shadow-xl shadow-accent/20 active:scale-95 transition-all">Crear Jugada</button>
+        <div
+          className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={() => setShowForm(false)}
+        >
+          <div
+            className="bg-surface w-full max-w-md rounded-t-[32px] sm:rounded-[48px] p-6 sm:p-10 border border-white/10 shadow-[0_0_100px_rgba(0,0,0,1)] animate-in slide-in-from-bottom sm:zoom-in-95 duration-300"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-5 sm:hidden" />
+            <h2 className="text-xl sm:text-2xl font-black text-white mb-6 tracking-tighter">Nueva Jugada</h2>
+            <input
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-accent/50 transition-all mb-5 font-bold text-base"
+              placeholder="Ej: Salida de balón 01"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+            />
+            <div className="flex gap-3" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+              <button onClick={() => setShowForm(false)} className="flex-1 py-4 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all">Cancelar</button>
+              <button onClick={createPlay} className="flex-1 py-4 rounded-2xl bg-accent text-bg font-black uppercase tracking-widest text-xs shadow-xl shadow-accent/20 active:scale-95 transition-all">Crear</button>
             </div>
           </div>
         </div>
